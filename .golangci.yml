@@ -15,13 +15,23 @@ linters:
     - sloglint
     - unconvert
   exclusions:
+    paths:
+      - web/node_modules
     rules:
       - path: _test\.go
         linters:
           - gosec
           - bodyclose
+  settings:
+    revive:
+      rules:
+        - name: unused-parameter
+          disabled: true
 
 formatters:
+  exclusions:
+    paths:
+      - web/node_modules
   enable:
     - gofmt
     - goimports

@@ -1,3 +1,5 @@
+// Command studio runs the static_studio server: a local HTTP API and UI
+// for editing SSG projeccts.
 package main
 
 import (
@@ -12,6 +14,7 @@ import (
 	"time"
 
 	"github.com/criscornea/static_studio/internal/server"
+	"github.com/criscornea/static_studio/web"
 )
 
 func main() {
@@ -30,7 +33,7 @@ func run() error {
 
 	srv := &http.Server{
 		Addr:         *addr,
-		Handler:      server.New(logger).Routes(),
+		Handler:      server.New(logger, web.Assets()).Routes(),
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  60 * time.Second,
