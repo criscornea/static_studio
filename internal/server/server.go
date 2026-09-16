@@ -27,8 +27,9 @@ func New(log *slog.Logger, assets fs.FS) *Server {
 // Routes returns the fully wired HTTP handler.
 func (s *Server) Routes() http.Handler {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /api/health", s.handleHealth)
 	mux.HandleFunc("/api/", s.handleAPINotFound)
+	mux.HandleFunc("GET /api/health", s.handleHealth)
+	mux.HandleFunc("GET /api/project", s.handleOpenProject)
 
 	if s.assets != nil {
 		mux.Handle("/", s.spaHandler(s.assets))
