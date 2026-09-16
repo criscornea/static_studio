@@ -2,10 +2,10 @@ package server
 
 import (
 	"encoding/json"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,88 +14,150 @@ import (
 	"github.com/criscornea/static_studio/internal/ssg"
 )
 
-func getProject(t *testing.T, dir string) *httptest.ResponseRecorder {
+// newHugoDir creates a minimal Hugo project and returns its path.
+func newHugoDir(t *testing.T) string {
 	t.Helper()
 
-	target := "/api/project?path=" + url.QueryEscape(dir)
-	req := httptest.NewRequest(http.MethodGet, target, nil)
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "hugo.toml"), nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return dir
+}
+
+// api drives one Server instance across several requests, so that state
+// established by one call is visible to the next.
+type api struct {
+	t       *testing.T
+	handler http.Handler
+}
+
+func newAPI(t *testing.T) *api {
+	t.Helper()
+	return &api{t: t, handler: New(slog.New(slog.DiscardHandler), nil).Routes()}
+}
+
+func (a *api) do(method, target, body string) *httptest.ResponseRecorder {
+	a.t.Helper()
+
+	var r io.Reader
+	if body != "" {
+		r = strings.NewReader(body)
+	}
+	req := httptest.NewRequest(method, target, r)
 	rec := httptest.NewRecorder()
-
-	New(slog.New(slog.DiscardHandler), nil).Routes().ServeHTTP(rec, req)
-
+	a.handler.ServeHTTP(rec, req)
 	return rec
 }
 
+func (a *api) open(path string) *httptest.ResponseRecorder {
+	a.t.Helper()
+	body, err := json.Marshal(openProjectRequest{Path: path})
+	if err != nil {
+		a.t.Fatal(err)
+	}
+	return a.do(http.MethodPost, "/api/project/open", string(body))
+}
+
+// decodeProject decodes a successful project response.
+func decodeProject(t *testing.T, rec *httptest.ResponseRecorder) projectResponse {
+	t.Helper()
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body: %s)", rec.Code, rec.Body)
+	}
+	var got projectResponse
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatalf("decoding body: %v", err)
+	}
+	return got
+}
+
+// decodeError decodes an error body and checks it is fit for a human.
 func decodeError(t *testing.T, rec *httptest.ResponseRecorder) apiError {
 	t.Helper()
 
 	if ct := rec.Header().Get("Content-Type"); ct != "application/json" {
 		t.Errorf("Content-Type = %q, want application/json", ct)
 	}
-
 	var got apiError
 	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
 		t.Fatalf("decoding error body: %v", err)
 	}
 	if got.Message == "" {
-		t.Error("Message is empty; errors must be readable by a non-dev")
+		t.Error("Message is empty; errors must be readable by a non-developer")
 	}
-
 	return got
 }
 
-func TestOpenProjectSuccess(t *testing.T) {
-	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "hugo.toml"), nil, 0o600); err != nil {
-		t.Fatal(err)
+func TestProjectLifecycle(t *testing.T) {
+	a := newAPI(t)
+
+	// Nothing open yet.
+	rec := a.do(http.MethodGet, "/api/project", "")
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("GET before open: status = %d, want 409", rec.Code)
+	}
+	if got := decodeError(t, rec); got.Code != "no_project" {
+		t.Errorf("code = %q, want no_project", got.Code)
 	}
 
-	rec := getProject(t, dir)
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d (body: %s)", rec.Code, http.StatusOK, rec.Body)
+	// Open.
+	dir := newHugoDir(t)
+	opened := decodeProject(t, a.open(dir))
+	if opened.ID == "" {
+		t.Error("id is empty")
+	}
+	if opened.Kind != ssg.KindHugo {
+		t.Errorf("kind = %q, want %q", opened.Kind, ssg.KindHugo)
+	}
+	if !filepath.IsAbs(opened.Root) {
+		t.Errorf("root = %q, want an absolute path", opened.Root)
 	}
 
-	var got ssg.Project
-	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
-		t.Fatalf("decoding body: %v", err)
+	// The same project is now current.
+	current := decodeProject(t, a.do(http.MethodGet, "/api/project", ""))
+	if current.ID != opened.ID {
+		t.Errorf("current id = %q, want %q", current.ID, opened.ID)
 	}
-	if got.Kind != ssg.KindHugo {
-		t.Errorf("kind = %q, want %q", got.Kind, ssg.KindHugo)
+
+	// Close, twice: closing what is already closed is not an error.
+	for i := range 2 {
+		rec := a.do(http.MethodPost, "/api/project/close", "")
+		if rec.Code != http.StatusNoContent {
+			t.Fatalf("close #%d: status = %d, want 204", i+1, rec.Code)
+		}
 	}
-	if got.ConfigFile != "hugo.toml" {
-		t.Errorf("configFile = %q, want hugo.toml", got.ConfigFile)
-	}
-	if !filepath.IsAbs(got.Root) {
-		t.Errorf("root = %q, want an absolute path", got.Root)
+
+	if rec := a.do(http.MethodGet, "/api/project", ""); rec.Code != http.StatusConflict {
+		t.Errorf("GET after close: status = %d, want 409", rec.Code)
 	}
 }
 
 func TestOpenProjectErrors(t *testing.T) {
-	emptyDir := t.TempDir()
-
 	astroDir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(astroDir, "astro.config.mjs"), nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
 
-	missing := filepath.Join(t.TempDir(), "nope")
-
 	tests := []struct {
 		name       string
-		dir        string
+		body       string
 		wantStatus int
 		wantCode   string
 	}{
-		{"empty path", "", http.StatusBadRequest, "missing_path"},
-		{"not a project", emptyDir, http.StatusUnprocessableEntity, "not_a_project"},
-		{"astro project", astroDir, http.StatusNotImplemented, "unsupported_generator"},
-		{"missing directory", missing, http.StatusBadRequest, "cannot_open"},
+		{"empty body", "", http.StatusBadRequest, "bad_request"},
+		{"malformed json", "{", http.StatusBadRequest, "bad_request"},
+		{"unknown field", `{"path":"/tmp","colour":"red"}`, http.StatusBadRequest, "bad_request"},
+		{"empty path", `{"path":""}`, http.StatusBadRequest, "missing_path"},
+		{"not a project", `{"path":"` + t.TempDir() + `"}`, http.StatusUnprocessableEntity, "not_a_project"},
+		{"astro project", `{"path":"` + astroDir + `"}`, http.StatusNotImplemented, "unsupported_generator"},
+		{"missing directory", `{"path":"/definitely/not/here"}`, http.StatusBadRequest, "cannot_open"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rec := getProject(t, tt.dir)
+			rec := newAPI(t).do(http.MethodPost, "/api/project/open", tt.body)
 
 			if rec.Code != tt.wantStatus {
 				t.Fatalf("status = %d, want %d (body: %s)", rec.Code, tt.wantStatus, rec.Body)
@@ -110,12 +172,23 @@ func TestOpenProjectErrors(t *testing.T) {
 func TestOpenProjectErrorDoesNotLeakInternals(t *testing.T) {
 	missing := filepath.Join(t.TempDir(), "secret-folder-name")
 
-	got := decodeError(t, getProject(t, missing))
+	got := decodeError(t, newAPI(t).open(missing))
 
 	if strings.Contains(got.Message, missing) {
 		t.Errorf("message leaks the filesystem path: %q", got.Message)
 	}
 	if strings.Contains(strings.ToLower(got.Message), "no such file") {
-		t.Errorf("message leaks the underlying OS err: %q", got.Message)
+		t.Errorf("message leaks the underlying OS error: %q", got.Message)
+	}
+}
+
+func TestReopenIssuesANewID(t *testing.T) {
+	a := newAPI(t)
+
+	first := decodeProject(t, a.open(newHugoDir(t)))
+	second := decodeProject(t, a.open(newHugoDir(t)))
+
+	if first.ID == second.ID {
+		t.Error("reopening returned the same id; ids must be unique per open")
 	}
 }

@@ -8,20 +8,24 @@ import (
 	"net/http"
 	"path"
 	"strings"
+
+	"github.com/criscornea/static_studio/internal/project"
 )
 
 // Server holds the dependencies shared by all handlers.
 type Server struct {
-	log    *slog.Logger
-	assets fs.FS // nil when the frontend is not embedded
+	log     *slog.Logger
+	assets  fs.FS // nil when the frontend is not embedded
+	project *project.Manager
 }
 
-// New returns a Server.
+// New returns a Server. A nil logger falls back to slog.Default,
+// and a nil assets filesystem disables the UI routes, leaving only the API.
 func New(log *slog.Logger, assets fs.FS) *Server {
 	if log == nil {
 		log = slog.Default()
 	}
-	return &Server{log: log, assets: assets}
+	return &Server{log: log, assets: assets, project: project.NewManager(log)}
 }
 
 // Routes returns the fully wired HTTP handler.
@@ -29,7 +33,9 @@ func (s *Server) Routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/", s.handleAPINotFound)
 	mux.HandleFunc("GET /api/health", s.handleHealth)
-	mux.HandleFunc("GET /api/project", s.handleOpenProject)
+	mux.HandleFunc("POST /api/project/open", s.handleOpenProject)
+	mux.HandleFunc("GET /api/project", s.handleCurrentProject)
+	mux.HandleFunc("POST /api/project/close", s.handleCloseProject)
 
 	if s.assets != nil {
 		mux.Handle("/", s.spaHandler(s.assets))
@@ -86,4 +92,11 @@ func (s *Server) writeJSON(w http.ResponseWriter, status int, v any) {
 		// Status and headers are already on the wire, so all we can do is log it.
 		s.log.Error("encoding response failed", "err", err)
 	}
+}
+
+func (s *Server) handleCloseProject(w http.ResponseWriter, _ *http.Request) {
+	if err := s.project.Close(); err != nil {
+		s.log.Warn("closing project failed", "err", err)
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
