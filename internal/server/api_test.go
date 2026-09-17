@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -190,5 +191,170 @@ func TestReopenIssuesANewID(t *testing.T) {
 
 	if first.ID == second.ID {
 		t.Error("reopening returned the same id; ids must be unique per open")
+	}
+}
+
+// withContent creates a Hugo project containing some content files.
+func withContent(t *testing.T) string {
+	t.Helper()
+
+	dir := newHugoDir(t)
+	files := map[string]string{
+		"content/about.md":        "about",
+		"content/posts/first.md":  "first",
+		"content/posts/second.md": "second",
+		"content/image.png":       "not markdown",
+		"static/logo.png":         "outside content",
+	}
+	for name, body := range files {
+		full := filepath.Join(dir, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(full), 0o750); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(full, []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return dir
+}
+
+func (a *api) content(id string) *httptest.ResponseRecorder {
+	a.t.Helper()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/content", nil)
+	if id != "" {
+		req.Header.Set("X-Project-ID", id)
+	}
+	rec := httptest.NewRecorder()
+	a.handler.ServeHTTP(rec, req)
+	return rec
+}
+
+func TestContentTree(t *testing.T) {
+	a := newAPI(t)
+	opened := decodeProject(t, a.open(withContent(t)))
+
+	rec := a.content(opened.ID)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body: %s)", rec.Code, rec.Body)
+	}
+
+	var got contentResponse
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatalf("decoding body: %v", err)
+	}
+	if got.Root == nil {
+		t.Fatal("root is nil")
+	}
+	if got.Root.Path != "content" {
+		t.Errorf("root path = %q, want content", got.Root.Path)
+	}
+
+	// Directories first, then files. Non-markdown and anything outside
+	// the content directory must not appear.
+	var found []string
+	for _, c := range got.Root.Children {
+		found = append(found, c.Path)
+	}
+	want := []string{"content/posts", "content/about.md"}
+	if len(found) != len(want) {
+		t.Fatalf("children = %v, want %v", found, want)
+	}
+	for i := range want {
+		if found[i] != want[i] {
+			t.Errorf("children[%d] = %q, want %q", i, found[i], want[i])
+		}
+	}
+}
+
+func TestContentAcceptsQueryParameterID(t *testing.T) {
+	a := newAPI(t)
+	opened := decodeProject(t, a.open(withContent(t)))
+
+	target := "/api/content?projectId=" + url.QueryEscape(opened.ID)
+	req := httptest.NewRequest(http.MethodGet, target, nil)
+	rec := httptest.NewRecorder()
+	a.handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body: %s)", rec.Code, rec.Body)
+	}
+}
+
+func TestContentRejectsBadID(t *testing.T) {
+	tests := []struct {
+		name     string
+		id       func(openedID string) string
+		wantCode string
+	}{
+		{"no id at all", func(string) string { return "" }, "stale_project"},
+		{"wrong id", func(string) string { return "not-the-id" }, "stale_project"},
+		{"id of a previous project", func(old string) string { return old }, "stale_project"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := newAPI(t)
+			first := decodeProject(t, a.open(withContent(t)))
+			// Reopen so that first.ID becomes stale.
+			decodeProject(t, a.open(withContent(t)))
+
+			rec := a.content(tt.id(first.ID))
+
+			if rec.Code != http.StatusConflict {
+				t.Fatalf("status = %d, want 409 (body: %s)", rec.Code, rec.Body)
+			}
+			if got := decodeError(t, rec); got.Code != tt.wantCode {
+				t.Errorf("code = %q, want %q", got.Code, tt.wantCode)
+			}
+		})
+	}
+}
+
+func TestContentWithNoProjectOpen(t *testing.T) {
+	rec := newAPI(t).content("some-id")
+
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("status = %d, want 409 (body: %s)", rec.Code, rec.Body)
+	}
+	if got := decodeError(t, rec); got.Code != "no_project" {
+		t.Errorf("code = %q, want no_project", got.Code)
+	}
+}
+
+func TestContentEmptyProject(t *testing.T) {
+	a := newAPI(t)
+	opened := decodeProject(t, a.open(newHugoDir(t))) // no content directory
+
+	rec := a.content(opened.ID)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body: %s)", rec.Code, rec.Body)
+	}
+
+	var got contentResponse
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Root == nil {
+		t.Fatal("root is nil; an empty project must still return a root node")
+	}
+	if len(got.Root.Children) != 0 {
+		t.Errorf("children = %d, want 0", len(got.Root.Children))
+	}
+}
+
+func TestContentTreeJSONFieldNames(t *testing.T) {
+	a := newAPI(t)
+	opened := decodeProject(t, a.open(withContent(t)))
+
+	body := a.content(opened.ID).Body.String()
+
+	for _, key := range []string{`"name"`, `"path"`, `"isDir"`, `"children"`, `"ext"`, `"size"`} {
+		if !strings.Contains(body, key) {
+			t.Errorf("response is missing the %s field: %s", key, body)
+		}
+	}
+	if strings.Contains(body, `"Path"`) {
+		t.Error(`response contains "Path"; JSON field names must be lower camel case`)
 	}
 }

@@ -52,7 +52,7 @@ web-build: ## build the frontend into web/dist
 	cd web && npm run build
 
 web-check: ##t typecheck, lint and test the frontend
-	cd web && npm run type-check && npm run lint && npm run test:unit -- --run
+	cd web && npm run type-check && npm run lint && npm run test:unit
 
 $(WEB_DIST)/index.html:
 	@mkdir -p $(WEB_DIST)

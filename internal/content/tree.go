@@ -11,7 +11,7 @@ import (
 // a file has a Size and an Ext.
 type Node struct {
 	Name     string  `json:"name"`
-	Path     string  `jons:"path"`
+	Path     string  `json:"path"`
 	IsDir    bool    `json:"isDir"`
 	Size     int64   `json:"size,omitempty"`
 	Ext      string  `json:"ext,omitempty"`

@@ -5,6 +5,8 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/criscornea/static_studio/internal/content"
+	"github.com/criscornea/static_studio/internal/project"
 	"github.com/criscornea/static_studio/internal/ssg"
 )
 
@@ -61,7 +63,7 @@ func (s *Server) handleOpenProject(w http.ResponseWriter, r *http.Request) {
 	case errors.Is(err, ssg.ErrUnsupported):
 		s.log.Info("unsupported generator", "path", req.Path, "err", err)
 		s.writeError(w, http.StatusNotImplemented, "unsupported_generator",
-			"This looks like an Astro project. static_studio currently works with Hugo projects only.")
+			"This looks like an Astro project. static_studio currently works with Hugo  only.")
 
 	default:
 		s.log.Warn("opening project failed", "path", req.Path, "err", err)
@@ -77,4 +79,60 @@ func (s *Server) handleCurrentProject(w http.ResponseWriter, _ *http.Request) {
 		return
 	}
 	s.writeJSON(w, http.StatusOK, projectResponse{Project: current.Info, ID: current.ID})
+}
+
+// contentResponse is the content treee of the open project.
+type contentResponse struct {
+	Root *content.Node `json:"root"`
+}
+
+// projectID reads the projectc id from the request. The header is preferred;
+// the query parameter exists so that links and manual testing work.
+func projectID(r *http.Request) string {
+	if id := r.Header.Get("X-Project-ID"); id != "" {
+		return id
+	}
+
+	return r.URL.Query().Get("projectId")
+}
+
+// requireProject resolves the open project for this request, writing an
+// error response and returning false if it cannot.
+func (s *Server) requireProject(w http.ResponseWriter, r *http.Request) (*project.Open, bool) {
+	open, err := s.project.Require(projectID(r))
+	switch {
+	case err == nil:
+		return open, true
+
+	case errors.Is(err, project.ErrNoProject):
+		s.writeError(w, http.StatusConflict, "no_project",
+			"No project is open. Open a project folder first.")
+
+	case errors.Is(err, project.ErrStaleID):
+		s.writeError(w, http.StatusConflict, "stale_project",
+			"A different project is open now. Reload to continue.")
+
+	default:
+		s.log.Warn("resolving the open project failed", "err", err)
+		s.writeError(w, http.StatusInternalServerError, "internal",
+			"Something went wrong. Please try again.")
+	}
+
+	return nil, false
+}
+
+func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
+	open, ok := s.requireProject(w, r)
+	if !ok {
+		return
+	}
+
+	tree, err := content.Tree(open.Root().FS(), open.Info.ContentDir)
+	if err != nil {
+		s.log.Warn("reading the content tree failed", "root", open.Info.Root, "dir", open.Info.ContentDir, "err", err)
+		s.writeError(w, http.StatusInternalServerError, "cannot_read_content",
+			"The content folder could not be read. Check that you have permission to read it.")
+	}
+
+	s.writeJSON(w, http.StatusOK, contentResponse{Root: tree})
 }
