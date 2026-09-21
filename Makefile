@@ -35,7 +35,7 @@ fmt: ## format the code
 tidy:
 	go mod tidy
 
-check: tidy fmt lint race ## everything CI will run
+check: tidy fmt lint race web-check ## everything CI will run
 	@echo "green"
 
 clean: ## remove build artifacts and the test cache

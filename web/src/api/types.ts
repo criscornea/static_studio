@@ -34,6 +34,11 @@ export type ApiErrorCode =
   | 'cannot_read_content'
   | 'internal'
   | 'unknonw'
+  | 'not_editable'
+  | 'page_not_found'
+  | 'page_too_large'
+  | 'invalid_frontmatter'
+  | 'cannot_read_page'
 
 /** An error response from the backend, or a transport failure. */
 export class ApiError extends Error {
@@ -47,4 +52,29 @@ export class ApiError extends Error {
     this.code = code
     this.status = status
   }
+}
+
+export type FrontmatterFormat = '' | 'yaml' | 'toml'
+
+export interface PageFields {
+  title: string
+  // RFC 3339 string. JSON has no date type, so this is never a Date.
+  date?: string
+  draft: boolean
+  tags?: string[]
+}
+
+export interface Page {
+  path: string
+  format: FrontmatterFormat
+  fields: PageFields
+  body: string
+}
+
+/** Normalises anything thrown by the client into an Api Error. */
+export function asApiError(err: unknown): ApiError {
+  if (err instanceof ApiError) {
+    return err
+  }
+  return new ApiError('unknonw', 'Something went wrong. Please try again.', 0)
 }

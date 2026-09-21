@@ -37,6 +37,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /api/project", s.handleCurrentProject)
 	mux.HandleFunc("POST /api/project/close", s.handleCloseProject)
 	mux.HandleFunc("GET /api/content", s.handleContent)
+	mux.HandleFunc("GET /api/page", s.handlePage)
 
 	if s.assets != nil {
 		mux.Handle("/", s.spaHandler(s.assets))

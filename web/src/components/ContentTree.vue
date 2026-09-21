@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import {ref} from 'vue'
 import type {ContentNode} from '@/api/types'
 
 defineProps<{
@@ -9,13 +10,8 @@ defineProps<{
 
 const selected = defineModel<string | null>('selected')
 
-function toggle(path: string, open: Set<string>) {
-  if (open.has(path)) {
-    open.delete(path)
-    return
-  }
-  open.add(path)
-}
+// Each folder instance tracks its own state. Folders start expanded.
+const expanded = ref(true)
 </script>
 
 <template>
@@ -31,10 +27,17 @@ function toggle(path: string, open: Set<string>) {
   </li>
 
   <li v-else class="dir">
-    <span class="label" :style="{ paddingLeft: `${(depth ?? 0) * 0.75 + 0.5}rem` }">
+    <button
+      type="button"
+      class="label"
+      :aria-expanded="expanded"
+      :style="{ paddingLeft: `${(depth ?? 0) * 0.75 + 0.5}rem` }"
+      @click="expanded = !expanded"
+    >
+      <span class="chevron" :class="{ open: expanded }">›</span>
       {{ node.name }}
-    </span>
-    <ul>
+    </button>
+    <ul v-show="expanded">
       <ContentTree
         v-for="child in node.children"
         :key="child.path"
@@ -54,11 +57,29 @@ ul {
 }
 
 .label {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  width: 100%;
   padding-block: 0.25rem;
+  border: 0;
+  background: none;
+  font: inherit;
   font-size: 0.8125rem;
   font-weight: 600;
   color: #888;
+  text-align: left;
+  cursor: pointer;
+}
+
+.chevron {
+  display: inline-block;
+  width: 0.75rem;
+  transition: transform 0.1s;
+}
+
+.chevron.open {
+  transform: rotate(90deg);
 }
 
 .file button {

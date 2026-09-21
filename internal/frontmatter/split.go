@@ -49,7 +49,7 @@ func Split(content []byte) (*Document, error) {
 
 	meta, body, ok := untilClosingFence(rest, fences[format])
 	if !ok {
-		return nil, fmt.Errorf("%w: expected a closing %s", ErrUnterminated, fences[format])
+		return nil, fmt.Errorf("%w: %w: expected a closing %s", ErrInvalid, ErrUnterminated, fences[format])
 	}
 
 	return &Document{Format: format, Meta: meta, Body: body}, nil

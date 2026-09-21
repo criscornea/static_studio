@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/criscornea/static_studio/internal/content"
+	"github.com/criscornea/static_studio/internal/frontmatter"
 	"github.com/criscornea/static_studio/internal/project"
 	"github.com/criscornea/static_studio/internal/ssg"
 )
@@ -135,4 +136,45 @@ func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.writeJSON(w, http.StatusOK, contentResponse{Root: tree})
+}
+
+func (s *Server) handlePage(w http.ResponseWriter, r *http.Request) {
+	open, ok := s.requireProject(w, r)
+	if !ok {
+		return
+	}
+
+	name := r.URL.Query().Get("path")
+	if name == "" {
+		s.writeError(w, http.StatusBadRequest, "missing_path", "No page was given.")
+		return
+	}
+
+	page, err := content.ReadPage(open.Root().FS(), open.Info.ContentDir, name)
+	switch {
+	case err == nil:
+		s.writeJSON(w, http.StatusOK, page)
+
+	case errors.Is(err, content.ErrNotEditable):
+		s.writeError(w, http.StatusBadRequest, "not_editable",
+			"This file can't be edited here. Only pages inside the content folder can be opened.")
+
+	case errors.Is(err, content.ErrNotFound):
+		s.writeError(w, http.StatusNotFound, "page_not_found",
+			"This page no longer exists. It may have been moved or deleted outside the editor.")
+
+	case errors.Is(err, content.ErrTooLarge):
+		s.writeError(w, http.StatusUnprocessableEntity, "page_too_large",
+			"This page is too large to open in the editor.")
+
+	case errors.Is(err, frontmatter.ErrInvalid):
+		s.log.Info("invalid frontmatter", "path", name, "err", err)
+		s.writeError(w, http.StatusUnprocessableEntity, "invalid_frontmatter",
+			"The settings block at the top of this page could not be read. It proably contains a typo.")
+
+	default:
+		s.log.Warn("reading page failed", "path", name, "err", err)
+		s.writeError(w, http.StatusInternalServerError, "cannot_read_page",
+			"This page could not be read. Check that you have permission to read it.")
+	}
 }

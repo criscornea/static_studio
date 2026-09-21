@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"encoding/json"
 	"io"
 	"log/slog"
@@ -12,6 +13,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/criscornea/static_studio/internal/content"
+	"github.com/criscornea/static_studio/internal/frontmatter"
 	"github.com/criscornea/static_studio/internal/ssg"
 )
 
@@ -356,5 +359,137 @@ func TestContentTreeJSONFieldNames(t *testing.T) {
 	}
 	if strings.Contains(body, `"Path"`) {
 		t.Error(`response contains "Path"; JSON field names must be lower camel case`)
+	}
+}
+
+// withPages creates a Hugo project with a small set of pages.
+func withPages(t *testing.T) string {
+	t.Helper()
+
+	dir := newHugoDir(t)
+	files := map[string]string{
+		"content/post.md":   "---\ntitle: A Post\ndraft: true\n---\nThe body.\n",
+		"content/broken.md": "---\ntitle: [unclosed\n---\n",
+		"static/x.md":       "---\ntitle: outside\n---\n",
+	}
+	for name, body := range files {
+		full := filepath.Join(dir, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(full), 0o750); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(full, []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return dir
+}
+
+func (a *api) page(id, path string) *httptest.ResponseRecorder {
+	a.t.Helper()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/page?path="+url.QueryEscape(path), nil)
+	if id != "" {
+		req.Header.Set("X-Project-ID", id)
+	}
+	rec := httptest.NewRecorder()
+	a.handler.ServeHTTP(rec, req)
+	return rec
+}
+
+func TestPage(t *testing.T) {
+	a := newAPI(t)
+	opened := decodeProject(t, a.open(withPages(t)))
+
+	rec := a.page(opened.ID, "content/post.md")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body: %s)", rec.Code, rec.Body)
+	}
+
+	var got content.Page
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatalf("decoding body: %v", err)
+	}
+	if got.Path != "content/post.md" {
+		t.Errorf("path = %q, want content/post.md", got.Path)
+	}
+	if got.Format != frontmatter.FormatYAML {
+		t.Errorf("format = %q, want yaml", got.Format)
+	}
+	if got.Fields == nil || got.Fields.Title != "A Post" || !got.Fields.Draft {
+		t.Errorf("fields = %+v, want title \"A Post\" and draft", got.Fields)
+	}
+	if got.Body != "The body.\n" {
+		t.Errorf("body = %q, want %q", got.Body, "The body.\n")
+	}
+}
+
+func TestPageJSONShape(t *testing.T) {
+	a := newAPI(t)
+	opened := decodeProject(t, a.open(withPages(t)))
+
+	body := a.page(opened.ID, "content/post.md").Body.String()
+
+	for _, key := range []string{`"path"`, `"format"`, `"fields"`, `"body"`, `"title"`, `"draft"`} {
+		if !strings.Contains(body, key) {
+			t.Errorf("response is missing %s: %s", key, body)
+		}
+	}
+	// A []byte body would be base64-encoded; the text must arrive as text.
+	if !strings.Contains(body, `"body":"The body.\n"`) {
+		t.Errorf("body is not plain text: %s", body)
+	}
+}
+
+func TestPageErrors(t *testing.T) {
+	dir := withPages(t)
+	huge := filepath.Join(dir, "content", "huge.md")
+	// Comfortably above the content package's size limit.
+	if err := os.WriteFile(huge, bytes.Repeat([]byte("a"), 3<<20), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name       string
+		path       string
+		wantStatus int
+		wantCode   string
+	}{
+		{"missing path", "", http.StatusBadRequest, "missing_path"},
+		{"config file", "hugo.toml", http.StatusBadRequest, "not_editable"},
+		{"outside content", "static/x.md", http.StatusBadRequest, "not_editable"},
+		{"traversal", "content/../hugo.toml", http.StatusBadRequest, "not_editable"},
+		{"missing page", "content/nope.md", http.StatusNotFound, "page_not_found"},
+		{"too large", "content/huge.md", http.StatusUnprocessableEntity, "page_too_large"},
+		{"broken frontmatter", "content/broken.md", http.StatusUnprocessableEntity, "invalid_frontmatter"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := newAPI(t)
+			opened := decodeProject(t, a.open(dir))
+
+			rec := a.page(opened.ID, tt.path)
+
+			if rec.Code != tt.wantStatus {
+				t.Fatalf("status = %d, want %d (body: %s)", rec.Code, tt.wantStatus, rec.Body)
+			}
+			if got := decodeError(t, rec); got.Code != tt.wantCode {
+				t.Errorf("code = %q, want %q", got.Code, tt.wantCode)
+			}
+		})
+	}
+}
+
+func TestPageRequiresProjectID(t *testing.T) {
+	a := newAPI(t)
+	decodeProject(t, a.open(withPages(t)))
+
+	rec := a.page("", "content/post.md")
+
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("status = %d, want 409 (body: %s)", rec.Code, rec.Body)
+	}
+	if got := decodeError(t, rec); got.Code != "stale_project" {
+		t.Errorf("code = %q, want stale_project", got.Code)
 	}
 }

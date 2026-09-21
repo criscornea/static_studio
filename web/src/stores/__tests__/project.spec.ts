@@ -80,13 +80,13 @@ describe('open', () => {
     expect(store.error).toBeNull()
     expect(store.loading).toBe(false)
 
-    expect(calls[0].url).toBe('/api/project/open')
-    expect(calls[0].method).toBe('POST')
-    expect(calls[0].body).toBe(JSON.stringify({ path: projectPath }))
+    expect(call(0).url).toBe('/api/project/open')
+    expect(call(0).method).toBe('POST')
+    expect(call(0).body).toBe(JSON.stringify({ path: projectPath }))
 
     // The tree request must carry the id returned by open.
-    expect(calls[1].url).toBe('/api/content')
-    expect(calls[1].headers.get('X-Project-ID')).toBe('id-1')
+    expect(call(1).url).toBe('/api/content')
+    expect(call(1).headers.get('X-Project-ID')).toBe('id-1')
   })
 
   it('reports a backend error and stays closed', async () => {
@@ -139,7 +139,7 @@ describe('restore', () => {
     await store.restore()
 
     expect(store.isOpen).toBe(true)
-    expect(calls[0].url).toBe('/api/project')
+    expect(call(0).url).toBe('/api/project')
   })
 
   it('treats no_project as the normal cold start, not an error', async () => {
@@ -180,6 +180,14 @@ describe('close', () => {
 
     // A later request must not carry the old id.
     await store.restore()
-    expect(calls[3].headers.get('X-Project-ID')).toBeNull()
+    expect(call(3).headers.get('X-Project-ID')).toBeNull()
   })
 })
+
+function call(i: number): Call {
+  const c = calls[i]
+  if (c === undefined) {
+    throw new Error(`expected at least ${i + 1} fetch calls, got ${calls.length}`)
+  }
+  return c
+}

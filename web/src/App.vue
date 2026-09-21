@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {onMounted} from 'vue'
+import {ref, onMounted} from 'vue'
 import {useProjectStore} from '@/stores/project'
 import ProjectPicker from '@/components/ProjectPicker.vue'
 
