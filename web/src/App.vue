@@ -1,34 +1,41 @@
 <script setup lang="ts">
-import {ref, onMounted} from 'vue'
+import {computed, onMounted} from 'vue'
 import {useProjectStore} from '@/stores/project'
+import {usePageStore} from '@/stores/page'
 import ProjectPicker from '@/components/ProjectPicker.vue'
+import ContentTree from '@/components/ContentTree.vue'
+import PageView from '@/components/PageView.vue'
 
-const store = useProjectStore()
-const selected = ref<string | null>(null)
+const project = useProjectStore()
+const pages = usePageStore()
+
+const selected = computed<string | null>({
+  get: () => pages.path,
+  set: (path) => {
+    if (path !== null) {
+      pages.load(path)
+    }
+  }
+})
 
 // The backend holds the open project, so a page reload reconnects to it.
-onMounted(() => store.restore())
-
-function close() {
-  selected.value = null
-  store.close()
-}
+onMounted(() => project.restore())
 </script>
 
 <template>
-  <ProjectPicker v-if="!store.isOpen" />
+  <ProjectPicker v-if="!project.isOpen" />
 
   <div v-else class="shell">
     <header>
-      <span class="root">{{ store.project?.root }}</span>
-      <button @click="close">Close</button>
+      <span class="root">{{ project.project?.root }}</span>
+      <button @click="project.close()">Close</button>
     </header>
 
     <div class="body">
       <nav class="sidebar">
-        <ul v-if="store.tree?.children?.length">
+        <ul v-if="project.tree?.children?.length">
           <ContentTree
-            v-for="child in store.tree.children"
+            v-for="child in project.tree.children"
             :key="child.path"
             v-model:selected="selected"
             :node="child"
@@ -38,8 +45,7 @@ function close() {
       </nav>
 
       <main class="content">
-        <p v-if="selected" class="placeholder">{{ selected }}</p>
-        <p v-else class="placeholder">Select a file.</p>
+        <PageView />
       </main>
     </div>
   </div>
@@ -92,8 +98,7 @@ header {
   overflow-y: auto;
 }
 
-.empty,
-.placeholder {
+.empty {
   color: #999;
   font-size: 0.875rem;
 }

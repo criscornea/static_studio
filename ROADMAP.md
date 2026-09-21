@@ -32,7 +32,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 
 **Goal:** manage files, not just look at them.
 
-- [ ] Frontmatter parser, YAML and TOML
+- [x] Frontmatter parser, YAML and TOML
 - [ ] Read Hugo config for the real `contentDir` (currently hardcoded)
 - [ ] Show metadata in the UI: title, date, tags, draft status
 - [ ] Sort, filter, full-text search across content
