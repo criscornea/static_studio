@@ -493,3 +493,83 @@ func TestPageRequiresProjectID(t *testing.T) {
 		t.Errorf("code = %q, want stale_project", got.Code)
 	}
 }
+
+func (a *api) search(id, query string) *httptest.ResponseRecorder {
+	a.t.Helper()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/search?q="+url.QueryEscape(query), nil)
+	if id != "" {
+		req.Header.Set("X-Project-ID", id)
+	}
+	rec := httptest.NewRecorder()
+	a.handler.ServeHTTP(rec, req)
+	return rec
+}
+
+func TestSearch(t *testing.T) {
+	a := newAPI(t)
+	opened := decodeProject(t, a.open(withPages(t)))
+
+	rec := a.search(opened.ID, "body")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body: %s)", rec.Code, rec.Body)
+	}
+
+	var got content.Results
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatalf("decoding body: %v", err)
+	}
+	if len(got.Hits) != 1 || got.Hits[0].Path != "content/post.md" || got.Hits[0].Title != "A Post" {
+		t.Fatalf("hits = %+v, want only content/post.md (static/ is outside the content dir)", got.Hits)
+	}
+	if !got.Hits[0].Draft || got.Hits[0].Snippet != "The body." {
+		t.Errorf("hit = %+v, want draft with snippet", got.Hits[0])
+	}
+}
+
+func TestSearchJSONShape(t *testing.T) {
+	a := newAPI(t)
+	opened := decodeProject(t, a.open(withPages(t)))
+
+	var raw map[string]any
+	if err := json.NewDecoder(a.search(opened.ID, "nothing-matches").Body).Decode(&raw); err != nil {
+		t.Fatal(err)
+	}
+	// The client relies on these exact names, and on [] rather than null.
+	hits, ok := raw["hits"].([]any)
+	if !ok || len(hits) != 0 {
+		t.Errorf("hits = %#v, want []", raw["hits"])
+	}
+	if raw["truncated"] != false {
+		t.Errorf("truncated = %#v, want false", raw["truncated"])
+	}
+}
+
+func TestSearchErrors(t *testing.T) {
+	a := newAPI(t)
+	opened := decodeProject(t, a.open(withPages(t)))
+
+	tests := []struct {
+		name     string
+		id       string
+		query    string
+		wantCode string
+		status   int
+	}{
+		{"empty query", opened.ID, "", "missing_query", http.StatusBadRequest},
+		{"blank query", opened.ID, "   ", "missing_query", http.StatusBadRequest},
+		{"huge query", opened.ID, strings.Repeat("a", maxQueryLength+1), "bad_request", http.StatusBadRequest},
+		{"no project id", "", "x", "stale_project", http.StatusConflict},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rec := a.search(tt.id, tt.query)
+			if rec.Code != tt.status {
+				t.Fatalf("status = %d, want %d (body: %s)", rec.Code, tt.status, rec.Body)
+			}
+			if got := decodeError(t, rec); got.Code != tt.wantCode {
+				t.Errorf("code = %q, want %q", got.Code, tt.wantCode)
+			}
+		})
+	}
+}

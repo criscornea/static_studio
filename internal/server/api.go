@@ -139,6 +139,36 @@ func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 	s.writeJSON(w, http.StatusOK, contentResponse{Root: tree})
 }
 
+// maxQueryLength caps a search query. Longer ones cannot be typed by hand.
+const maxQueryLength = 200
+
+func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
+	open, ok := s.requireProject(w, r)
+	if !ok {
+		return
+	}
+
+	query := r.URL.Query().Get("q")
+	if len(query) > maxQueryLength {
+		s.writeError(w, http.StatusBadRequest, "bad_request", "The search text is too long.")
+		return
+	}
+
+	results, err := content.Search(open.Root().FS(), open.Info.ContentDir, query)
+	switch {
+	case err == nil:
+		s.writeJSON(w, http.StatusOK, results)
+
+	case errors.Is(err, content.ErrEmptyQuery):
+		s.writeError(w, http.StatusBadRequest, "missing_query", "No search text was given.")
+
+	default:
+		s.log.Warn("searching failed", "root", open.Info.Root, "err", err)
+		s.writeError(w, http.StatusInternalServerError, "cannot_search",
+			"The content could not be searched. Check that you have permission to read it.")
+	}
+}
+
 func (s *Server) handlePage(w http.ResponseWriter, r *http.Request) {
 	open, ok := s.requireProject(w, r)
 	if !ok {
