@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createPinia, setActivePinia } from 'pinia'
-import { useProjectStore } from '../project'
+import { selectIsOpen, useProjectStore } from '../project'
+import { setProjectID } from '@/api/client'
 import type { ContentTree, Project } from '@/api/types'
 
 const projectPath = '/tmp/example-site'
+
+const store = () => useProjectStore.getState()
 
 const aProject: Project = {
   root: projectPath,
@@ -58,7 +60,8 @@ function respondWith(...responses: Array<{ status: number; body?: unknown }>) {
 }
 
 beforeEach(() => {
-  setActivePinia(createPinia())
+  useProjectStore.setState({ project: null, tree: null, loading: false, error: null })
+  setProjectID(null)
   calls = []
 })
 
@@ -70,15 +73,14 @@ describe('open', () => {
   it('stores the project, loads the tree and sends the id', async () => {
     respondWith({ status: 200, body: aProject }, { status: 200, body: aTree })
 
-    const store = useProjectStore()
-    const ok = await store.open(projectPath)
+    const ok = await store().open(projectPath)
 
     expect(ok).toBe(true)
-    expect(store.isOpen).toBe(true)
-    expect(store.project?.id).toBe('id-1')
-    expect(store.tree?.children).toHaveLength(1)
-    expect(store.error).toBeNull()
-    expect(store.loading).toBe(false)
+    expect(selectIsOpen(store())).toBe(true)
+    expect(store().project?.id).toBe('id-1')
+    expect(store().tree?.children).toHaveLength(1)
+    expect(store().error).toBeNull()
+    expect(store().loading).toBe(false)
 
     expect(call(0).url).toBe('/api/project/open')
     expect(call(0).method).toBe('POST')
@@ -95,14 +97,13 @@ describe('open', () => {
       body: { code: 'not_a_project', message: "This folder doesn't look like a website project." },
     })
 
-    const store = useProjectStore()
-    const ok = await store.open('/tmp')
+    const ok = await store().open('/tmp')
 
     expect(ok).toBe(false)
-    expect(store.isOpen).toBe(false)
-    expect(store.tree).toBeNull()
-    expect(store.error?.code).toBe('not_a_project')
-    expect(store.error?.message).toContain('website project')
+    expect(selectIsOpen(store())).toBe(false)
+    expect(store().tree).toBeNull()
+    expect(store().error?.code).toBe('not_a_project')
+    expect(store().error?.message).toContain('website project')
   })
 
   it('does not stay half-open when the tree fails to load', async () => {
@@ -111,23 +112,21 @@ describe('open', () => {
       { status: 500, body: { code: 'cannot_read_content', message: 'Could not read content.' } },
     )
 
-    const store = useProjectStore()
-    const ok = await store.open(projectPath)
+    const ok = await store().open(projectPath)
 
     expect(ok).toBe(false)
-    expect(store.project).toBeNull()
-    expect(store.tree).toBeNull()
-    expect(store.error?.code).toBe('cannot_read_content')
+    expect(store().project).toBeNull()
+    expect(store().tree).toBeNull()
+    expect(store().error?.code).toBe('cannot_read_content')
   })
 
   it('turns a network failure into a readable error', async () => {
     vi.stubGlobal('fetch', () => Promise.reject(new TypeError('Failed to fetch')))
 
-    const store = useProjectStore()
 
-    expect(await store.open(projectPath)).toBe(false)
-    expect(store.error?.status).toBe(0)
-    expect(store.error?.message).toContain('static_studio')
+    expect(await store().open(projectPath)).toBe(false)
+    expect(store().error?.status).toBe(0)
+    expect(store().error?.message).toContain('static_studio')
   })
 })
 
@@ -135,30 +134,27 @@ describe('restore', () => {
   it('reconnects to the project the backend already has open', async () => {
     respondWith({ status: 200, body: aProject }, { status: 200, body: aTree })
 
-    const store = useProjectStore()
-    await store.restore()
+    await store().restore()
 
-    expect(store.isOpen).toBe(true)
+    expect(selectIsOpen(store())).toBe(true)
     expect(call(0).url).toBe('/api/project')
   })
 
   it('treats no_project as the normal cold start, not an error', async () => {
     respondWith({ status: 409, body: { code: 'no_project', message: 'No project is open.' } })
 
-    const store = useProjectStore()
-    await store.restore()
+    await store().restore()
 
-    expect(store.isOpen).toBe(false)
-    expect(store.error).toBeNull()
+    expect(selectIsOpen(store())).toBe(false)
+    expect(store().error).toBeNull()
   })
 
   it('surfaces any other failure', async () => {
     respondWith({ status: 500, body: { code: 'internal', message: 'Something went wrong.' } })
 
-    const store = useProjectStore()
-    await store.restore()
+    await store().restore()
 
-    expect(store.error?.code).toBe('internal')
+    expect(store().error?.code).toBe('internal')
   })
 })
 
@@ -171,15 +167,14 @@ describe('close', () => {
       { status: 409, body: { code: 'no_project', message: 'No project is open.' } },
     )
 
-    const store = useProjectStore()
-    await store.open(projectPath)
-    await store.close()
+    await store().open(projectPath)
+    await store().close()
 
-    expect(store.isOpen).toBe(false)
-    expect(store.tree).toBeNull()
+    expect(selectIsOpen(store())).toBe(false)
+    expect(store().tree).toBeNull()
 
     // A later request must not carry the old id.
-    await store.restore()
+    await store().restore()
     expect(call(3).headers.get('X-Project-ID')).toBeNull()
   })
 })

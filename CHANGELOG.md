@@ -19,9 +19,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   point outside it.
 - Content tree endpoint returning the editable files of the open project,
   with directories sorted before files and empty directories pruned.
-- Vue 3 frontend with a typed API client, a Pinia store for the open
-  project, a folder picker and a file tree. A page reload reconnects to the
-  project the backend already has open.
+- React 19 frontend (Vite, Tailwind v4, shadcn/ui) with a typed API client,
+  Zustand stores for the open project and page, a folder picker, a file
+  tree and a resizable sidebar. A page reload reconnects to the project the
+  backend already has open. Migrated from an initial Vue 3 scaffold.
+- Content tree entries carry their frontmatter (title, date, draft, tags),
+  and the file tree shows the title, filename, date and a draft badge.
+- Hugo's `contentDir` and `staticDir` are read from the config file instead
+  of being hardcoded. Missing, invalid or out-of-project values fall back to
+  the defaults.
 - The built frontend is embedded into the binary, so a release is a single
   file.
 - Project skeleton: Makefile with a single `make check`, `golangci-lint`,

@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { nextTick } from 'vue'
-import { createPinia, setActivePinia } from 'pinia'
 import { usePageStore } from '../page'
 import { useProjectStore } from '../project'
 import type { Page, Project } from '@/api/types'
+
+const store = () => usePageStore.getState()
 
 const aProject: Project = {
   root: '/tmp/example-site',
@@ -57,10 +57,11 @@ function respond(url: string, res: Response) {
 }
 
 beforeEach(() => {
-  setActivePinia(createPinia())
+  useProjectStore.setState({ project: null })
+  usePageStore.getState().clear()
   pending = []
   holdRequests()
-  useProjectStore().project = aProject
+  useProjectStore.setState({ project: aProject })
 })
 
 afterEach(() => {
@@ -69,79 +70,74 @@ afterEach(() => {
 
 describe('load', () => {
   it('sets the path at once and the page when it arrives', async () => {
-    const store = usePageStore()
 
-    const done = store.load('content/a.md')
+    const done = store().load('content/a.md')
 
-    expect(store.path).toBe('content/a.md')
-    expect(store.loading).toBe(true)
-    expect(store.page).toBeNull()
+    expect(store().path).toBe('content/a.md')
+    expect(store().loading).toBe(true)
+    expect(store().page).toBeNull()
 
     respond(pageURL('content/a.md'), json(200, aPage('content/a.md', 'A')))
     await done
 
-    expect(store.page?.fields.title).toBe('A')
-    expect(store.loading).toBe(false)
-    expect(store.error).toBeNull()
+    expect(store().page?.fields.title).toBe('A')
+    expect(store().loading).toBe(false)
+    expect(store().error).toBeNull()
   })
 
   it('reports an error and shows no page', async () => {
-    const store = usePageStore()
 
-    const done = store.load('content/broken.md')
+    const done = store().load('content/broken.md')
     respond(
       pageURL('content/broken.md'),
       json(422, { code: 'invalid_frontmatter', message: 'The settings block could not be read.' }),
     )
     await done
 
-    expect(store.page).toBeNull()
-    expect(store.error?.code).toBe('invalid_frontmatter')
-    expect(store.loading).toBe(false)
+    expect(store().page).toBeNull()
+    expect(store().error?.code).toBe('invalid_frontmatter')
+    expect(store().loading).toBe(false)
   })
 })
 
 describe('races', () => {
   it('shows the last clicked page even if an earlier response arrives later', async () => {
-    const store = usePageStore()
 
-    const first = store.load('content/a.md')
-    const second = store.load('content/b.md')
+    const first = store().load('content/a.md')
+    const second = store().load('content/b.md')
 
     respond(pageURL('content/b.md'), json(200, aPage('content/b.md', 'B')))
     await second
-    expect(store.page?.fields.title).toBe('B')
+    expect(store().page?.fields.title).toBe('B')
 
     // The slow response for the first click lands last and must be ignored.
     respond(pageURL('content/a.md'), json(200, aPage('content/a.md', 'A')))
     await first
 
-    expect(store.path).toBe('content/b.md')
-    expect(store.page?.fields.title).toBe('B')
+    expect(store().path).toBe('content/b.md')
+    expect(store().page?.fields.title).toBe('B')
   })
 
   it('stays loading while a newer request is still in flight', async () => {
-    const store = usePageStore()
 
-    const first = store.load('content/a.md')
-    const second = store.load('content/b.md')
+    const first = store().load('content/a.md')
+    const second = store().load('content/b.md')
 
     respond(pageURL('content/a.md'), json(200, aPage('content/a.md', 'A')))
     await first
 
-    expect(store.loading).toBe(true)
-    expect(store.page).toBeNull()
+    expect(store().loading).toBe(true)
+    expect(store().page).toBeNull()
 
     respond(pageURL('content/b.md'), json(200, aPage('content/b.md', 'B')))
     await second
-    expect(store.loading).toBe(false)
+    expect(store().loading).toBe(false)
   })
 
   it('does not let a stale error replace a newer page', async () => {
-    const store = usePageStore()
 
-    const first = store.load('content/a.md')
-    const second = store.load('content/b.md')
+    const first = store().load('content/a.md')
+    const second = store().load('content/b.md')
 
     respond(pageURL('content/b.md'), json(200, aPage('content/b.md', 'B')))
     await second
@@ -151,50 +147,45 @@ describe('races', () => {
     )
     await first
 
-    expect(store.page?.fields.title).toBe('B')
-    expect(store.error).toBeNull()
+    expect(store().page?.fields.title).toBe('B')
+    expect(store().error).toBeNull()
   })
 })
 
 describe('clearing', () => {
   it('discards a request that was in flight when cleared', async () => {
-    const store = usePageStore()
 
-    const done = store.load('content/a.md')
-    store.clear()
+    const done = store().load('content/a.md')
+    store().clear()
     respond(pageURL('content/a.md'), json(200, aPage('content/a.md', 'A')))
     await done
 
-    expect(store.page).toBeNull()
-    expect(store.path).toBeNull()
-    expect(store.loading).toBe(false)
+    expect(store().page).toBeNull()
+    expect(store().path).toBeNull()
+    expect(store().loading).toBe(false)
   })
 
   it('clears itself when a different project is opened', async () => {
-    const store = usePageStore()
 
-    const done = store.load('content/a.md')
+    const done = store().load('content/a.md')
     respond(pageURL('content/a.md'), json(200, aPage('content/a.md', 'A')))
     await done
-    expect(store.page).not.toBeNull()
+    expect(store().page).not.toBeNull()
 
-    useProjectStore().project = { ...aProject, id: 'id-2' }
-    await nextTick()
+    useProjectStore.setState({ project: { ...aProject, id: 'id-2' } })
 
-    expect(store.page).toBeNull()
-    expect(store.path).toBeNull()
+    expect(store().page).toBeNull()
+    expect(store().path).toBeNull()
   })
 
   it('clears itself when the project is closed', async () => {
-    const store = usePageStore()
 
-    const done = store.load('content/a.md')
+    const done = store().load('content/a.md')
     respond(pageURL('content/a.md'), json(200, aPage('content/a.md', 'A')))
     await done
 
-    useProjectStore().project = null
-    await nextTick()
+    useProjectStore.setState({ project: null })
 
-    expect(store.page).toBeNull()
+    expect(store().page).toBeNull()
   })
 })

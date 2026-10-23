@@ -15,14 +15,14 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 - [x] GitHub Actions CI mirroring `make check`
 - [x] `CHANGELOG.md`
 - [x] Structured logging (`log/slog`) from day one
-- [x] Vue 3 + TypeScript + Vite scaffold, dev proxy to the Go backend
+- [x] React + TypeScript + Vite scaffold (migrated from Vue), dev proxy to the Go backend
 - [x] Frontend embedded into the binary (`go:embed`), SPA fallback routing
 - [x] Project detection: Hugo supported, Astro recognised but rejected
 - [x] Path confinement via `os.Root` (traversal, symlinks, absolute paths)
 - [x] Project lifecycle API: `open` / `get` / `close`, with a per-open id
 - [x] Content tree walker (`internal/content`)
 - [x] `GET /api/content` endpoint
-- [x] File tree in the Vue UI
+- [x] File tree in the UI
 - [x] Folder picker in the UI
 
 🎯 **Milestone:** choose a folder → see a tree of all content files.
@@ -33,8 +33,8 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 **Goal:** manage files, not just look at them.
 
 - [x] Frontmatter parser, YAML and TOML
-- [ ] Read Hugo config for the real `contentDir` (currently hardcoded)
-- [ ] Show metadata in the UI: title, date, tags, draft status
+- [x] Read Hugo config for the real `contentDir` (and `staticDir`)
+- [x] Show metadata in the UI: title, date, tags, draft status
 - [ ] Sort, filter, full-text search across content
 - [ ] Create a page from an archetype, rename, delete
 - [ ] Atomic writes (temp file + rename)
@@ -108,8 +108,12 @@ auth · undo across sessions
 
 Deliberate simplifications, recorded so they don't become invisible.
 
-- `ContentDir` and `AssetDir` are hardcoded to Hugo defaults; the config is
-  not parsed yet. Fix alongside the frontmatter work.
+- `ContentDir` and `AssetDir` come from the top level of the detected Hugo
+  config file only. Per-language `contentDir`, module mounts, merged
+  `config/_default/*` files and `HUGO_*` environment overrides are ignored,
+  and an unreadable or invalid config silently falls back to the defaults.
+- The content tree reads every page's frontmatter on each load. Fine for a
+  personal site; cache it if a project with thousands of pages gets slow.
 - The content tree only lists `.md`, `.markdown`, `.mdx` and `.html`.
 - `Manager.Close` is not called on server shutdown; it becomes relevant
   alongside subprocess cleanup.

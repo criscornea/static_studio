@@ -15,6 +15,8 @@ export interface ContentNode {
   isDir: boolean
   size?: number
   ext?: string
+  // Present when the file has readable frontmatter.
+  fields?: PageFields
   children?: ContentNode[]
 }
 
