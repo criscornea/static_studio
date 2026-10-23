@@ -5,17 +5,20 @@ import (
 	"path"
 	"sort"
 	"strings"
+
+	"github.com/criscornea/static_studio/internal/frontmatter"
 )
 
 // Node is one entry in the content tree. A directory has Children;
-// a file has a Size and an Ext.
+// a file has a Size and an Ext, and Fields when it has readable frontmatter.
 type Node struct {
-	Name     string  `json:"name"`
-	Path     string  `json:"path"`
-	IsDir    bool    `json:"isDir"`
-	Size     int64   `json:"size,omitempty"`
-	Ext      string  `json:"ext,omitempty"`
-	Children []*Node `json:"children,omitempty"`
+	Name     string              `json:"name"`
+	Path     string              `json:"path"`
+	IsDir    bool                `json:"isDir"`
+	Size     int64               `json:"size,omitempty"`
+	Ext      string              `json:"ext,omitempty"`
+	Fields   *frontmatter.Fields `json:"fields,omitempty"`
+	Children []*Node             `json:"children,omitempty"`
 }
 
 // editableExts are the file types the editor can open. Everything else is
@@ -66,16 +69,40 @@ func Tree(fsys fs.FS, dir string) (*Node, error) {
 			continue
 		}
 		root.Children = append(root.Children, &Node{
-			Name:  name,
-			Path:  child,
-			IsDir: false,
-			Size:  info.Size(),
-			Ext:   strings.ToLower(path.Ext(name)),
+			Name:   name,
+			Path:   child,
+			IsDir:  false,
+			Size:   info.Size(),
+			Ext:    strings.ToLower(path.Ext(name)),
+			Fields: readFields(fsys, child, info.Size()),
 		})
 	}
 
 	sortChildren(root)
 	return root, nil
+}
+
+// readFields returns the frontmatter fields of the file at name, or nil when
+// the file has no frontmatter, is too large, or cannot be read or parsed.
+// A broken page must not break the tree: the page view reports the error
+// when the user opens it.
+func readFields(fsys fs.FS, name string, size int64) *frontmatter.Fields {
+	if size > maxPageSize {
+		return nil
+	}
+	data, err := fs.ReadFile(fsys, name)
+	if err != nil {
+		return nil
+	}
+	doc, err := frontmatter.Split(data)
+	if err != nil || doc.Format == frontmatter.FormatNone {
+		return nil
+	}
+	fields, err := doc.Fields()
+	if err != nil {
+		return nil
+	}
+	return fields
 }
 
 // skip reports wether an entry should never appear in the tree.

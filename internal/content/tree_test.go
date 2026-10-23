@@ -101,6 +101,43 @@ func TestTreeMetadata(t *testing.T) {
 	}
 }
 
+func TestTreeFields(t *testing.T) {
+	fsys := fstest.MapFS{
+		"content/a-yaml.md": {Data: []byte("---\ntitle: Hello\ndate: 2024-03-01\ndraft: true\ntags: [go, vue]\n---\nbody")},
+		"content/b-toml.md": {Data: []byte("+++\ntitle = \"World\"\n+++\nbody")},
+		"content/c-none.md": {Data: []byte("just text")},
+		"content/d-bad.md":  {Data: []byte("---\ntitle: [unclosed\n---\nbody")},
+	}
+
+	root, err := Tree(fsys, "content")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := names(root), []string{"a-yaml.md", "b-toml.md", "c-none.md", "d-bad.md"}; !equal(got, want) {
+		t.Fatalf("children = %v, want %v (a broken page must stay in the tree)", got, want)
+	}
+
+	yamlPage := root.Children[0].Fields
+	if yamlPage == nil {
+		t.Fatal("yaml page has no fields")
+	}
+	if yamlPage.Title != "Hello" || !yamlPage.Draft || len(yamlPage.Tags) != 2 || yamlPage.Date == nil {
+		t.Errorf("yaml fields = %+v", yamlPage)
+	}
+
+	tomlPage := root.Children[1].Fields
+	if tomlPage == nil || tomlPage.Title != "World" {
+		t.Errorf("toml fields = %+v, want title World", tomlPage)
+	}
+
+	if f := root.Children[2].Fields; f != nil {
+		t.Errorf("page without frontmatter has fields %+v, want nil", f)
+	}
+	if f := root.Children[3].Fields; f != nil {
+		t.Errorf("page with broken frontmatter has fields %+v, want nil", f)
+	}
+}
+
 func TestTreeMissingContentDirIsEmptyNotAnError(t *testing.T) {
 	root, err := Tree(fstest.MapFS{"hugo.toml": {}}, "content")
 	if err != nil {

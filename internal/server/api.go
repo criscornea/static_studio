@@ -133,6 +133,7 @@ func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 		s.log.Warn("reading the content tree failed", "root", open.Info.Root, "dir", open.Info.ContentDir, "err", err)
 		s.writeError(w, http.StatusInternalServerError, "cannot_read_content",
 			"The content folder could not be read. Check that you have permission to read it.")
+		return
 	}
 
 	s.writeJSON(w, http.StatusOK, contentResponse{Root: tree})

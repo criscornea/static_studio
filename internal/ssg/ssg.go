@@ -25,10 +25,11 @@ type SSG interface {
 	// Detect looks for the generator's config file at the root fo fsys.
 	// It returns the config file's path relative to the root.
 	Detect(fsys fs.FS) (configFile string, ok bool)
-	// ContentDir is where editable markdown lives, relative to the root.
-	ContentDir() string
-	// AssetDir is where images and other static files live, relative to the root.
-	AssetDir() string
+	// Dirs returns where editable markdown (contentDir) and images and other
+	// static files (assetDir) live, relative to the root. It honours the
+	// project's config file and falls back to the generator's defaults for
+	// anything missing, unreadable or pointing outside the project.
+	Dirs(fsys fs.FS, configFile string) (contentDir, assetDir string)
 }
 
 type Project struct {
