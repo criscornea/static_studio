@@ -10,6 +10,7 @@ Static Studio: a local desktop-style editor for static-site-generator projects (
 
 Use the Makefile (`make help`):
 
+- `scripts/check.sh` — build-check entry point for agents; runs `make check`
 - `make check` — everything CI runs (tidy, fmt, lint, race tests, frontend check)
 - `make test` / `make race` — Go tests (`go test ./cmd/... ./internal/... ./web`)
 - Single Go test: `go test ./internal/content -run TestName`
@@ -36,3 +37,32 @@ Backend (`internal/`), wired in `cmd/studio/main.go` → `server.New(logger, web
 Frontend (`web/`, React 19 + TS + Zustand + Vite + Tailwind v4 + shadcn/ui): `src/api/client.ts` and `types.ts` mirror the Go JSON shapes (keep in sync when changing API structs); state lives in `src/stores/{project,page}.ts`; components are `ProjectPicker`, `ContentTree`, `PageView` (`src/components/ui/` is generated shadcn code; add more with `npx shadcn@latest add <name>`). `web/embed.go` exposes `dist/` to the Go binary.
 
 CI (`.github/workflows/ci.yml`) has a Go job (tidy/gofmt diff, vet, race tests, golangci-lint) and a web job (type-check, lint, build, then `go build ./...` with the real embed).
+
+## Planning
+
+- `ROADMAP.md` is the long-term list (built, next, out of scope, known shortcuts). `PLAN.md` breaks the current ROADMAP section into phases and milestones.
+- When a phase is done, tick its items in `ROADMAP.md` and move shipped items to `CHANGELOG.md`.
+
+## Workflow
+
+- `PLAN.md` is the source of truth for the current work: phases, milestones, status. Keep it current.
+- Planning: Opus (`planner` agent). Coding: Sonnet (`implementer` agent). Review: Opus (`code-reviewer` agent), only when the user agrees.
+- One branch per phase: `feat/p<N>-<slug>`. One commit per milestone. Push after each commit if a remote exists.
+- Merge into `main` only with a local squash merge, after the optional review.
+- Use `/run-plan` to execute PLAN.md.
+- Need the user? Write `BLOCKED: <reason>` in PLAN.md and stop.
+
+## Token rules
+
+- Run the `repo-man` skill before exploring unfamiliar code. Open only the files the map points to.
+- Read file ranges, not whole large files. Do not re-read files you just edited.
+- Build/test output: errors only. Formatting runs automatically after each edit; never fix style by hand.
+- context7: only for third-party library APIs you are unsure about (version-specific). Not for the standard library.
+- Playwright: verify a UI milestone once at the end. Prefer snapshots over screenshots. Close the browser when done.
+- Subagents return the short report format their definition gives. No prose recaps.
+
+## Conventions
+
+- Conventional Commits (`feat:`, `fix:`, `chore:`, `refactor:`, `test:`, `docs:`).
+- Match existing code style. No new dependencies without a reason in the commit body.
+- Never commit secrets or `.env` files.

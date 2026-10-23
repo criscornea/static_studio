@@ -1,0 +1,12 @@
+# Noise only: files with no symbols that can number in the hundreds.
+# Config and docs stay in the map as one line each, so Claude knows they exist.
+.claude/
+*.lock
+package-lock.json
+pnpm-lock.yaml
+go.sum
+*.svg
+*.min.js
+*.map
+**/fixtures/
+**/translations/

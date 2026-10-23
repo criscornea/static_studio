@@ -1,1 +1,5 @@
 .aider*
+
+# Claude Code local state
+.claude/settings.local.json
+.claude/.stop-state
