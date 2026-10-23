@@ -32,7 +32,7 @@ export type ApiErrorCode =
   | 'unsupported_generator'
   | 'cannot_open'
   | 'no_project'
-  | 'stable_project'
+  | 'stale_project'
   | 'cannot_read_content'
   | 'internal'
   | 'unknonw'
@@ -41,6 +41,8 @@ export type ApiErrorCode =
   | 'page_too_large'
   | 'invalid_frontmatter'
   | 'cannot_read_page'
+  | 'missing_query'
+  | 'cannot_search'
 
 /** An error response from the backend, or a transport failure. */
 export class ApiError extends Error {
@@ -71,6 +73,20 @@ export interface Page {
   format: FrontmatterFormat
   fields: PageFields
   body: string
+}
+
+export interface SearchHit {
+  path: string
+  title: string
+  draft: boolean
+  // Text around the first body match. Absent when only the title or tags match.
+  snippet?: string
+}
+
+export interface SearchResults {
+  hits: SearchHit[]
+  // True when more pages matched than the backend returns.
+  truncated: boolean
 }
 
 /** Normalises anything thrown by the client into an Api Error. */

@@ -4,3 +4,10 @@ import { afterEach } from 'vitest'
 
 // Testing Library only unmounts automatically when vitest globals are on.
 afterEach(cleanup)
+
+// jsdom has no ResizeObserver, which Radix's ScrollArea and Select need.
+globalThis.ResizeObserver ??= class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}

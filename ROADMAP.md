@@ -35,7 +35,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 - [x] Frontmatter parser, YAML and TOML
 - [x] Read Hugo config for the real `contentDir` (and `staticDir`)
 - [x] Show metadata in the UI: title, date, tags, draft status
-- [ ] Sort, filter, full-text search across content
+- [x] Sort, filter, full-text search across content
 - [ ] Create a page from an archetype, rename, delete
 - [ ] Atomic writes (temp file + rename)
 
@@ -112,6 +112,10 @@ Deliberate simplifications, recorded so they don't become invisible.
   config file only. Per-language `contentDir`, module mounts, merged
   `config/_default/*` files and `HUGO_*` environment overrides are ignored,
   and an unreadable or invalid config silently falls back to the defaults.
+- Search reads every page on each query, and the content tree reads every
+  page's frontmatter on each load, with no index or cache. Search is a
+  case-insensitive substring match over title, tags and body (no stemming,
+  no ranking beyond title-and-tag matches first, capped at 50 hits).
 - The content tree reads every page's frontmatter on each load. Fine for a
   personal site; cache it if a project with thousands of pages gets slow.
 - The content tree only lists `.md`, `.markdown`, `.mdx` and `.html`.

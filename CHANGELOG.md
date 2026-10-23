@@ -25,6 +25,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   backend already has open. Migrated from an initial Vue 3 scaffold.
 - Content tree entries carry their frontmatter (title, date, draft, tags),
   and the file tree shows the title, filename, date and a draft badge.
+- Sort the file tree by name, title or date, filter it by draft status and
+  tag, and search page titles, tags and bodies from a box in the sidebar
+  (Ctrl/Cmd+K focuses it). Search is served by `GET /api/search`.
 - Hugo's `contentDir` and `staticDir` are read from the config file instead
   of being hardcoded. Missing, invalid or out-of-project values fall back to
   the defaults.

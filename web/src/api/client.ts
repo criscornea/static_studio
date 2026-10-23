@@ -1,4 +1,11 @@
-import { ApiError, type ApiErrorCode, type ContentTree, type Page, type Project } from "./types";
+import {
+  ApiError,
+  type ApiErrorCode,
+  type ContentTree,
+  type Page,
+  type Project,
+  type SearchResults,
+} from "./types";
 
 /**
  * The id of the open project, sent with every request that touches project
@@ -79,4 +86,6 @@ export const api = {
   closeProject: () => request<void>('/api/project/close', { method: 'POST', withProject: false }),
   contentTree: () => request<ContentTree>('/api/content'),
   page: (path: string) => request<Page>(`/api/page?path=${encodeURIComponent(path)}`),
+  search: (query: string) =>
+    request<SearchResults>(`/api/search?q=${encodeURIComponent(query)}`),
 }
