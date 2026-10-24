@@ -116,25 +116,37 @@ Status: merged
 - [x] M10.2 Expose parsed errors in the build status API
 - [x] M10.3 Mark pages with errors in the tree and jump to the line in the editor
 
-## Phase 11: Publish to GitHub Pages
-Branch: feat/p11-publish
+## Phase 11: Recent projects
+Branch: feat/p11-recent-projects
+Goal: The open-project screen lists recently opened projects so the user opens one with a click instead of retyping the path.
+Done when: an `internal/recent` store keeps up to 10 entries (path, name, kind, opened-at) in `<os.UserConfigDir()>/static-studio/recent.json`, never in the project dir, written via temp file plus rename; only successful `POST /api/project/open` calls record an entry, most recent first, deduped by the cleaned absolute path; a missing or corrupt file reads as an empty list (logged), and an unavailable config dir disables recording without breaking open; `GET /api/recent` returns the entries with an `available` flag (false when the directory no longer exists) and `DELETE /api/recent` removes one entry by path (covered by the existing Origin/Host guard); `web/src/api/types.ts` and `client.ts` mirror the shapes; `ProjectPicker` shows the list, clicking an available entry runs the existing open flow, unavailable entries are shown greyed out with a remove action only; Go tests (store with `t.TempDir()` as config dir, handlers) and vitest (picker list, click-to-open, remove, unavailable) pass; `make check` green; ROADMAP item ticked and moved to CHANGELOG.
+Risk: low
+Status: todo
+- [ ] M11.1 Add the `internal/recent` store (load, add, remove, dedupe, cap, atomic write, injectable dir) with tests
+- [ ] M11.2 Record successful project opens in the recent store with a handler test
+- [ ] M11.3 Add `GET /api/recent` and `DELETE /api/recent` handlers with tests, including the `available` flag
+- [ ] M11.4 Add recent-project types and client functions in `web/src/api`
+- [ ] M11.5 Show the recent list in `ProjectPicker` with open and remove actions, with a vitest test
+
+## Phase 12: Publish to GitHub Pages
+Branch: feat/p12-publish
 Goal: Users publish the site to GitHub Pages without a terminal.
 Done when: publish runs a hugo build, then pushes `public/` to the `gh-pages` branch of a configured remote using the system `git` binary; no credentials are stored by the app (the user's SSH key or git credential helper is used); the remote and branch are configurable in the UI; progress streams to the UI and errors are readable; tests push to a local bare repo as the fake remote.
 Risk: high (external side effects, subprocess control, pushing to a user remote)
 Status: todo
-- [ ] M11.1 Add publish settings (remote, branch) load and save with tests
-- [ ] M11.2 Add a git publisher that commits `public/` to `gh-pages` via system `git`, tested against a local bare repo
-- [ ] M11.3 Add publish (build then push) and progress-stream handlers with tests
-- [ ] M11.4 Add the publish settings and progress UI
+- [ ] M12.1 Add publish settings (remote, branch) load and save with tests
+- [ ] M12.2 Add a git publisher that commits `public/` to `gh-pages` via system `git`, tested against a local bare repo
+- [ ] M12.3 Add publish (build then push) and progress-stream handlers with tests
+- [ ] M12.4 Add the publish settings and progress UI
 
-## Phase 12: Harden and ship
-Branch: feat/p12-harden
+## Phase 13: Harden and ship
+Branch: feat/p13-harden
 Goal: v1.0.0 is releasable with readable errors, logging flags, docs and binaries.
 Done when: `-log-level` and `-log-format=json` work; API errors map to non-developer messages in the UI; coverage raised for writes, paths and processes; README complete; a tagged release builds binaries for macOS, Linux and Windows in CI.
 Risk: low
 Status: todo
-- [ ] M12.1 Add `-log-level` and `-log-format` flags with tests
-- [ ] M12.2 Map API error codes to readable UI messages
-- [ ] M12.3 Add tests for uncovered write, path and process failure paths
-- [ ] M12.4 Write the README (problem, quickstart, architecture, scope)
-- [ ] M12.5 Add a release workflow building cross-platform binaries on tags
+- [ ] M13.1 Add `-log-level` and `-log-format` flags with tests
+- [ ] M13.2 Map API error codes to readable UI messages
+- [ ] M13.3 Add tests for uncovered write, path and process failure paths
+- [ ] M13.4 Write the README (problem, quickstart, architecture, scope)
+- [ ] M13.5 Add a release workflow building cross-platform binaries on tags
