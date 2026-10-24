@@ -246,13 +246,13 @@ Branch: feat/p21-multi-dir-edit
 Goal: Pages in any resolved content dir can be opened, saved, created, renamed and deleted with the same confinement guarantees as the primary dir.
 Done when: a single `content.Dirs` check replaces the `contentDir` prefix checks in read, save, rename, delete and create, accepting a path only when it lies inside one resolved content dir (rename may move between dirs only if both are resolved); `POST /api/page` accepts a target content dir validated against the resolved set; `NewPageDialog` offers a content-dir picker when there is more than one; `RenamePageDialog` accepts a path in any content dir; Go tests prove paths outside every resolved dir, including sibling-prefix names like `content-old/`, are refused for each operation; vitest covers both dialogs; `make check` green; ROADMAP, CHANGELOG and known shortcuts updated (per-language preview URLs stay a separate shortcut).
 Risk: high (security: write-path confinement; data writes)
-Status: todo
-- [ ] M21.1 Add a `content.Dirs` membership check with sibling-prefix tests
-- [ ] M21.2 Use the dir-set check in read, save and delete
-- [ ] M21.3 Use the dir-set check in rename, allowing moves between resolved dirs
-- [ ] M21.4 Accept a target content dir in page creation and the new-page dialog
-- [ ] M21.5 Accept any content dir in the rename dialog
-- [ ] M21.6 Update ROADMAP.md, CHANGELOG.md and the known-shortcuts note
+Status: merged
+- [x] M21.1 Add a `content.Dirs` membership check with sibling-prefix tests
+- [x] M21.2 Use the dir-set check in read, save and delete
+- [x] M21.3 Use the dir-set check in rename, allowing moves between resolved dirs
+- [x] M21.4 Accept a target content dir in page creation and the new-page dialog
+- [x] M21.5 Accept any content dir in the rename dialog
+- [x] M21.6 Update ROADMAP.md, CHANGELOG.md and the known-shortcuts note
 
 ## Phase 22: Close the save, rename and delete race window
 Branch: feat/p22-toctou

@@ -137,3 +137,14 @@ export function flattenPages(nodes: ContentNode[]): PageEntry[] {
       : [{ path: n.path, title: n.fields?.title || n.name, draft: n.fields?.draft === true }],
   )
 }
+
+/** The content dir that contains pagePath, the longest match when dirs are nested. */
+export function dirOf(pagePath: string | null, dirs: string[]): string | null {
+  let best: string | null = null
+  for (const dir of dirs) {
+    if (pagePath?.startsWith(dir + '/') && (best === null || dir.length > best.length)) {
+      best = dir
+    }
+  }
+  return best
+}

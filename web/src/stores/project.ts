@@ -1,6 +1,13 @@
 import { create } from 'zustand'
 import { api, setProjectID } from '@/api/client'
-import { asApiError, type ApiError, type ContentNode, type ContentRoot, type Project } from '@/api/types'
+import {
+  asApiError,
+  type ApiError,
+  type ContentNode,
+  type ContentRoot,
+  type PageFields,
+  type Project,
+} from '@/api/types'
 import { useBuildStore } from '@/stores/build'
 import { useDevServerStore } from '@/stores/devserver'
 import { usePublishStore } from '@/stores/publish'
@@ -18,6 +25,8 @@ interface ProjectState {
   restore: () => Promise<void>
   close: () => Promise<void>
   loadTree: () => Promise<void>
+  // Updates one file's frontmatter in the loaded trees, without a reload.
+  patchNodeFields: (path: string, fields: PageFields) => void
   reset: () => void
 }
 
@@ -97,6 +106,24 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
     }
     const { root, roots } = await api.contentTree()
     set({ tree: root, roots: roots ?? [] })
+  },
+
+  patchNodeFields(path, fields) {
+    const patch = (node: ContentNode): ContentNode => {
+      if (!node.isDir) {
+        return node.path === path ? { ...node, fields } : node
+      }
+      if (!node.children) {
+        return node
+      }
+      const children = node.children.map(patch)
+      return children.some((c, i) => c !== node.children![i]) ? { ...node, children } : node
+    }
+    const { tree, roots } = get()
+    set({
+      tree: tree && patch(tree),
+      roots: roots.map((r) => ({ ...r, root: patch(r.root) })),
+    })
   },
 
   reset() {

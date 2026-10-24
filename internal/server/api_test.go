@@ -930,3 +930,43 @@ func TestContentAndSearchCoverEveryContentDir(t *testing.T) {
 		t.Errorf("hits = %+v, want 2 (content and inhalt, not outside)", res.Hits)
 	}
 }
+
+func TestCreatePageInChosenContentDir(t *testing.T) {
+	dir := newHugoDir(t)
+	for name, body := range map[string]string{
+		"hugo.toml":    "[languages.de]\ncontentDir = 'inhalt'\n",
+		"content/a.md": "a",
+		"inhalt/b.md":  "b",
+		"content-old/": "",
+	} {
+		full := filepath.Join(dir, filepath.FromSlash(name))
+		if strings.HasSuffix(name, "/") {
+			if err := os.MkdirAll(full, 0o750); err != nil {
+				t.Fatal(err)
+			}
+			continue
+		}
+		if err := os.MkdirAll(filepath.Dir(full), 0o750); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(full, []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	a := newAPI(t)
+	opened := decodeProject(t, a.open(dir))
+
+	rec := a.createPage(opened.ID, `{"name":"Hallo","dir":"inhalt"}`)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status = %d (body: %s)", rec.Code, rec.Body)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "inhalt", "hallo.md")); err != nil {
+		t.Errorf("not written: %v", err)
+	}
+	for _, bad := range []string{"content-old", "content/sub", "../x", "elsewhere"} {
+		rec := a.createPage(opened.ID, `{"name":"x","dir":"`+bad+`"}`)
+		if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "invalid_dir") {
+			t.Errorf("dir %q: status %d body %s", bad, rec.Code, rec.Body)
+		}
+	}
+}

@@ -269,6 +269,7 @@ export function Sidebar() {
                           onNewPage={(node) =>
                             openNewPage(
                               folderOf(node.isDir ? `${node.path}/x` : node.path, g.dir || contentDir),
+                              g.dir || undefined,
                             )
                           }
                           errorPaths={errorPaths}

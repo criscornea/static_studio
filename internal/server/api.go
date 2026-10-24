@@ -192,6 +192,17 @@ type createPageRequest struct {
 	Archetype string `json:"archetype"`
 	Folder    string `json:"folder"`
 	Name      string `json:"name"`
+	// Dir is the content dir to create the page in; empty means the first.
+	Dir string `json:"dir"`
+}
+
+// contentDirs returns the resolved content dirs of a project.
+func contentDirs(info ssg.Project) content.Dirs {
+	dirs := make(content.Dirs, 0, len(info.ContentDirs))
+	for _, d := range info.ContentDirs {
+		dirs = append(dirs, d.Path)
+	}
+	return dirs
 }
 
 func (s *Server) handleCreatePage(w http.ResponseWriter, r *http.Request) {
@@ -208,7 +219,8 @@ func (s *Server) handleCreatePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	page, err := content.CreatePage(open.Root(), open.Info.ContentDir, content.NewPage{
+	page, err := content.CreatePage(open.Root(), contentDirs(open.Info), content.NewPage{
+		Dir:       req.Dir,
 		Archetype: req.Archetype,
 		Folder:    req.Folder,
 		Name:      req.Name,
@@ -217,6 +229,10 @@ func (s *Server) handleCreatePage(w http.ResponseWriter, r *http.Request) {
 	case err == nil:
 		s.log.Info("page created", "path", page.Path)
 		s.writeJSON(w, http.StatusCreated, page)
+
+	case errors.Is(err, content.ErrNotEditable):
+		s.writeError(w, http.StatusBadRequest, "invalid_dir",
+			"That content folder is not part of this project.")
 
 	case errors.Is(err, content.ErrInvalidName):
 		s.writeError(w, http.StatusBadRequest, "invalid_name",
@@ -297,7 +313,7 @@ func (s *Server) handlePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	page, err := content.ReadPage(open.Root().FS(), open.Info.ContentDir, name)
+	page, err := content.ReadPage(open.Root().FS(), contentDirs(open.Info), name)
 	switch {
 	case err == nil:
 		s.writeJSON(w, http.StatusOK, page)
@@ -353,7 +369,7 @@ func (s *Server) handleRenamePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	to, err := content.RenamePage(open.Root(), open.Info.ContentDir, req.From, req.To)
+	to, err := content.RenamePage(open.Root(), contentDirs(open.Info), req.From, req.To)
 	switch {
 	case err == nil:
 		s.log.Info("page renamed", "from", req.From, "to", to)
@@ -390,7 +406,7 @@ func (s *Server) handleDeletePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := content.DeletePage(open.Root(), open.Info.ContentDir, name)
+	err := content.DeletePage(open.Root(), contentDirs(open.Info), name)
 	switch {
 	case err == nil:
 		s.log.Info("page deleted", "path", name)
@@ -444,7 +460,7 @@ func (s *Server) handleSavePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hash, err := content.SavePage(open.Root(), open.Info.ContentDir, req.Path, req.Body, req.Hash, req.Fields)
+	hash, err := content.SavePage(open.Root(), contentDirs(open.Info), req.Path, req.Body, req.Hash, req.Fields)
 	switch {
 	case err == nil:
 		s.writeJSON(w, http.StatusOK, savePageResponse{Hash: hash})

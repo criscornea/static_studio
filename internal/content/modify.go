@@ -73,18 +73,21 @@ func checkParents(root *os.Root, contentDir, name string) error {
 	return nil
 }
 
-// RenamePage moves the page from to to, both paths inside contentDir with an
+// RenamePage moves the page from to to, both paths inside a resolved content dir (they may be in different ones) with an
 // editable extension. It never overwrites: ErrPageExists is returned if to is
 // taken. Missing folders of to are created. It returns the new path.
-func RenamePage(root *os.Root, contentDir, from, to string) (string, error) {
+func RenamePage(root *os.Root, dirs Dirs, from, to string) (string, error) {
 	defer lockRoot(root)()
-	if err := checkPagePath(contentDir, from); err != nil {
+	fromDir, err := checkPagePath(dirs, from)
+	if err != nil {
 		return "", err
 	}
-	if err := checkPagePath(contentDir, to); err != nil {
+	toDir, err := checkPagePath(dirs, to)
+	if err != nil {
 		return "", err
 	}
-	for _, name := range []string{from, to} {
+	for i, name := range []string{from, to} {
+		contentDir := []string{fromDir, toDir}[i]
 		if err := checkSegments(contentDir, name); err != nil {
 			return "", err
 		}
@@ -116,7 +119,7 @@ func RenamePage(root *os.Root, contentDir, from, to string) (string, error) {
 		return "", fmt.Errorf("creating %s: %w", dir, err)
 	}
 	// A hard link fails if to exists, so a race cannot overwrite anything.
-	err := linkFile(root, from, to)
+	err = linkFile(root, from, to)
 	switch {
 	case err == nil:
 		if err := root.Remove(from); err != nil {
@@ -139,11 +142,12 @@ func RenamePage(root *os.Root, contentDir, from, to string) (string, error) {
 	return to, nil
 }
 
-// DeletePage removes the page name: a plain file inside contentDir with an
+// DeletePage removes the page name: a plain file inside a content dir with an
 // editable extension. Folders are never removed.
-func DeletePage(root *os.Root, contentDir, name string) error {
+func DeletePage(root *os.Root, dirs Dirs, name string) error {
 	defer lockRoot(root)()
-	if err := checkPagePath(contentDir, name); err != nil {
+	contentDir, err := checkPagePath(dirs, name)
+	if err != nil {
 		return err
 	}
 	if err := checkSegments(contentDir, name); err != nil {
@@ -171,9 +175,10 @@ var ErrConflict = errors.New("page changed on disk")
 // hash of the saved file. When fields is not nil the known frontmatter
 // fields are rewritten too, keeping unknown keys; a page without
 // frontmatter gets a new YAML block.
-func SavePage(root *os.Root, contentDir, name, body, hash string, fields *frontmatter.Fields) (string, error) {
+func SavePage(root *os.Root, dirs Dirs, name, body, hash string, fields *frontmatter.Fields) (string, error) {
 	defer lockRoot(root)()
-	if err := checkPagePath(contentDir, name); err != nil {
+	contentDir, err := checkPagePath(dirs, name)
+	if err != nil {
 		return "", err
 	}
 	if err := checkSegments(contentDir, name); err != nil {

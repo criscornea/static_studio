@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { collectFolders, folderOf } from '@/lib/tree'
+import { collectFolders, dirOf, folderOf } from '@/lib/tree'
 import { usePageStore } from '@/stores/page'
 import { useProjectStore } from '@/stores/project'
 
@@ -30,14 +30,16 @@ interface NewPageDialogProps {
   onOpenChange: (open: boolean) => void
   // Folder to preselect, relative to the content directory. Defaults to the open page's folder.
   folder?: string
+  // Content dir to start in. Defaults to the open page's dir, then the primary dir.
+  dir?: string
 }
 
-export function NewPageDialog({ open, onOpenChange, folder }: NewPageDialogProps) {
+export function NewPageDialog({ open, onOpenChange, folder, dir }: NewPageDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         {/* Mounted only while open, so every opening starts with a fresh form. */}
-        <NewPageForm initialFolder={folder} onDone={() => onOpenChange(false)} />
+        <NewPageForm initialFolder={folder} initialDir={dir} onDone={() => onOpenChange(false)} />
       </DialogContent>
     </Dialog>
   )
@@ -46,22 +48,54 @@ export function NewPageDialog({ open, onOpenChange, folder }: NewPageDialogProps
 // Radix Select cannot use an empty string as a value.
 const automatic = '__auto__'
 
-function NewPageForm({ onDone, initialFolder }: { onDone: () => void; initialFolder?: string }) {
+function NewPageForm({
+  onDone,
+  initialFolder,
+  initialDir,
+}: {
+  onDone: () => void
+  initialFolder?: string
+  initialDir?: string
+}) {
   const tree = useProjectStore((s) => s.tree)
-  const contentDir = useProjectStore((s) => s.project?.contentDir ?? 'content')
+  const roots = useProjectStore((s) => s.roots)
+  const primaryDir = useProjectStore((s) => s.project?.contentDir ?? 'content')
+  const dirInfos = useProjectStore((s) => s.project?.contentDirs)
+  const dirs = useMemo(
+    () => (dirInfos?.length ? dirInfos : [{ path: primaryDir }]),
+    [dirInfos, primaryDir],
+  )
+  const multiple = dirs.length > 1
   const loadTree = useProjectStore((s) => s.loadTree)
   const selected = usePageStore((s) => s.path)
   const load = usePageStore((s) => s.load)
 
   const [name, setName] = useState('')
+  const [contentDir, setContentDir] = useState(
+    () =>
+      initialDir ??
+      dirOf(
+        selected,
+        dirs.map((d) => d.path),
+      ) ?? primaryDir,
+  )
   const [folder, setFolder] = useState(() => initialFolder ?? folderOf(selected, contentDir))
   const [archetype, setArchetype] = useState(automatic)
   const [archetypes, setArchetypes] = useState<Archetype[]>([])
   const [error, setError] = useState<ApiError | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
-  const folders = useMemo(() => collectFolders(tree), [tree])
-  const ids = { name: useId(), folder: useId(), archetype: useId(), folders: useId() }
+  const folders = useMemo(
+    () => collectFolders(roots.find((r) => r.dir === contentDir)?.root ?? tree),
+    [roots, tree, contentDir],
+  )
+  const ids = {
+    name: useId(),
+    folder: useId(),
+    archetype: useId(),
+    folders: useId(),
+    dir: useId(),
+  }
 
   useEffect(() => {
     // Without the list the form still works: the backend picks the template.
@@ -76,6 +110,7 @@ function NewPageForm({ onDone, initialFolder }: { onDone: () => void; initialFol
         name,
         folder,
         archetype: archetype === automatic ? '' : archetype,
+        ...(multiple ? { dir: contentDir } : {}),
       })
       await loadTree()
       await load(page.path)
@@ -112,6 +147,28 @@ function NewPageForm({ onDone, initialFolder }: { onDone: () => void; initialFol
           placeholder="My first post"
         />
       </div>
+
+      {multiple && (
+        <div className="space-y-1.5">
+          <Label htmlFor={ids.dir}>Content folder</Label>
+          <Select value={contentDir} onValueChange={(v) => {
+              setContentDir(v)
+              setFolder('')
+            }}>
+            <SelectTrigger id={ids.dir} className="w-full font-mono">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {dirs.map((d) => (
+                <SelectItem key={d.path} value={d.path} className="font-mono">
+                  {d.path}
+                  {d.lang ? ` (${d.lang})` : ''}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       <div className="space-y-1.5">
         <Label htmlFor={ids.folder}>Folder</Label>

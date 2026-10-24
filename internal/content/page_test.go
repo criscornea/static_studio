@@ -74,7 +74,7 @@ func TestReadPage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ReadPage(fsys, "content", tt.path)
+			got, err := ReadPage(fsys, Dirs{"content"}, tt.path)
 
 			if tt.wantErr != nil {
 				if !errors.Is(err, tt.wantErr) {
@@ -119,7 +119,7 @@ func truncate(s string) string {
 func TestReadPageBodyLine(t *testing.T) {
 	fsys := pageFS()
 	for path, want := range map[string]int{"content/yaml.md": 4, "content/plain.md": 1} {
-		got, err := ReadPage(fsys, "content", path)
+		got, err := ReadPage(fsys, Dirs{"content"}, path)
 		if err != nil {
 			t.Fatal(err)
 		}

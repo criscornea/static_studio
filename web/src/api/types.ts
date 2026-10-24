@@ -142,6 +142,8 @@ export interface NewPageRequest {
   folder: string
   // What the user typed. The backend derives the file name from it.
   name: string
+  // Content dir to create the page in. Omitted means the primary one.
+  dir?: string
 }
 
 export interface RenamePageRequest {

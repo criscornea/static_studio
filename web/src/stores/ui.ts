@@ -2,7 +2,7 @@ import { create } from 'zustand'
 
 interface UiState {
   /** Folder to preselect (undefined: the open page's folder) while the new page dialog is open. */
-  newPage: { folder?: string } | null
+  newPage: { folder?: string; dir?: string } | null
   renamePath: string | null
   deletePath: string | null
   publishOpen: boolean
@@ -12,7 +12,7 @@ interface UiState {
   /** Set by the focus-search command; the sidebar clears it once the box has focus. */
   searchFocusRequested: boolean
 
-  openNewPage: (folder?: string) => void
+  openNewPage: (folder?: string, dir?: string) => void
   closeNewPage: () => void
   openRename: (path: string) => void
   closeRename: () => void
@@ -37,7 +37,8 @@ export const useUiStore = create<UiState>()((set) => ({
   shortcutsOpen: false,
   searchFocusRequested: false,
 
-  openNewPage: (folder) => set({ newPage: { folder: folder === '' ? undefined : folder } }),
+  openNewPage: (folder, dir) =>
+    set({ newPage: { folder: folder === '' ? undefined : folder, dir } }),
   closeNewPage: () => set({ newPage: null }),
   openRename: (path) => set({ renamePath: path }),
   closeRename: () => set({ renamePath: null }),

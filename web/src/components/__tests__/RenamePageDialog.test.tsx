@@ -154,3 +154,52 @@ describe('RenamePageDialog', () => {
     expect(onClose).not.toHaveBeenCalled()
   })
 })
+
+describe('RenamePageDialog with several content dirs', () => {
+  beforeEach(() => {
+    useProjectStore.setState({
+      project: {
+        root: '/site',
+        kind: 'hugo',
+        configFile: 'hugo.toml',
+        contentDir: 'content',
+        contentDirs: [{ path: 'content' }, { path: 'inhalt', lang: 'de' }],
+        assetDir: 'static',
+        id: 'p1',
+      },
+    })
+  })
+
+  it('renames inside the page own content dir', async () => {
+    stubBackend(() => new Response(JSON.stringify({ path: 'inhalt/b.md' }), { status: 200 }))
+    render(<RenamePageDialog path="inhalt/a.md" onClose={() => {}} />)
+
+    const input = screen.getByLabelText(/Path inside inhalt/)
+    expect(input).toHaveValue('a.md')
+    await userEvent.clear(input)
+    await userEvent.type(input, 'b.md')
+    await userEvent.click(screen.getByRole('button', { name: 'Rename' }))
+
+    await waitFor(() => expect(calls.some((c) => c.method === 'POST')).toBe(true))
+    expect(calls.find((c) => c.method === 'POST')?.body).toEqual({
+      from: 'inhalt/a.md',
+      to: 'inhalt/b.md',
+    })
+  })
+
+  it('moves into another content dir when the path starts with it', async () => {
+    stubBackend(() => new Response(JSON.stringify({ path: 'content/a.md' }), { status: 200 }))
+    render(<RenamePageDialog path="inhalt/a.md" onClose={() => {}} />)
+
+    const input = screen.getByLabelText(/Path inside inhalt/)
+    await userEvent.clear(input)
+    await userEvent.type(input, 'content/a.md')
+    await userEvent.click(screen.getByRole('button', { name: 'Rename' }))
+
+    await waitFor(() => expect(calls.some((c) => c.method === 'POST')).toBe(true))
+    expect(calls.find((c) => c.method === 'POST')?.body).toEqual({
+      from: 'inhalt/a.md',
+      to: 'content/a.md',
+    })
+  })
+})

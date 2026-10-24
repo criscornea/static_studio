@@ -186,6 +186,9 @@ async function doSave(get: Get, set: Set): Promise<void> {
         // Page was reloaded meanwhile: merge only what the save changed.
         set({ page: { ...current, body: draft, hash, fields: saved } })
       }
+      if (fields) {
+        useProjectStore.getState().patchNodeFields(page.path, fields)
+      }
       ok = true
     } catch (err) {
       if (get().page?.path === page.path) {

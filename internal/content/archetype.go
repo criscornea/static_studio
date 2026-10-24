@@ -91,6 +91,9 @@ type NewPage struct {
 	Archetype string
 	// Folder is relative to the content directory. Empty means its root.
 	Folder string
+	// Dir is the content directory to create the page in. Empty means the
+	// first of the resolved dirs.
+	Dir string
 	// Name is what the user typed. The file name is derived from it.
 	Name string
 }
@@ -98,7 +101,14 @@ type NewPage struct {
 // CreatePage renders the archetype and writes the result as a new page in
 // the content directory of root. It never overwrites an existing file.
 // now is the creation time given to the template.
-func CreatePage(root *os.Root, contentDir string, req NewPage, now time.Time) (*Page, error) {
+func CreatePage(root *os.Root, dirs Dirs, req NewPage, now time.Time) (*Page, error) {
+	contentDir := req.Dir
+	if contentDir == "" && len(dirs) > 0 {
+		contentDir = dirs[0]
+	}
+	if !dirs.Has(contentDir) {
+		return nil, ErrNotEditable
+	}
 	slug := Slugify(req.Name)
 	if slug == "" {
 		return nil, ErrInvalidName
@@ -145,7 +155,7 @@ func CreatePage(root *os.Root, contentDir string, req NewPage, now time.Time) (*
 		}
 		return nil, err
 	}
-	return ReadPage(fsys, contentDir, file)
+	return ReadPage(fsys, dirs, file)
 }
 
 // Slugify turns a page name into a file name: lower case letters and digits

@@ -7,6 +7,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Pages in every resolved content dir can be opened, saved, created, renamed
+  (also between dirs) and deleted; paths outside all of them, including
+  sibling-prefix names like `content-old/`, are refused. `POST /api/page`
+  takes an optional `dir`, and the new-page dialog has a content folder picker.
 - Every Hugo content dir is resolved (per-language `contentDir`, project-local
   content and static module mounts; unsafe sources are skipped). The sidebar
   shows one labelled tree per dir and search covers all of them.

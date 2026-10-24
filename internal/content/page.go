@@ -34,8 +34,8 @@ type Page struct {
 	Hash string `json:"hash"`
 }
 
-func ReadPage(fsys fs.FS, contentDir, name string) (*Page, error) {
-	if err := checkPagePath(contentDir, name); err != nil {
+func ReadPage(fsys fs.FS, dirs Dirs, name string) (*Page, error) {
+	if _, err := checkPagePath(dirs, name); err != nil {
 		return nil, err
 	}
 
@@ -76,15 +76,19 @@ func ReadPage(fsys fs.FS, contentDir, name string) (*Page, error) {
 }
 
 // checkPagePath rejects anything that is not a well-formed path to an
-// editable file inside contentDir.
-func checkPagePath(contentDir, name string) error {
-	if !fs.ValidPath(name) || !strings.HasPrefix(name, contentDir+"/") {
-		return ErrNotEditable
+// editable file inside one of dirs. It returns that content dir.
+func checkPagePath(dirs Dirs, name string) (string, error) {
+	if !fs.ValidPath(name) {
+		return "", ErrNotEditable
+	}
+	dir, ok := dirs.Containing(name)
+	if !ok {
+		return "", ErrNotEditable
 	}
 	if !editableExts[strings.ToLower(path.Ext(name))] {
-		return ErrNotEditable
+		return "", ErrNotEditable
 	}
-	return nil
+	return dir, nil
 }
 
 func hashBytes(data []byte) string {

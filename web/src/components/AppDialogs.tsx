@@ -22,6 +22,7 @@ export function AppDialogs() {
         open={newPage !== null}
         onOpenChange={(open) => !open && closeNewPage()}
         folder={newPage?.folder}
+        dir={newPage?.dir}
       />
       <RenamePageDialog path={renamePath} onClose={closeRename} />
       <DeletePageDialog path={deletePath} onClose={closeDelete} />

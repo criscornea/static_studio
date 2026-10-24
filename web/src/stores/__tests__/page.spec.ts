@@ -267,6 +267,38 @@ describe('page store frontmatter fields', () => {
   })
 })
 
+describe('tree title refresh', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    store().clear()
+    useProjectStore.setState({ tree: null, roots: [] })
+  })
+
+  it('patches the tree row title after a save', async () => {
+    const page = aPage('content/a.md', 'A')
+    const root = {
+      name: 'content',
+      path: 'content',
+      isDir: true,
+      children: [
+        { name: 'a.md', path: 'content/a.md', isDir: false, fields: page.fields },
+        { name: 'b.md', path: 'content/b.md', isDir: false, fields: { title: 'Bee', draft: false } },
+      ],
+    }
+    useProjectStore.setState({ tree: root, roots: [{ dir: 'content', root }] })
+    usePageStore.setState({ path: page.path, page, draft: page.body, fieldsDraft: page.fields })
+    vi.stubGlobal('fetch', () => Promise.resolve(json(200, { hash: 'h2' })))
+
+    store().setFieldsDraft({ ...page.fields, title: 'New' })
+    await store().save()
+
+    const kids = useProjectStore.getState().tree?.children
+    expect(kids?.[0]?.fields?.title).toBe('New')
+    expect(kids?.[1]?.fields?.title).toBe('Bee')
+    expect(useProjectStore.getState().roots[0]?.root.children?.[0]?.fields?.title).toBe('New')
+  })
+})
+
 describe('autosave and dirty state', () => {
   const puts: unknown[] = []
   let putStatus = 200

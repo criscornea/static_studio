@@ -100,7 +100,7 @@ func TestSlugifyCapsTheLengthWithoutATrailingHyphen(t *testing.T) {
 func TestCreatePageFromTheBuiltinDefault(t *testing.T) {
 	root := newSite(t, map[string]string{"hugo.toml": ""})
 
-	page, err := CreatePage(root, "content", NewPage{Folder: "posts", Name: "My First Post!"}, fixedNow)
+	page, err := CreatePage(root, Dirs{"content"}, NewPage{Folder: "posts", Name: "My First Post!"}, fixedNow)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -131,7 +131,7 @@ func TestCreatePageUsesTheProjectsArchetypes(t *testing.T) {
 	})
 
 	// Folder named after an archetype picks it when none is requested.
-	page, err := CreatePage(root, "content", NewPage{Folder: "posts/2024", Name: "hello world"}, fixedNow)
+	page, err := CreatePage(root, Dirs{"content"}, NewPage{Folder: "posts/2024", Name: "hello world"}, fixedNow)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -143,7 +143,7 @@ func TestCreatePageUsesTheProjectsArchetypes(t *testing.T) {
 	}
 
 	// Elsewhere the default is used, and .Type is the folder's section.
-	page, err = CreatePage(root, "content", NewPage{Folder: "docs", Name: "intro"}, fixedNow)
+	page, err = CreatePage(root, Dirs{"content"}, NewPage{Folder: "docs", Name: "intro"}, fixedNow)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,7 +152,7 @@ func TestCreatePageUsesTheProjectsArchetypes(t *testing.T) {
 	}
 
 	// An explicit choice wins over the folder.
-	page, err = CreatePage(root, "content", NewPage{Archetype: "posts", Name: "at the root"}, fixedNow)
+	page, err = CreatePage(root, Dirs{"content"}, NewPage{Archetype: "posts", Name: "at the root"}, fixedNow)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -164,7 +164,7 @@ func TestCreatePageUsesTheProjectsArchetypes(t *testing.T) {
 func TestCreatePageNeverOverwrites(t *testing.T) {
 	root := newSite(t, map[string]string{"content/a.md": "precious"})
 
-	_, err := CreatePage(root, "content", NewPage{Name: "A"}, fixedNow)
+	_, err := CreatePage(root, Dirs{"content"}, NewPage{Name: "A"}, fixedNow)
 
 	if !errors.Is(err, ErrPageExists) {
 		t.Fatalf("err = %v, want ErrPageExists", err)
@@ -202,7 +202,7 @@ func TestCreatePageErrors(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if _, err := CreatePage(root, "content", tt.req, fixedNow); !errors.Is(err, tt.want) {
+			if _, err := CreatePage(root, Dirs{"content"}, tt.req, fixedNow); !errors.Is(err, tt.want) {
 				t.Errorf("err = %v, want %v", err, tt.want)
 			}
 		})
@@ -221,7 +221,7 @@ func TestCreatePageStaysInsideTheProject(t *testing.T) {
 		t.Skipf("symlinks unavailable: %v", err)
 	}
 
-	if _, err := CreatePage(root, "content", NewPage{Name: "escape"}, fixedNow); err == nil {
+	if _, err := CreatePage(root, Dirs{"content"}, NewPage{Name: "escape"}, fixedNow); err == nil {
 		t.Fatal("created a page through a symlink that leaves the project")
 	}
 	if entries, _ := os.ReadDir(outside); len(entries) != 0 {

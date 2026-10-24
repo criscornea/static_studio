@@ -52,7 +52,7 @@ func TestRenamePage(t *testing.T) {
 	}
 	for _, tc := range refusals {
 		t.Run(tc.name, func(t *testing.T) {
-			if _, err := RenamePage(root, "content", tc.from, tc.to); !errors.Is(err, tc.want) {
+			if _, err := RenamePage(root, Dirs{"content"}, tc.from, tc.to); !errors.Is(err, tc.want) {
 				t.Fatalf("got %v, want %v", err, tc.want)
 			}
 		})
@@ -61,7 +61,7 @@ func TestRenamePage(t *testing.T) {
 		t.Fatalf("b.md overwritten: %q", got)
 	}
 
-	to, err := RenamePage(root, "content", "content/a.md", "content/sub/c.md")
+	to, err := RenamePage(root, Dirs{"content"}, "content/a.md", "content/sub/c.md")
 	if err != nil || to != "content/sub/c.md" {
 		t.Fatalf("got %q, %v", to, err)
 	}
@@ -81,10 +81,10 @@ func TestRenamePageWithoutHardLinks(t *testing.T) {
 	linkFile = func(*os.Root, string, string) error { return errors.New("unsupported") }
 	t.Cleanup(func() { linkFile = old })
 
-	if _, err := RenamePage(root, "content", "content/a.md", "content/b.md"); !errors.Is(err, ErrPageExists) {
+	if _, err := RenamePage(root, Dirs{"content"}, "content/a.md", "content/b.md"); !errors.Is(err, ErrPageExists) {
 		t.Fatalf("got %v", err)
 	}
-	if _, err := RenamePage(root, "content", "content/a.md", "content/c.md"); err != nil {
+	if _, err := RenamePage(root, Dirs{"content"}, "content/a.md", "content/c.md"); err != nil {
 		t.Fatal(err)
 	}
 	if got, _ := os.ReadFile(filepath.Join(dir, "content/c.md")); string(got) != "A" {
@@ -114,7 +114,7 @@ func TestDeletePage(t *testing.T) {
 		"/etc/passwd":           ErrNotEditable,
 		"content":               ErrNotEditable,
 	} {
-		if err := DeletePage(root, "content", name); !errors.Is(err, want) {
+		if err := DeletePage(root, Dirs{"content"}, name); !errors.Is(err, want) {
 			t.Errorf("%s: got %v, want %v", name, err, want)
 		}
 	}
@@ -123,7 +123,7 @@ func TestDeletePage(t *testing.T) {
 			t.Errorf("%s removed", keep)
 		}
 	}
-	if err := DeletePage(root, "content", "content/a.md"); err != nil {
+	if err := DeletePage(root, Dirs{"content"}, "content/a.md"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(filepath.Join(dir, "content/a.md")); !os.IsNotExist(err) {
@@ -139,13 +139,13 @@ func TestPageSymlinkedFolder(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := DeletePage(root, "content", "content/lnk/x.html"); !errors.Is(err, ErrNotEditable) {
+	if err := DeletePage(root, Dirs{"content"}, "content/lnk/x.html"); !errors.Is(err, ErrNotEditable) {
 		t.Fatalf("delete: %v", err)
 	}
-	if _, err := RenamePage(root, "content", "content/lnk/x.html", "content/y.html"); !errors.Is(err, ErrNotEditable) {
+	if _, err := RenamePage(root, Dirs{"content"}, "content/lnk/x.html", "content/y.html"); !errors.Is(err, ErrNotEditable) {
 		t.Fatalf("rename from: %v", err)
 	}
-	if _, err := RenamePage(root, "content", "content/a.md", "content/lnk/sub/a.md"); !errors.Is(err, ErrNotEditable) {
+	if _, err := RenamePage(root, Dirs{"content"}, "content/a.md", "content/lnk/sub/a.md"); !errors.Is(err, ErrNotEditable) {
 		t.Fatalf("rename to: %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(dir, "layouts/x.html")); err != nil {
@@ -163,10 +163,10 @@ func TestPageHiddenSegments(t *testing.T) {
 	writeTest(t, dir, "content/c.md", "C")
 
 	for _, name := range []string{"content/.h/a.md", "content/node_modules/b.md"} {
-		if err := DeletePage(root, "content", name); !errors.Is(err, ErrNotEditable) {
+		if err := DeletePage(root, Dirs{"content"}, name); !errors.Is(err, ErrNotEditable) {
 			t.Errorf("delete %s: %v", name, err)
 		}
-		if _, err := RenamePage(root, "content", name, "content/z.md"); !errors.Is(err, ErrNotEditable) {
+		if _, err := RenamePage(root, Dirs{"content"}, name, "content/z.md"); !errors.Is(err, ErrNotEditable) {
 			t.Errorf("rename %s: %v", name, err)
 		}
 		if _, err := os.Stat(filepath.Join(dir, name)); err != nil {
@@ -181,7 +181,7 @@ func TestRenamePageCaseOnly(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(dir, "content/A.md")); err != nil {
 		t.Skip("case-sensitive filesystem")
 	}
-	if _, err := RenamePage(root, "content", "content/a.md", "content/A.md"); err != nil {
+	if _, err := RenamePage(root, Dirs{"content"}, "content/a.md", "content/A.md"); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -204,7 +204,7 @@ func TestSavePage(t *testing.T) {
 	}
 
 	data := read("content/a.md")
-	h, err := SavePage(root, "content", "content/a.md", "new\n", hashBytes(data), nil)
+	h, err := SavePage(root, Dirs{"content"}, "content/a.md", "new\n", hashBytes(data), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -217,7 +217,7 @@ func TestSavePage(t *testing.T) {
 	}
 
 	// Stale hash: file untouched.
-	if _, err := SavePage(root, "content", "content/a.md", "x", hashBytes(data), nil); !errors.Is(err, ErrConflict) {
+	if _, err := SavePage(root, Dirs{"content"}, "content/a.md", "x", hashBytes(data), nil); !errors.Is(err, ErrConflict) {
 		t.Fatalf("got %v, want ErrConflict", err)
 	}
 	if string(read("content/a.md")) != string(got) {
@@ -226,7 +226,7 @@ func TestSavePage(t *testing.T) {
 
 	// No frontmatter.
 	p := read("content/plain.md")
-	if _, err := SavePage(root, "content", "content/plain.md", "n", hashBytes(p), nil); err != nil {
+	if _, err := SavePage(root, Dirs{"content"}, "content/plain.md", "n", hashBytes(p), nil); err != nil {
 		t.Fatal(err)
 	}
 	if string(read("content/plain.md")) != "n" {
@@ -234,11 +234,11 @@ func TestSavePage(t *testing.T) {
 	}
 
 	for _, name := range []string{"content/img.png", "content/d.md", "static/x.md", "../x.md", "content/.h/a.md"} {
-		if _, err := SavePage(root, "content", name, "x", "", nil); !errors.Is(err, ErrNotEditable) {
+		if _, err := SavePage(root, Dirs{"content"}, name, "x", "", nil); !errors.Is(err, ErrNotEditable) {
 			t.Errorf("%s: got %v, want ErrNotEditable", name, err)
 		}
 	}
-	if _, err := SavePage(root, "content", "content/missing.md", "x", "", nil); !errors.Is(err, ErrNotFound) {
+	if _, err := SavePage(root, Dirs{"content"}, "content/missing.md", "x", "", nil); !errors.Is(err, ErrNotFound) {
 		t.Errorf("missing: got %v", err)
 	}
 }
@@ -257,7 +257,7 @@ func TestSavePageFields(t *testing.T) {
 			t.Fatal(err)
 		}
 		f := &frontmatter.Fields{Title: "New", Draft: true, Tags: []string{"a"}}
-		if _, err := SavePage(root, "content", tc.name, "body\n", hashBytes(data), f); err != nil {
+		if _, err := SavePage(root, Dirs{"content"}, tc.name, "body\n", hashBytes(data), f); err != nil {
 			t.Fatalf("%s: %v", tc.name, err)
 		}
 		got, _ := os.ReadFile(filepath.Join(dir, tc.name))
@@ -282,7 +282,7 @@ func TestSavePageFieldsCRLF(t *testing.T) {
 			t.Fatal(err)
 		}
 		f := &frontmatter.Fields{Title: "New", Draft: true, Tags: []string{"a"}}
-		if _, err := SavePage(root, "content", tc.name, "body\r\n", hashBytes(data), f); err != nil {
+		if _, err := SavePage(root, Dirs{"content"}, tc.name, "body\r\n", hashBytes(data), f); err != nil {
 			t.Fatalf("%s: %v", tc.name, err)
 		}
 		got, _ := os.ReadFile(filepath.Join(dir, tc.name))
@@ -292,5 +292,68 @@ func TestSavePageFieldsCRLF(t *testing.T) {
 			strings.Contains(strings.ReplaceAll(head, "\r\n", ""), "\n") || !strings.Contains(s, "New") {
 			t.Errorf("%s: got %q", tc.name, s)
 		}
+	}
+}
+
+func TestMultiDirOperations(t *testing.T) {
+	root, dir := openTestRoot(t)
+	dirs := Dirs{"content", "content.de"}
+	writeTest(t, dir, "content/a.md", "---\ntitle: A\n---\nA")
+	writeTest(t, dir, "content.de/b.md", "---\ntitle: B\n---\nB")
+	writeTest(t, dir, "content-old/c.md", "C")
+	writeTest(t, dir, "content-old/d.md", "D")
+
+	// Read, save, delete work in every resolved dir.
+	p, err := ReadPage(root.FS(), dirs, "content.de/b.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := SavePage(root, dirs, "content.de/b.md", "new\n", p.Hash, nil); err != nil {
+		t.Fatal(err)
+	}
+
+	// Rename moves between resolved dirs.
+	if to, err := RenamePage(root, dirs, "content/a.md", "content.de/a.md"); err != nil || to != "content.de/a.md" {
+		t.Fatalf("move: %q, %v", to, err)
+	}
+	if err := DeletePage(root, dirs, "content.de/a.md"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Sibling-prefix and outside dirs are refused for every operation.
+	for _, name := range []string{"content-old/c.md", "contentx/c.md", "other/c.md", "content.md"} {
+		if _, err := ReadPage(root.FS(), dirs, name); !errors.Is(err, ErrNotEditable) {
+			t.Errorf("read %s: %v", name, err)
+		}
+		if _, err := SavePage(root, dirs, name, "x", "", nil); !errors.Is(err, ErrNotEditable) {
+			t.Errorf("save %s: %v", name, err)
+		}
+		if err := DeletePage(root, dirs, name); !errors.Is(err, ErrNotEditable) {
+			t.Errorf("delete %s: %v", name, err)
+		}
+		if _, err := RenamePage(root, dirs, name, "content/z.md"); !errors.Is(err, ErrNotEditable) {
+			t.Errorf("rename from %s: %v", name, err)
+		}
+		if _, err := RenamePage(root, dirs, "content.de/b.md", name); !errors.Is(err, ErrNotEditable) {
+			t.Errorf("rename to %s: %v", name, err)
+		}
+	}
+	for _, bad := range []string{"content-old", "content/sub", "../content", "other"} {
+		if _, err := CreatePage(root, dirs, NewPage{Dir: bad, Name: "x"}, fixedNow); !errors.Is(err, ErrNotEditable) {
+			t.Errorf("create in %s: %v", bad, err)
+		}
+	}
+	if _, err := os.Lstat(filepath.Join(dir, "content-old/c.md")); err != nil {
+		t.Error("content-old file touched")
+	}
+
+	// Create targets a chosen dir.
+	pg, err := CreatePage(root, dirs, NewPage{Dir: "content.de", Name: "hallo"}, fixedNow)
+	if err != nil || pg.Path != "content.de/hallo.md" {
+		t.Fatalf("create: %v %v", pg, err)
+	}
+	pg, err = CreatePage(root, dirs, NewPage{Name: "dflt"}, fixedNow)
+	if err != nil || pg.Path != "content/dflt.md" {
+		t.Fatalf("create default: %v %v", pg, err)
 	}
 }

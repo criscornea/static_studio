@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { dirOf } from '@/lib/tree'
 import { cancelAutosave, usePageStore } from '@/stores/page'
 import { useProjectStore } from '@/stores/project'
 
@@ -34,12 +35,22 @@ export function RenamePageDialog({ path, onClose }: RenamePageDialogProps) {
   )
 }
 
+// A path that starts with a content dir moves the page into that dir; anything
+// else stays inside the page's current dir.
+function targetPath(value: string, prefix: string, dirs: string[]): string {
+  const v = value.trim().replace(/^\/+/, '')
+  return dirs.some((d) => v.startsWith(d + '/')) ? v : prefix + v
+}
+
 function RenameForm({ path, onDone }: { path: string; onDone: () => void }) {
-  const contentDir = useProjectStore((s) => s.project?.contentDir ?? 'content')
+  const primaryDir = useProjectStore((s) => s.project?.contentDir ?? 'content')
+  const dirInfos = useProjectStore((s) => s.project?.contentDirs)
   const loadTree = useProjectStore((s) => s.loadTree)
   const openPath = usePageStore((s) => s.path)
   const load = usePageStore((s) => s.load)
 
+  const allDirs = dirInfos?.length ? dirInfos.map((d) => d.path) : [primaryDir]
+  const contentDir = dirOf(path, allDirs) ?? primaryDir
   const prefix = contentDir + '/'
   const relative = path.startsWith(prefix) ? path.slice(prefix.length) : path
   const [value, setValue] = useState(relative)
@@ -67,7 +78,7 @@ function RenameForm({ path, onDone }: { path: string; onDone: () => void }) {
       }
       const res = await api.renamePage({
         from: path,
-        to: prefix + value.trim().replace(/^\/+/, ''),
+        to: targetPath(value, prefix, allDirs),
       })
       next = res.path
     } catch (err) {
@@ -101,6 +112,7 @@ function RenameForm({ path, onDone }: { path: string; onDone: () => void }) {
         <DialogDescription>
           Change the file name, or add a folder such as posts/ to move it. Missing folders are
           created.
+          {allDirs.length > 1 && ' Start the path with another content folder to move it there.'}
         </DialogDescription>
       </DialogHeader>
 
@@ -115,6 +127,11 @@ function RenameForm({ path, onDone }: { path: string; onDone: () => void }) {
           spellCheck={false}
           className="font-mono"
         />
+        {allDirs.length > 1 && (
+          <p className="text-xs text-muted-foreground">
+            Will be saved as <span className="font-mono">{targetPath(value, prefix, allDirs)}</span>
+          </p>
+        )}
       </div>
 
       {error && (

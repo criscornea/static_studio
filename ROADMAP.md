@@ -113,12 +113,16 @@ auth · undo across sessions
 
 Deliberate simplifications, recorded so they don't become invisible.
 
+- Preview URLs are derived from the primary content dir only; pages in
+  other content dirs (per-language) get no preview link until per-language
+  URL mapping lands.
+
 - `ContentDir` and `AssetDir` come from the top level of the merged Hugo
   config (root file, `config/_default/*`, `config/<environment>/*`,
   `HUGO_CONTENTDIR`, `HUGO_STATICDIR`). Per-language `contentDir` and
   project-local `module.mounts` add content dirs (shown in the tree and
-  searched) but only the primary dir can be edited until multi-dir editing
-  lands; imported-module mounts are ignored. An unreadable, oversized or invalid config now stops the project from
+  searched) and pages in all of them can be edited, created, renamed and
+  deleted; imported-module mounts are ignored. An unreadable, oversized or invalid config now stops the project from
   opening with a readable error.
 - The `/api` host guard accepts a loopback Host (`127.0.0.1`, `::1`,
   `localhost`) on any port, not only the server's own. Rebinding still fails

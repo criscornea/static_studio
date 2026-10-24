@@ -198,3 +198,11 @@ describe('Sidebar with several content dirs', () => {
     expect(screen.getByText('German page')).toBeInTheDocument()
   })
 })
+
+describe('openNewPage', () => {
+  it('carries the content dir into the dialog state', () => {
+    useUiStore.getState().openNewPage('sub', 'inhalt')
+    expect(useUiStore.getState().newPage).toEqual({ folder: 'sub', dir: 'inhalt' })
+    useUiStore.getState().closeNewPage()
+  })
+})

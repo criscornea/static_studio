@@ -154,3 +154,64 @@ describe('NewPageDialog', () => {
     expect(calls).toHaveLength(0)
   })
 })
+
+describe('NewPageDialog with several content dirs', () => {
+  beforeEach(() => {
+    useProjectStore.setState({
+      project: {
+        root: '/site',
+        kind: 'hugo',
+        configFile: 'hugo.toml',
+        contentDir: 'content',
+        contentDirs: [{ path: 'content' }, { path: 'inhalt', lang: 'de' }],
+        assetDir: 'static',
+        id: 'p1',
+      },
+    })
+  })
+
+  it('offers a content folder picker and sends the choice', async () => {
+    stubBackend(() => new Response(JSON.stringify(created), { status: 201 }))
+    const onOpenChange = vi.fn<(open: boolean) => void>()
+    render(<NewPageDialog open onOpenChange={onOpenChange} />)
+
+    await userEvent.click(screen.getByLabelText('Content folder'))
+    await userEvent.click(await screen.findByRole('option', { name: 'inhalt (de)' }))
+    await userEvent.type(screen.getByLabelText('Name'), 'Hallo')
+    await userEvent.click(screen.getByRole('button', { name: 'Create page' }))
+
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false))
+    expect(calls.find((c) => c.method === 'POST')?.body).toEqual({
+      name: 'Hallo',
+      folder: '',
+      archetype: '',
+      dir: 'inhalt',
+    })
+  })
+
+  it('starts in the content folder of the open page', () => {
+    usePageStore.setState({ path: 'inhalt/x.md' })
+    stubBackend(() => new Response(null, { status: 500 }))
+    render(<NewPageDialog open onOpenChange={() => {}} />)
+
+    expect(screen.getByLabelText('Content folder')).toHaveTextContent('inhalt')
+  })
+
+  it('hides the picker with a single content dir', () => {
+    useProjectStore.setState({
+      project: {
+        root: '/site',
+        kind: 'hugo',
+        configFile: 'hugo.toml',
+        contentDir: 'content',
+        contentDirs: [{ path: 'content' }],
+        assetDir: 'static',
+        id: 'p1',
+      },
+    })
+    stubBackend(() => new Response(null, { status: 500 }))
+    render(<NewPageDialog open onOpenChange={() => {}} />)
+
+    expect(screen.queryByLabelText('Content folder')).not.toBeInTheDocument()
+  })
+})
