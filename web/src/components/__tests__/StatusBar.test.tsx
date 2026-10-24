@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 import { StatusBar } from '@/components/StatusBar'
 import userEvent from '@testing-library/user-event'
+import { useEditorModeStore } from '@/stores/editorMode'
 import { useLayoutStore } from '@/stores/layout'
 import { useBuildStore } from '@/stores/build'
 import { useDevServerStore } from '@/stores/devserver'
@@ -47,5 +48,17 @@ describe('StatusBar build log toggle', () => {
     expect(useLayoutStore.getState().buildLogOpen).toBe(true)
     expect(toggle).toHaveAttribute('aria-pressed', 'true')
     useLayoutStore.setState({ buildLogOpen: false })
+  })
+})
+
+describe('StatusBar editor mode', () => {
+  it('shows and toggles the editor mode when a page is open', async () => {
+    useEditorModeStore.getState().setMode('live')
+    usePageStore.setState({ page: { path: 'content/a.md' } as never })
+    render(<StatusBar />)
+    await userEvent.click(screen.getByRole('button', { name: 'Live preview' }))
+    expect(useEditorModeStore.getState().mode).toBe('source')
+    expect(screen.getByRole('button', { name: 'Source' })).toBeInTheDocument()
+    useEditorModeStore.getState().setMode('live')
   })
 })

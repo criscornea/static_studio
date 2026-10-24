@@ -298,13 +298,13 @@ Branch: feat/p25-live-preview
 Goal: The editor shows markdown rendered inline, Obsidian-style, with markup revealed only where the cursor is, and a persisted switch back to plain source mode.
 Done when: a CodeMirror extension built from the markdown syntax tree hides markup (`#`, `**`, `_`, `` ` ``, `[`/`](url)`, `>`) everywhere except on lines touched by the cursor or a selection, styles headings by level, bold, italic, strikethrough, inline code and links, replaces list markers with bullet or number widgets, styles quotes with a left border and renders `---`/`***` horizontal rules as a line; decorations cover only the visible ranges and update on cursor moves; code blocks and HTML are left as source; the document text is never changed by the extension (tests assert `doc.toString()` is identical before and after toggling and cursor moves, and that toggling does not mark the page dirty or trigger autosave); a live-preview/source mode setting persists in `localStorage`, defaults to live preview, and is toggled from the editor header, the status bar and a palette command; the floating toolbar works in both modes; colours follow the app theme in light and dark; vitest covers the decoration ranges per construct and the reveal-on-cursor rule; Playwright check once at the end; `make check` green.
 Risk: low
-Status: todo
-- [ ] M25.1 Add a persisted live-preview or source mode setting with tests
-- [ ] M25.2 Hide markup outside the cursor lines for headings, emphasis and inline code
-- [ ] M25.3 Render links and quotes inline outside the cursor lines
-- [ ] M25.4 Render list markers and horizontal rules as widgets
-- [ ] M25.5 Add the mode toggle to the editor header, status bar and command palette
-- [ ] M25.6 Update ROADMAP.md and CHANGELOG.md
+Status: merged
+- [x] M25.1 Add a persisted live-preview or source mode setting with tests
+- [x] M25.2 Hide markup outside the cursor lines for headings, emphasis and inline code
+- [x] M25.3 Render links and quotes inline outside the cursor lines
+- [x] M25.4 Render list markers and horizontal rules as widgets
+- [x] M25.5 Add the mode toggle to the editor header, status bar and command palette
+- [x] M25.6 Update ROADMAP.md and CHANGELOG.md
 
 ## Phase 26: Publish with rsync over SSH
 Branch: feat/p26-rsync-publish

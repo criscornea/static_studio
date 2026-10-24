@@ -1,7 +1,8 @@
-import { render, waitFor } from '@testing-library/react'
+import { act, render, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { imageMarkdown } from '@/lib/markdown'
+import { useEditorModeStore } from '@/stores/editorMode'
 import { MarkdownEditor } from '../MarkdownEditor'
 
 describe('MarkdownEditor', () => {
@@ -46,5 +47,22 @@ describe('MarkdownEditor', () => {
     const text = onChange.mock.calls.at(-1)?.[0] ?? ''
     expect(text).toContain('![cat](/images/cat.png)')
     expect(text).toContain('hello')
+  })
+
+  it('toggles live preview without changing the text or reporting a change', () => {
+    const onChange = vi.fn<(text: string) => void>()
+    useEditorModeStore.getState().setMode('live')
+    const { container } = render(
+      <MarkdownEditor value={'# Title\n\n**b**'} onChange={onChange} onSave={() => {}} />,
+    )
+    const text = () =>
+      Array.from(container.querySelectorAll('.cm-line'))
+        .map((l) => l.textContent)
+        .join('\n')
+    act(() => useEditorModeStore.getState().setMode('source'))
+    expect(text()).toBe('# Title\n\n**b**')
+    act(() => useEditorModeStore.getState().setMode('live'))
+    expect(onChange).not.toHaveBeenCalled()
+    useEditorModeStore.getState().setMode('live')
   })
 })

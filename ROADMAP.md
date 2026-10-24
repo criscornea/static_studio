@@ -112,7 +112,7 @@ No new features. Zero.
   list, quote; built on CodeMirror commands; active-state highlighting;
   Ctrl/Cmd+B, I, K in the editor; reachable from the command palette; themed
   for light and dark; hidden when the editor is unfocused
-- [ ] Live preview in the editor (Obsidian-style hybrid): markup shown only on
+- [x] Live preview in the editor (Obsidian-style hybrid): markup shown only on
   the cursor line or selection, headings, emphasis, links, inline code, lists,
   quotes and horizontal rules rendered inline via CodeMirror decorations;
   persisted toggle between live preview and source mode; the document text is

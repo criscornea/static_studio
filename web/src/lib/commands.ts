@@ -4,6 +4,7 @@ import { matchesShortcut, usesMod } from '@/lib/shortcuts'
 import { useBuildStore } from '@/stores/build'
 import { useDevServerStore } from '@/stores/devserver'
 import { useEditorStore } from '@/stores/editor'
+import { useEditorModeStore } from '@/stores/editorMode'
 import { useLayoutStore } from '@/stores/layout'
 import { usePageStore } from '@/stores/page'
 import { useProjectStore } from '@/stores/project'
@@ -42,6 +43,7 @@ export function buildCommands(): Command[] {
   const running = dev.running
 
   const editor = useEditorStore.getState()
+  const editorMode = useEditorModeStore.getState()
   const canFormat = hasPage && editor.view !== null
   const formats = (Object.keys(formatTitles) as FormatId[]).map(
     (id): Command => ({
@@ -123,6 +125,13 @@ export function buildCommands(): Command[] {
       shortcut: 'Mod+B',
       enabled: true,
       run: layout.toggleSidebar,
+    },
+    {
+      id: 'view.livepreview',
+      title: editorMode.mode === 'live' ? 'Editor: show source' : 'Editor: show live preview',
+      group: 'View',
+      enabled: true,
+      run: editorMode.toggle,
     },
     {
       id: 'view.preview',

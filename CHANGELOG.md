@@ -7,6 +7,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Live preview in the editor: headings, bold, italic, strikethrough, inline
+  code, links, quotes, list markers and horizontal rules render inline, with
+  the markup revealed only on lines touched by the cursor or selection. Code
+  blocks and HTML stay as source and the document text is never changed. A
+  live-preview/source switch (default live preview, saved in localStorage) is
+  in the editor header, the status bar and the command palette.
 - Floating formatting toolbar at the bottom center of the editor: H1-H3, bold,
   italic, strikethrough, inline code, link, bullet and numbered lists and
   quote. Active formats are highlighted from the markdown syntax tree. It shows
