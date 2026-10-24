@@ -1,11 +1,15 @@
 import { useEffect, useRef } from 'react'
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
-import { markdown } from '@codemirror/lang-markdown'
+import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
 import { Compartment, EditorState } from '@codemirror/state'
 import { EditorView, keymap } from '@codemirror/view'
 
+import { FormatToolbar } from '@/components/FormatToolbar'
+import { insertLink, toggleBold, toggleItalic } from '@/lib/editorFormat'
 import { editorTheme } from '@/lib/editorTheme'
+import { activeFormats } from '@/lib/formatState'
 import { imageMarkdown } from '@/lib/markdown'
+import { useEditorStore } from '@/stores/editor'
 import { useThemeStore } from '@/stores/theme'
 
 interface Props {
@@ -62,13 +66,18 @@ export function MarkdownEditor({
                 return true
               },
             },
+            // Ahead of the defaults (Mod-i) and of the global handler, which skips
+            // keys the editor already handled (Mod-b toggles the sidebar elsewhere).
+            { key: 'Mod-b', preventDefault: true, run: toggleBold },
+            { key: 'Mod-i', preventDefault: true, run: toggleItalic },
+            { key: 'Mod-k', preventDefault: true, run: insertLink },
             ...defaultKeymap,
             ...historyKeymap,
           ]),
           EditorState.lineSeparator.of(sep.current),
           theme.current.of(editorTheme(darkNow.current)),
           history(),
-          markdown(),
+          markdown({ base: markdownLanguage }),
           EditorView.lineWrapping,
           EditorView.domEventHandlers({
             dragover: (e) => {
@@ -97,7 +106,23 @@ export function MarkdownEditor({
               return true
             },
           }),
+          EditorView.domEventHandlers({
+            focus: () => {
+              const store = useEditorStore.getState()
+              store.attach(view.current!)
+              store.setFocused(true)
+              store.setActive([...activeFormats(view.current!.state)])
+            },
+            blur: (e) => {
+              const next = e.relatedTarget
+              if (next instanceof Element && next.closest('[data-format-toolbar]')) return
+              useEditorStore.getState().setFocused(false)
+            },
+          }),
           EditorView.updateListener.of((u) => {
+            if (u.selectionSet || u.docChanged) {
+              if (u.view.hasFocus) useEditorStore.getState().setActive([...activeFormats(u.state)])
+            }
             if (u.docChanged) {
               for (const t of trackers.current) t.pos = u.changes.mapPos(t.pos, 1)
               handlers.current.onChange(u.state.sliceDoc())
@@ -108,6 +133,7 @@ export function MarkdownEditor({
     })
     view.current = v
     return () => {
+      useEditorStore.getState().detach(v)
       v.destroy()
       view.current = null
     }
@@ -139,7 +165,12 @@ export function MarkdownEditor({
     }
   }, [value])
 
-  return <div ref={host} className="h-full min-h-0 overflow-hidden" />
+  return (
+    <div className="relative h-full min-h-0">
+      <div ref={host} className="h-full min-h-0 overflow-hidden" />
+      <FormatToolbar />
+    </div>
+  )
 }
 
 function dropPosition(v: EditorView, e: DragEvent): number {

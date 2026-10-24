@@ -285,13 +285,13 @@ Branch: feat/p24-format-toolbar
 Goal: A floating, Obsidian-style toolbar at the bottom center of the editor formats the selection with one click, a shortcut or the command palette.
 Done when: pure CodeMirror commands in `web/src/lib/` toggle H1, H2 and H3 on the selected lines, wrap or unwrap bold, italic, strikethrough and inline code, insert or edit a link (`[text](url)` with the url placeholder selected), toggle bullet and numbered lists and quotes on every selected line, and each is a single undoable transaction; active formats for the current selection are read from the markdown syntax tree; the toolbar floats bottom-center over the editor, highlights the active formats, uses the app theme tokens in light and dark, and is hidden when the editor is unfocused or no page is open (clicking a toolbar button does not count as losing focus); Ctrl/Cmd+B, I and K format inside the focused editor, and outside it `Mod+B` (toggle sidebar) and `Mod+K` (focus search) keep working as before; every formatting action is a registry command in the palette that applies to the last focused editor and returns focus to it; the shortcuts dialog shows the editor-scoped bindings; vitest covers each command (toggle on, toggle off, multi-line, empty selection), active-state detection, shortcut scoping and the toolbar visibility; Playwright check in both themes once at the end; `make check` green.
 Risk: low
-Status: todo
-- [ ] M24.1 Add markdown formatting commands for CodeMirror with tests
-- [ ] M24.2 Detect active formats for the selection from the syntax tree
-- [ ] M24.3 Bind editor-scoped Mod+B, Mod+I and Mod+K ahead of the global shortcuts
-- [ ] M24.4 Add the floating toolbar with active-state highlighting and focus-based visibility
-- [ ] M24.5 Register the formatting actions in the command registry and shortcuts dialog
-- [ ] M24.6 Update ROADMAP.md and CHANGELOG.md
+Status: merged
+- [x] M24.1 Add markdown formatting commands for CodeMirror with tests
+- [x] M24.2 Detect active formats for the selection from the syntax tree
+- [x] M24.3 Bind editor-scoped Mod+B, Mod+I and Mod+K ahead of the global shortcuts
+- [x] M24.4 Add the floating toolbar with active-state highlighting and focus-based visibility
+- [x] M24.5 Register the formatting actions in the command registry and shortcuts dialog
+- [x] M24.6 Update ROADMAP.md and CHANGELOG.md
 
 ## Phase 25: Live preview in the editor
 Branch: feat/p25-live-preview

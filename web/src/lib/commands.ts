@@ -1,6 +1,9 @@
+import { formatShortcuts, formatTitles } from '@/lib/editorFormat'
+import type { FormatId } from '@/lib/formatState'
 import { matchesShortcut, usesMod } from '@/lib/shortcuts'
 import { useBuildStore } from '@/stores/build'
 import { useDevServerStore } from '@/stores/devserver'
+import { useEditorStore } from '@/stores/editor'
 import { useLayoutStore } from '@/stores/layout'
 import { usePageStore } from '@/stores/page'
 import { useProjectStore } from '@/stores/project'
@@ -14,6 +17,11 @@ export interface Command {
   group: string
   /** Shortcut string such as "Mod+Shift+P". */
   shortcut?: string
+  /**
+   * "editor": the shortcut only works inside the focused editor (CodeMirror binds
+   * it), so the global handler ignores it and it may reuse a global key.
+   */
+  scope?: 'editor'
   /** False when the command cannot run now; it is then dimmed and skipped. */
   enabled: boolean
   run: () => void
@@ -32,6 +40,20 @@ export function buildCommands(): Command[] {
   const hasPage = page.page !== null
   const pagePath = page.page?.path ?? null
   const running = dev.running
+
+  const editor = useEditorStore.getState()
+  const canFormat = hasPage && editor.view !== null
+  const formats = (Object.keys(formatTitles) as FormatId[]).map(
+    (id): Command => ({
+      id: `format.${id}`,
+      title: formatTitles[id],
+      group: 'Format',
+      shortcut: formatShortcuts[id],
+      scope: formatShortcuts[id] ? 'editor' : undefined,
+      enabled: canFormat,
+      run: () => editor.format(id),
+    }),
+  )
 
   return [
     {
@@ -182,6 +204,7 @@ export function buildCommands(): Command[] {
       enabled: project.project !== null,
       run: () => void project.close(),
     },
+    ...formats,
   ]
 }
 
@@ -217,7 +240,9 @@ export function dispatchShortcut(e: KeyboardEvent, commands: Command[]): boolean
   if (document.querySelector('[role="dialog"]') !== null) {
     return false
   }
-  const command = commands.find((c) => c.shortcut !== undefined && matchesShortcut(e, c.shortcut))
+  const command = commands.find(
+    (c) => c.scope !== 'editor' && c.shortcut !== undefined && matchesShortcut(e, c.shortcut),
+  )
   if (command?.shortcut === undefined) {
     return false
   }

@@ -36,7 +36,10 @@ function ShortcutList() {
     <dl className="max-h-96 divide-y overflow-auto text-sm">
       {rows.map((c) => (
         <div key={c.id} className="flex items-center justify-between gap-4 py-1.5">
-          <dt>{c.title}</dt>
+          <dt>
+            {c.title}
+            {c.scope === 'editor' && <span className="ml-2 text-xs text-muted-foreground">in editor</span>}
+          </dt>
           <dd>
             <kbd className="rounded border bg-muted px-1.5 py-0.5 text-xs">
               {formatShortcut(c.shortcut ?? '')}

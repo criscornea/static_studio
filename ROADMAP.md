@@ -107,7 +107,7 @@ No new features. Zero.
 
 **Goal:** write comfortably in the editor and publish to any server.
 
-- [ ] Floating formatting toolbar (Obsidian style): bottom-center bar with
+- [x] Floating formatting toolbar (Obsidian style): bottom-center bar with
   H1-H3, bold, italic, strikethrough, inline code, link, bullet and numbered
   list, quote; built on CodeMirror commands; active-state highlighting;
   Ctrl/Cmd+B, I, K in the editor; reachable from the command palette; themed

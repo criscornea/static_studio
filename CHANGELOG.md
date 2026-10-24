@@ -5,6 +5,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Floating formatting toolbar at the bottom center of the editor: H1-H3, bold,
+  italic, strikethrough, inline code, link, bullet and numbered lists and
+  quote. Active formats are highlighted from the markdown syntax tree. It shows
+  only while the editor has focus. Ctrl/Cmd+B, I and K format inside the
+  editor; outside it Mod+B still toggles the sidebar and Mod+K focuses search.
+  Every action is also in the command palette (group Format) and the shortcuts
+  dialog marks the editor-only bindings. The editor now parses GFM markdown.
+
 ### Changed
 
 - The content tree and search read pages through a per-project cached index

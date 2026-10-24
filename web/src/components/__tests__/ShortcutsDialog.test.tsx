@@ -20,4 +20,10 @@ describe('ShortcutsDialog', () => {
       expect(screen.getAllByText(formatShortcut(c.shortcut ?? '')).length).toBeGreaterThan(0)
     }
   })
+
+  it('marks the editor-scoped bindings', () => {
+    render(<ShortcutsDialog />)
+    act(() => useUiStore.getState().setShortcutsOpen(true))
+    expect(screen.getAllByText('in editor').length).toBe(3)
+  })
 })

@@ -47,7 +47,7 @@ describe('registry', () => {
     ]) {
       expect(ids).toContain(id)
     }
-    const shortcuts = commands.flatMap((c) => (c.shortcut ? [c.shortcut.toLowerCase()] : []))
+    const shortcuts = commands.flatMap((c) => (c.shortcut && c.scope !== 'editor' ? [c.shortcut.toLowerCase()] : []))
     expect(new Set(shortcuts).size).toBe(shortcuts.length)
     shortcuts.forEach((s) => expect(parseShortcut(s).key).not.toBe(''))
   })
