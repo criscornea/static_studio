@@ -7,8 +7,6 @@ import (
 	"regexp"
 	"strings"
 	"unicode/utf8"
-
-	"github.com/criscornea/static_studio/internal/frontmatter"
 )
 
 var ErrEmptyQuery = errors.New("empty search query")
@@ -41,19 +39,24 @@ type Results struct {
 }
 
 // Search finds pages under dirs whose title, tags or body contain query,
-// ignoring case. Title matches come first, then path order. It reads every
-// page on each call, which is fine for a personal site.
+// ignoring case. Title matches come first, then path order.
 func Search(fsys fs.FS, dirs []string, query string) (*Results, error) {
+	return (*Index)(nil).Search(fsys, dirs, query)
+}
+
+// Search is like the package-level Search but matches against text cached in
+// ix, so unchanged pages are not read again.
+func (ix *Index) Search(fsys fs.FS, dirs []string, query string) (*Results, error) {
 	query = strings.TrimSpace(query)
 	if query == "" {
 		return nil, ErrEmptyQuery
 	}
-	re := regexp.MustCompile("(?i)" + regexp.QuoteMeta(query))
+	m := newMatcher(query)
 
 	var titleHits, bodyHits []Hit
 	seen := map[string]bool{}
 	for _, dir := range dirs {
-		if err := searchDir(fsys, dir, re, seen, &titleHits, &bodyHits); err != nil {
+		if err := ix.searchDir(fsys, dir, m, seen, &titleHits, &bodyHits); err != nil {
 			return nil, err
 		}
 	}
@@ -71,7 +74,7 @@ func Search(fsys fs.FS, dirs []string, query string) (*Results, error) {
 }
 
 // searchDir appends the matching pages under dir to titleHits and bodyHits.
-func searchDir(fsys fs.FS, dir string, re *regexp.Regexp, seen map[string]bool, titleHits, bodyHits *[]Hit) error {
+func (ix *Index) searchDir(fsys fs.FS, dir string, m matcher, seen map[string]bool, titleHits, bodyHits *[]Hit) error {
 	return fs.WalkDir(fsys, dir, func(name string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			// An unreadable entry must not fail the whole search.
@@ -94,7 +97,7 @@ func searchDir(fsys fs.FS, dir string, re *regexp.Regexp, seen map[string]bool, 
 		}
 		seen[name] = true
 
-		hit, inTitle, ok := matchPage(fsys, name, entry, re)
+		hit, inTitle, ok := ix.matchPage(fsys, name, entry, m)
 		switch {
 		case !ok:
 		case inTitle:
@@ -109,29 +112,21 @@ func searchDir(fsys fs.FS, dir string, re *regexp.Regexp, seen map[string]bool, 
 // matchPage reports whether the page at name matches re. inTitle is true when
 // the title or a tag matches. A page with broken frontmatter is searched as
 // plain text, so a typo in its settings does not hide it.
-func matchPage(fsys fs.FS, name string, entry fs.DirEntry, re *regexp.Regexp) (hit Hit, inTitle, ok bool) {
+func (ix *Index) matchPage(fsys fs.FS, name string, entry fs.DirEntry, m matcher) (hit Hit, inTitle, ok bool) {
 	info, err := entry.Info()
-	if err != nil || info.Size() > maxPageSize {
-		return Hit{}, false, false
-	}
-	data, err := fs.ReadFile(fsys, name)
 	if err != nil {
 		return Hit{}, false, false
 	}
-
-	hit = Hit{Path: name}
-	body := string(data)
-
-	if doc, err := frontmatter.Split(data); err == nil {
-		body = string(doc.Body)
-		if fields, err := doc.Fields(); err == nil {
-			hit.Title = fields.Title
-			hit.Draft = fields.Draft
-			inTitle = re.MatchString(fields.Title) || re.MatchString(strings.Join(fields.Tags, "\n"))
-		}
+	e := ix.lookup(fsys, name, info)
+	if e == nil {
+		return Hit{}, false, false
 	}
 
-	loc := re.FindStringIndex(body)
+	hit = Hit{Path: name, Title: e.title, Draft: e.draft}
+	inTitle = m.re.MatchString(e.title) || m.re.MatchString(e.tags)
+	body := e.body
+
+	loc := m.find(e)
 	if loc != nil {
 		hit.Snippet = snippet(body, loc[0], loc[1])
 	}
@@ -158,4 +153,33 @@ func snippet(body string, start, end int) string {
 		out += "…"
 	}
 	return out
+}
+
+// matcher is a compiled case-insensitive query.
+type matcher struct {
+	re *regexp.Regexp
+	// lower is the lower-cased query when it is pure ASCII, else empty.
+	lower string
+}
+
+func newMatcher(query string) matcher {
+	m := matcher{re: regexp.MustCompile("(?i)" + regexp.QuoteMeta(query))}
+	if isASCII(query) {
+		m.lower = strings.ToLower(query)
+	}
+	return m
+}
+
+// find returns the first match in the page body. Pure-ASCII bodies use a
+// plain substring search on the cached lower-case copy; the answer is the
+// same as the regexp's.
+func (m matcher) find(e *indexed) []int {
+	if m.lower != "" && e.lower != "" {
+		i := strings.Index(e.lower, m.lower)
+		if i < 0 {
+			return nil
+		}
+		return []int{i, i + len(m.lower)}
+	}
+	return m.re.FindStringIndex(e.body)
 }

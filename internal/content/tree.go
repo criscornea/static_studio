@@ -34,6 +34,22 @@ var editableExts = map[string]bool{
 // contain no editable files are omitted. A missing dir is not an error:
 // the returned root simply has no children.
 func Tree(fsys fs.FS, dir string) (*Node, error) {
+	return (*Index)(nil).Tree(fsys, dir)
+}
+
+// Tree is like the package-level Tree but reads frontmatter through ix, so
+// unchanged pages are not read again.
+func (ix *Index) Tree(fsys fs.FS, dir string) (*Node, error) {
+	seen := map[string]bool{}
+	root, err := ix.tree(fsys, dir, seen)
+	if err != nil {
+		return nil, err
+	}
+	ix.prune(dir+"/", seen)
+	return root, nil
+}
+
+func (ix *Index) tree(fsys fs.FS, dir string, seen map[string]bool) (*Node, error) {
 	root := &Node{Name: path.Base(dir), Path: dir, IsDir: true}
 
 	entries, err := fs.ReadDir(fsys, dir)
@@ -50,7 +66,7 @@ func Tree(fsys fs.FS, dir string) (*Node, error) {
 		child := path.Join(dir, name)
 
 		if entry.IsDir() {
-			sub, err := Tree(fsys, child)
+			sub, err := ix.tree(fsys, child, seen)
 			if err != nil {
 				return nil, err
 			}
@@ -68,13 +84,14 @@ func Tree(fsys fs.FS, dir string) (*Node, error) {
 			// The file vanished between ReadDir and Info. Skip it.
 			continue
 		}
+		seen[child] = true
 		root.Children = append(root.Children, &Node{
 			Name:   name,
 			Path:   child,
 			IsDir:  false,
 			Size:   info.Size(),
 			Ext:    strings.ToLower(path.Ext(name)),
-			Fields: readFields(fsys, child, info.Size()),
+			Fields: ix.fields(fsys, child, info),
 		})
 	}
 
@@ -82,27 +99,16 @@ func Tree(fsys fs.FS, dir string) (*Node, error) {
 	return root, nil
 }
 
-// readFields returns the frontmatter fields of the file at name, or nil when
+// fields returns the frontmatter fields of the file at name, or nil when
 // the file has no frontmatter, is too large, or cannot be read or parsed.
 // A broken page must not break the tree: the page view reports the error
 // when the user opens it.
-func readFields(fsys fs.FS, name string, size int64) *frontmatter.Fields {
-	if size > maxPageSize {
+func (ix *Index) fields(fsys fs.FS, name string, info fs.FileInfo) *frontmatter.Fields {
+	e := ix.lookup(fsys, name, info)
+	if e == nil {
 		return nil
 	}
-	data, err := fs.ReadFile(fsys, name)
-	if err != nil {
-		return nil
-	}
-	doc, err := frontmatter.Split(data)
-	if err != nil || doc.Format == frontmatter.FormatNone {
-		return nil
-	}
-	fields, err := doc.Fields()
-	if err != nil {
-		return nil
-	}
-	return fields
+	return e.treeFields
 }
 
 // skip reports wether an entry should never appear in the tree.

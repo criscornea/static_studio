@@ -158,7 +158,7 @@ func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 
 	resp := contentResponse{Roots: make([]contentRoot, 0, len(open.Info.ContentDirs))}
 	for _, d := range open.Info.ContentDirs {
-		tree, err := content.Tree(open.Root().FS(), d.Path)
+		tree, err := open.Index.Tree(open.Root().FS(), d.Path)
 		if err != nil {
 			s.log.Warn("reading the content tree failed", "root", open.Info.Root, "dir", d.Path, "err", err)
 			s.writeError(w, http.StatusInternalServerError, "cannot_read_content",
@@ -227,6 +227,7 @@ func (s *Server) handleCreatePage(w http.ResponseWriter, r *http.Request) {
 	}, time.Now())
 	switch {
 	case err == nil:
+		open.Index.Drop(page.Path)
 		s.log.Info("page created", "path", page.Path)
 		s.writeJSON(w, http.StatusCreated, page)
 
@@ -286,7 +287,7 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 	for _, d := range open.Info.ContentDirs {
 		dirs = append(dirs, d.Path)
 	}
-	results, err := content.Search(open.Root().FS(), dirs, query)
+	results, err := open.Index.Search(open.Root().FS(), dirs, query)
 	switch {
 	case err == nil:
 		s.writeJSON(w, http.StatusOK, results)
@@ -372,6 +373,8 @@ func (s *Server) handleRenamePage(w http.ResponseWriter, r *http.Request) {
 	to, err := content.RenamePage(open.Root(), contentDirs(open.Info), req.From, req.To)
 	switch {
 	case err == nil:
+		open.Index.Drop(req.From)
+		open.Index.Drop(to)
 		s.log.Info("page renamed", "from", req.From, "to", to)
 		s.writeJSON(w, http.StatusOK, renamePageResponse{Path: to})
 
@@ -419,6 +422,7 @@ func (s *Server) handleDeletePage(w http.ResponseWriter, r *http.Request) {
 	err := content.DeletePage(open.Root(), contentDirs(open.Info), name, hash)
 	switch {
 	case err == nil:
+		open.Index.Drop(name)
 		s.log.Info("page deleted", "path", name)
 		w.WriteHeader(http.StatusNoContent)
 
@@ -481,6 +485,7 @@ func (s *Server) handleSavePage(w http.ResponseWriter, r *http.Request) {
 	hash, err := content.SavePage(open.Root(), contentDirs(open.Info), req.Path, req.Body, req.Hash, req.Fields)
 	switch {
 	case err == nil:
+		open.Index.Drop(req.Path)
 		s.writeJSON(w, http.StatusOK, savePageResponse{Hash: hash})
 
 	case errors.Is(err, content.ErrNotEditable):

@@ -134,12 +134,13 @@ Deliberate simplifications, recorded so they don't become invisible.
   gap: a sub-millisecond window in rename between the identity check and
   removing the old name, and no protection on filesystems where renaming a
   file that another process holds open fails.
-- Search reads every page on each query, and the content tree reads every
-  page's frontmatter on each load, with no index or cache. Search is a
+- The page index (`content.Index`, one per open project) caches frontmatter
+  fields and search text per page, validated by size, mtime and file identity
+  on every lookup (a stat per page; no file watcher). A write that keeps the
+  size and mtime and replaces the file in place is missed. Search is a
   case-insensitive substring match over title, tags and body (no stemming,
-  no ranking beyond title-and-tag matches first, capped at 50 hits).
-- The content tree reads every page's frontmatter on each load. Fine for a
-  personal site; cache it if a project with thousands of pages gets slow.
+  no ranking beyond title-and-tag matches first, capped at 50 hits). The
+  index holds page text in memory, so very large sites use proportional RAM.
 - Archetypes are rendered by a built-in `text/template` with `.Name`, `.Type`,
   `.Date`, `.File.ContentBaseName` and the functions `replace`, `title`,
   `lower`, `upper` and `now`, not by Hugo. A template using anything else is

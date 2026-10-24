@@ -7,6 +7,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- The content tree and search read pages through a per-project cached index
+  validated by size, mtime and file identity, so unchanged pages are not read
+  again. On a generated 5,000-page site a warm tree load is about 35x faster
+  and a warm search about 30x faster. External edits are still picked up on
+  the next load.
 - Save and delete move the file aside, verify its hash there and only then
   replace or remove it, so a change made by an external editor in between is
   reported as a conflict instead of being lost. A file recreated at the name

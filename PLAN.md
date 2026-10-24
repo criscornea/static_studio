@@ -272,10 +272,10 @@ Branch: feat/p23-page-index
 Goal: Loading the tree and searching do not re-read unchanged pages, so a site with thousands of pages stays fast.
 Done when: a `content.Index` owned by each open project caches per-page frontmatter fields and search text, keyed by path and validated by size, modification time and file identity on each lookup, so an external edit is picked up on the next load without a file watcher or new dependency; save, create, rename and delete update or drop their entries; the index is dropped on project close; it is safe under `-race` with concurrent tree, search and save calls; benchmarks on a generated 5,000-page site show warm tree and search at least 5x faster than the baseline; search semantics (case-insensitive substring, title and tag hits first, 50-hit cap) are unchanged; `make check` green.
 Risk: high (concurrency; a stale cache shows wrong content)
-Status: todo
-- [ ] M23.1 Add tree and search benchmarks over a generated 5,000-page site
-- [ ] M23.2 Add `content.Index` with stat-validated entries and staleness tests
-- [ ] M23.3 Read tree frontmatter through the index
-- [ ] M23.4 Match search queries against indexed text
-- [ ] M23.5 Own one index per open project and update it on writes
-- [ ] M23.6 Update ROADMAP.md, CHANGELOG.md and the known-shortcuts note
+Status: merged
+- [x] M23.1 Add tree and search benchmarks over a generated 5,000-page site
+- [x] M23.2 Add `content.Index` with stat-validated entries and staleness tests
+- [x] M23.3 Read tree frontmatter through the index
+- [x] M23.4 Match search queries against indexed text
+- [x] M23.5 Own one index per open project and update it on writes
+- [x] M23.6 Update ROADMAP.md, CHANGELOG.md and the known-shortcuts note

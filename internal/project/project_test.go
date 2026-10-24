@@ -210,3 +210,25 @@ func TestOpenRejectsMissingDir(t *testing.T) {
 		t.Fatalf("err = %v, want ErrNoProject", err)
 	}
 }
+
+func TestCloseDropsIndex(t *testing.T) {
+	m := NewManager(nil)
+	t.Cleanup(func() { _ = m.Close() })
+
+	open, err := m.Open(newHugoDir(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if open.Index == nil {
+		t.Fatal("open project has no index")
+	}
+	if _, err := open.Index.Tree(open.Root().FS(), "content"); err != nil {
+		t.Fatal(err)
+	}
+	if err := m.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if open.Index.Len() != 0 {
+		t.Fatal("index kept entries after close")
+	}
+}

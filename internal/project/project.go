@@ -11,6 +11,7 @@ import (
 	"os"
 	"sync"
 
+	"github.com/criscornea/static_studio/internal/content"
 	"github.com/criscornea/static_studio/internal/ssg"
 )
 
@@ -23,6 +24,10 @@ var (
 type Open struct {
 	ID   string
 	Info ssg.Project
+
+	// Index caches page data for the tree and search. It lives and dies
+	// with this open project.
+	Index *content.Index
 
 	root *os.Root
 }
@@ -69,7 +74,7 @@ func (m *Manager) Open(dir string) (*Open, error) {
 		return nil, err
 	}
 
-	next := &Open{Info: *info, ID: id, root: root}
+	next := &Open{Info: *info, ID: id, root: root, Index: content.NewIndex()}
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -126,6 +131,7 @@ func (m *Manager) closeLocked() error {
 		return nil
 	}
 
+	m.current.Index.Reset()
 	err := m.current.root.Close()
 	m.current = nil
 
