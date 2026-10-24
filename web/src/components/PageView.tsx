@@ -1,11 +1,12 @@
 import { useEffect } from 'react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { FrontmatterForm } from '@/components/FrontmatterForm'
 import { MarkdownEditor } from '@/components/MarkdownEditor'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { formatDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { usePageStore } from '@/stores/page'
+import { fieldsEqual, usePageStore } from '@/stores/page'
 
 function formatLabel(format: string | undefined): string {
   switch (format) {
@@ -33,6 +34,8 @@ export function PageView() {
   const loading = usePageStore((s) => s.loading)
   const error = usePageStore((s) => s.error)
   const draft = usePageStore((s) => s.draft)
+  const fieldsDraft = usePageStore((s) => s.fieldsDraft)
+  const setFieldsDraft = usePageStore((s) => s.setFieldsDraft)
   const savingPath = usePageStore((s) => s.savingPath)
   const saveError = usePageStore((s) => s.saveError)
   const setDraft = usePageStore((s) => s.setDraft)
@@ -67,6 +70,8 @@ export function PageView() {
     return <p className="text-sm text-muted-foreground">Loading…</p>
   }
 
+  const unchanged =
+    draft === page.body && (fieldsDraft === null || fieldsEqual(fieldsDraft, page.fields))
   const date = formatDate(page.fields.date)
 
   return (
@@ -104,11 +109,16 @@ export function PageView() {
             <AlertDescription>{saveError.message}</AlertDescription>
           </Alert>
         )}
+        <FrontmatterForm
+          key={page.path}
+          fields={fieldsDraft ?? page.fields}
+          onChange={setFieldsDraft}
+        />
         <div className="mb-2 flex items-center gap-3">
           <Button
             size="sm"
             onClick={() => void save()}
-            disabled={saving || draft === page.body}
+            disabled={saving || unchanged}
           >
             {saving ? 'Saving…' : 'Save'}
           </Button>

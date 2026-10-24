@@ -12,6 +12,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Frontmatter form (title, date, draft, tags) above the editor. `PUT /api/page`
+  accepts optional `fields`; unknown keys are kept, comments and TOML key order
+  are not.
+
 - CodeMirror 6 markdown editor with save (button and Ctrl/Cmd+S). Pages carry a
   sha256 hash; `PUT /api/page` keeps frontmatter verbatim, writes atomically and
   returns 409 when the file changed on disk.

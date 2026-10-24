@@ -377,6 +377,8 @@ type savePageRequest struct {
 	Path string `json:"path"`
 	Body string `json:"body"`
 	Hash string `json:"hash"`
+	// Fields, when present, replaces the known frontmatter fields.
+	Fields *frontmatter.Fields `json:"fields,omitempty"`
 }
 
 type savePageResponse struct {
@@ -404,7 +406,7 @@ func (s *Server) handleSavePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hash, err := content.SavePage(open.Root(), open.Info.ContentDir, req.Path, req.Body, req.Hash)
+	hash, err := content.SavePage(open.Root(), open.Info.ContentDir, req.Path, req.Body, req.Hash, req.Fields)
 	switch {
 	case err == nil:
 		s.writeJSON(w, http.StatusOK, savePageResponse{Hash: hash})

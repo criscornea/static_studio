@@ -50,7 +50,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 **Goal:** the core. This is where it becomes real.
 
 - [x] CodeMirror 6 as the markdown editor
-- [ ] Frontmatter as a **form**, not as text
+- [x] Frontmatter as a **form**, not as text
 - [ ] Preview: the real Hugo-rendered page from `hugo server`, loaded in an
   iframe from its own port (separate origin from the app)
 - [ ] Drag & drop images into `static/`, path inserted into the markdown

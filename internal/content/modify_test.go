@@ -4,7 +4,10 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"github.com/criscornea/static_studio/internal/frontmatter"
 )
 
 func writeTest(t *testing.T, dir, name, data string) {
@@ -201,7 +204,7 @@ func TestSavePage(t *testing.T) {
 	}
 
 	data := read("content/a.md")
-	h, err := SavePage(root, "content", "content/a.md", "new\n", hashBytes(data))
+	h, err := SavePage(root, "content", "content/a.md", "new\n", hashBytes(data), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -214,7 +217,7 @@ func TestSavePage(t *testing.T) {
 	}
 
 	// Stale hash: file untouched.
-	if _, err := SavePage(root, "content", "content/a.md", "x", hashBytes(data)); !errors.Is(err, ErrConflict) {
+	if _, err := SavePage(root, "content", "content/a.md", "x", hashBytes(data), nil); !errors.Is(err, ErrConflict) {
 		t.Fatalf("got %v, want ErrConflict", err)
 	}
 	if string(read("content/a.md")) != string(got) {
@@ -223,7 +226,7 @@ func TestSavePage(t *testing.T) {
 
 	// No frontmatter.
 	p := read("content/plain.md")
-	if _, err := SavePage(root, "content", "content/plain.md", "n", hashBytes(p)); err != nil {
+	if _, err := SavePage(root, "content", "content/plain.md", "n", hashBytes(p), nil); err != nil {
 		t.Fatal(err)
 	}
 	if string(read("content/plain.md")) != "n" {
@@ -231,11 +234,37 @@ func TestSavePage(t *testing.T) {
 	}
 
 	for _, name := range []string{"content/img.png", "content/d.md", "static/x.md", "../x.md", "content/.h/a.md"} {
-		if _, err := SavePage(root, "content", name, "x", ""); !errors.Is(err, ErrNotEditable) {
+		if _, err := SavePage(root, "content", name, "x", "", nil); !errors.Is(err, ErrNotEditable) {
 			t.Errorf("%s: got %v, want ErrNotEditable", name, err)
 		}
 	}
-	if _, err := SavePage(root, "content", "content/missing.md", "x", ""); !errors.Is(err, ErrNotFound) {
+	if _, err := SavePage(root, "content", "content/missing.md", "x", "", nil); !errors.Is(err, ErrNotFound) {
 		t.Errorf("missing: got %v", err)
+	}
+}
+
+func TestSavePageFields(t *testing.T) {
+	root, dir := openTestRoot(t)
+	writeTest(t, dir, "content/y.md", "---\ntitle: Y\nweight: 3\n---\nold\n")
+	writeTest(t, dir, "content/t.md", "+++\ntitle = 'T'\nweight = 3\n+++\nold\n")
+	writeTest(t, dir, "content/p.md", "plain\n")
+
+	for _, tc := range []struct{ name, fence string }{
+		{"content/y.md", "---\n"}, {"content/t.md", "+++\n"}, {"content/p.md", "---\n"},
+	} {
+		data, err := os.ReadFile(filepath.Join(dir, tc.name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		f := &frontmatter.Fields{Title: "New", Draft: true, Tags: []string{"a"}}
+		if _, err := SavePage(root, "content", tc.name, "body\n", hashBytes(data), f); err != nil {
+			t.Fatalf("%s: %v", tc.name, err)
+		}
+		got, _ := os.ReadFile(filepath.Join(dir, tc.name))
+		s := string(got)
+		if !strings.HasPrefix(s, tc.fence) || !strings.HasSuffix(s, tc.fence+"body\n") ||
+			!strings.Contains(s, "New") || (tc.name != "content/p.md" && !strings.Contains(s, "weight")) {
+			t.Errorf("%s: got %q", tc.name, s)
+		}
 	}
 }

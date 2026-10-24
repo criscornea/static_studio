@@ -53,11 +53,11 @@ Branch: feat/p5-frontmatter-form
 Goal: Users edit title, date, draft and tags in a form instead of raw frontmatter text.
 Done when: the frontmatter package can re-serialise YAML and TOML with changed known fields while preserving unknown keys; save accepts form fields under the same hash check; `PageView` shows a form above the editor; round-trip tests for both formats pass.
 Risk: low
-Status: todo
-- [ ] M5.1 Add frontmatter field updates that preserve unknown keys, with YAML and TOML round-trip tests
-- [ ] M5.2 Extend `SavePage` and `PUT /api/page` to accept frontmatter fields
-- [ ] M5.3 Add a frontmatter form component (title, date, draft, tags) with a test
-- [ ] M5.4 Wire the form into `PageView` and the page store save
+Status: merged
+- [x] M5.1 Add frontmatter field updates that preserve unknown keys, with YAML and TOML round-trip tests
+- [x] M5.2 Extend `SavePage` and `PUT /api/page` to accept frontmatter fields
+- [x] M5.3 Add a frontmatter form component (title, date, draft, tags) with a test
+- [x] M5.4 Wire the form into `PageView` and the page store save
 
 ## Phase 6: Autosave and unsaved state
 Branch: feat/p6-autosave

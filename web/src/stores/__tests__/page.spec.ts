@@ -242,3 +242,25 @@ describe('save', () => {
     expect(store().savingPath).toBeNull()
   })
 })
+
+describe('page store frontmatter fields', () => {
+  it('sends changed fields on save and adopts them', async () => {
+    const page = aPage('content/a.md', 'A')
+    usePageStore.setState({ path: page.path, page, draft: page.body, fieldsDraft: page.fields })
+    const bodies: unknown[] = []
+    vi.stubGlobal('fetch', (_url: string, init?: RequestInit) => {
+      bodies.push(JSON.parse(init?.body as string))
+      return Promise.resolve(json(200, { hash: 'h2' }))
+    })
+
+    store().setFieldsDraft({ ...page.fields, title: 'B' })
+    await store().save()
+    expect(bodies[0]).toMatchObject({ fields: { title: 'B' }, hash: 'hash-A' })
+    expect(store().page?.fields.title).toBe('B')
+    expect(store().page?.hash).toBe('h2')
+
+    // Unchanged fields are not sent again.
+    await store().save()
+    expect((bodies[1] as { fields?: unknown }).fields).toBeUndefined()
+  })
+})

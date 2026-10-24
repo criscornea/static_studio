@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { api } from '@/api/client'
-import { asApiError, type ApiError, type Page } from '@/api/types'
+import { asApiError, type ApiError, type Page, type PageFields } from '@/api/types'
 import { useProjectStore } from './project'
 
 interface PageState {
@@ -11,15 +11,27 @@ interface PageState {
   error: ApiError | null
   // Editor text; null until a page is loaded. Differs from page.body when unsaved.
   draft: string | null
+  // Form values; null until a page is loaded. Differs from page.fields when unsaved.
+  fieldsDraft: PageFields | null
   // Path being saved, or null. Only a save of the same path is blocked.
   savingPath: string | null
   // Why the last save failed, including a hash conflict (code page_conflict).
   saveError: ApiError | null
 
   setDraft: (text: string) => void
+  setFieldsDraft: (fields: PageFields) => void
   save: () => Promise<void>
   load: (path: string) => Promise<void>
   clear: () => void
+}
+
+export function fieldsEqual(a: PageFields, b: PageFields): boolean {
+  return (
+    a.title === b.title &&
+    a.draft === b.draft &&
+    (a.date ?? '') === (b.date ?? '') &&
+    (a.tags ?? []).join('\u0000') === (b.tags ?? []).join('\u0000')
+  )
 }
 
 // Incremented on every load. A response is only applied if no newer
@@ -32,6 +44,7 @@ export const usePageStore = create<PageState>()((set, get) => ({
   loading: false,
   error: null,
   draft: null,
+  fieldsDraft: null,
   savingPath: null,
   saveError: null,
 
@@ -44,12 +57,12 @@ export const usePageStore = create<PageState>()((set, get) => ({
       if (request !== latest) {
         return
       }
-      set({ page: loaded, draft: loaded.body })
+      set({ page: loaded, draft: loaded.body, fieldsDraft: loaded.fields })
     } catch (err) {
       if (request !== latest) {
         return
       }
-      set({ page: null, draft: null, error: asApiError(err) })
+      set({ page: null, draft: null, fieldsDraft: null, error: asApiError(err) })
     } finally {
       if (request === latest) {
         set({ loading: false })
@@ -61,20 +74,28 @@ export const usePageStore = create<PageState>()((set, get) => ({
     set({ draft: text })
   },
 
+  setFieldsDraft(fields) {
+    set({ fieldsDraft: fields })
+  },
+
   async save() {
-    const { page, draft, savingPath } = get()
+    const { page, draft, fieldsDraft, savingPath } = get()
     if (page === null || draft === null || savingPath === page.path) {
       return
     }
     set({ savingPath: page.path, saveError: null })
+    // Only send fields the user changed, so a plain body save never rewrites frontmatter.
+    const fields =
+      fieldsDraft !== null && !fieldsEqual(fieldsDraft, page.fields) ? fieldsDraft : undefined
     try {
-      const { hash } = await api.savePage(page.path, draft, page.hash)
+      const { hash } = await api.savePage(page.path, draft, page.hash, fields)
       const current = get().page
+      const saved = fields ?? current?.fields
       if (current === page) {
-        set({ page: { ...page, body: draft, hash } })
-      } else if (current?.path === page.path) {
+        set({ page: { ...page, body: draft, hash, fields: fields ?? page.fields } })
+      } else if (current?.path === page.path && saved) {
         // Page was reloaded meanwhile: merge only what the save changed.
-        set({ page: { ...current, body: draft, hash } })
+        set({ page: { ...current, body: draft, hash, fields: saved } })
       }
     } catch (err) {
       if (get().page?.path === page.path) {
@@ -89,7 +110,7 @@ export const usePageStore = create<PageState>()((set, get) => ({
 
   clear() {
     latest++
-    set({ path: null, page: null, draft: null, error: null, saveError: null, loading: false })
+    set({ path: null, page: null, draft: null, fieldsDraft: null, error: null, saveError: null, loading: false })
   },
 }))
 

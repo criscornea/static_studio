@@ -1,6 +1,7 @@
 package content
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -167,8 +168,10 @@ var ErrConflict = errors.New("page changed on disk")
 // SavePage replaces the body of the page name, keeping its frontmatter bytes
 // verbatim. hash must be the hash of the file as the caller last read it;
 // otherwise ErrConflict is returned and nothing is written. It returns the
-// hash of the saved file.
-func SavePage(root *os.Root, contentDir, name, body, hash string) (string, error) {
+// hash of the saved file. When fields is not nil the known frontmatter
+// fields are rewritten too, keeping unknown keys; a page without
+// frontmatter gets a new YAML block.
+func SavePage(root *os.Root, contentDir, name, body, hash string, fields *frontmatter.Fields) (string, error) {
 	defer lockRoot(root)()
 	if err := checkPagePath(contentDir, name); err != nil {
 		return "", err
@@ -205,7 +208,13 @@ func SavePage(root *os.Root, contentDir, name, body, hash string) (string, error
 	if err != nil {
 		return "", err
 	}
-	out := append(append([]byte{}, data[:len(data)-len(doc.Body)]...), body...)
+	head := data[:len(data)-len(doc.Body)]
+	if fields != nil {
+		if head, err = rewriteHead(doc, head, *fields); err != nil {
+			return "", err
+		}
+	}
+	out := append(append([]byte{}, head...), body...)
 	if len(out) > maxPageSize {
 		return "", ErrTooLarge
 	}
@@ -213,4 +222,32 @@ func SavePage(root *os.Root, contentDir, name, body, hash string) (string, error
 		return "", fmt.Errorf("saving %s: %w", name, err)
 	}
 	return hashBytes(out), nil
+}
+
+// rewriteHead returns the file prefix (BOM and frontmatter block) with the
+// known fields replaced.
+func rewriteHead(doc *frontmatter.Document, head []byte, f frontmatter.Fields) ([]byte, error) {
+	format := doc.Format
+	if format == frontmatter.FormatNone {
+		format = frontmatter.FormatYAML
+		doc = &frontmatter.Document{Format: format}
+		head = nil
+	}
+	meta, err := doc.Update(f)
+	if err != nil {
+		return nil, err
+	}
+	fence := "---\n"
+	if format == frontmatter.FormatTOML {
+		fence = "+++\n"
+	}
+	var prefix []byte
+	if bytes.HasPrefix(head, []byte{0xEF, 0xBB, 0xBF}) {
+		prefix = head[:3]
+	}
+	out := append([]byte{}, prefix...)
+	out = append(out, fence...)
+	out = append(out, meta...)
+	out = append(out, fence...)
+	return out, nil
 }

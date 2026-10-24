@@ -845,3 +845,26 @@ func TestSavePage(t *testing.T) {
 		t.Fatal("save without project id succeeded")
 	}
 }
+
+func TestSavePageFields(t *testing.T) {
+	dir := withPages(t)
+	a := newAPI(t)
+	id := decodeProject(t, a.open(dir)).ID
+
+	var page struct {
+		Hash string `json:"hash"`
+	}
+	if err := json.Unmarshal(a.page(id, "content/post.md").Body.Bytes(), &page); err != nil {
+		t.Fatal(err)
+	}
+	rec := a.savePage(id, `{"path":"content/post.md","body":"b\n","hash":"`+page.Hash+
+		`","fields":{"title":"Renamed","draft":false,"date":"2026-05-01T10:00:00Z","tags":["x"]}}`)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("save: %d %s", rec.Code, rec.Body)
+	}
+	got, _ := os.ReadFile(filepath.Join(dir, "content/post.md"))
+	s := string(got)
+	if !strings.Contains(s, "title: Renamed") || !strings.Contains(s, "draft: false") || !strings.HasSuffix(s, "---\nb\n") {
+		t.Fatalf("file: %q", s)
+	}
+}
