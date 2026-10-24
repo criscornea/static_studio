@@ -24,7 +24,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 - [x] `GET /api/content` endpoint
 - [x] File tree in the UI
 - [x] Folder picker in the UI
-- [ ] Recent projects on the open screen, stored in the user config dir
+- [x] Recent projects on the open screen, stored in the user config dir
 
 🎯 **Milestone:** choose a folder → see a tree of all content files.
 📓 **Blog:** "Why Static Studio, aka: who needs an IDE anyway?"

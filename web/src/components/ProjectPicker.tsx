@@ -1,5 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
+import { api } from '@/api/client'
+import type { RecentProject } from '@/api/types'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,6 +12,33 @@ export function ProjectPicker() {
   const loading = useProjectStore((s) => s.loading)
   const error = useProjectStore((s) => s.error)
   const [path, setPath] = useState('')
+  const [recent, setRecent] = useState<RecentProject[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    api
+      .recentProjects()
+      .then((list) => {
+        if (!cancelled) {
+          setRecent(list)
+        }
+      })
+      .catch(() => {
+        // The list is a convenience; the path field still works without it.
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  async function removeRecent(entry: RecentProject) {
+    try {
+      await api.removeRecent(entry.path)
+      setRecent((list) => list.filter((e) => e.path !== entry.path))
+    } catch {
+      // Leave the entry in place if removal failed.
+    }
+  }
 
   const trimmed = path.trim()
 
@@ -50,6 +79,46 @@ export function ProjectPicker() {
         <Alert variant="destructive" className="mt-4">
           <AlertDescription>{error.message}</AlertDescription>
         </Alert>
+      )}
+
+      {recent.length > 0 && (
+        <div className="mt-8">
+          <h2 className="mb-2 text-sm font-medium">Recent projects</h2>
+          <ul className="divide-y rounded-md border">
+            {recent.map((entry) => (
+              <li key={entry.path} className="flex items-center gap-2 px-3 py-2">
+                {entry.available ? (
+                  <button
+                    type="button"
+                    className="min-w-0 flex-1 text-left"
+                    disabled={loading}
+                    onClick={() => void open(entry.path)}
+                  >
+                    <span className="block truncate font-medium">{entry.name}</span>
+                    <span className="block truncate font-mono text-xs text-muted-foreground">
+                      {entry.path}
+                    </span>
+                  </button>
+                ) : (
+                  <div className="min-w-0 flex-1 opacity-50" aria-disabled="true">
+                    <span className="block truncate font-medium">{entry.name}</span>
+                    <span className="block truncate font-mono text-xs">{entry.path}</span>
+                    <span className="block text-xs">Folder not found</span>
+                  </div>
+                )}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  aria-label={`Remove ${entry.name} from recent projects`}
+                  onClick={() => void removeRecent(entry)}
+                >
+                  Remove
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       <p className="mt-8 text-sm text-muted-foreground">

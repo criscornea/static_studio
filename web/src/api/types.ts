@@ -9,6 +9,15 @@ export interface Project {
   id: string
 }
 
+export interface RecentProject {
+  path: string
+  name: string
+  kind: SSGKind
+  openedAt: string
+  // False when the folder no longer exists.
+  available: boolean
+}
+
 export interface ContentNode {
   name: string
   path: string

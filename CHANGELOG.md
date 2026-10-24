@@ -12,6 +12,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Recent projects: the open screen lists the last 10 opened projects (kept in the
+  user config dir) with one-click open, remove, and greyed-out missing folders.
 - Build errors: Hugo error lines are parsed into file, line and message and sent
   as `problems` on the build stream's `done` event. The tree marks affected pages,
   the build panel lists them, and clicking one opens the page and moves the editor

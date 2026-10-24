@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/criscornea/static_studio/internal/recent"
 	"github.com/criscornea/static_studio/internal/server"
 	"github.com/criscornea/static_studio/web"
 )
@@ -33,6 +34,7 @@ func run() error {
 	slog.SetDefault(logger)
 
 	app := server.New(logger, web.Assets())
+	app.UseRecent(recent.NewDefault(logger))
 	// Idempotent; also covers the listen-error path, which skips the signal branch.
 	defer app.Close()
 	baseCtx, cancelBase := context.WithCancel(context.Background())

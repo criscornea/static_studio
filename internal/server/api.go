@@ -58,6 +58,9 @@ func (s *Server) handleOpenProject(w http.ResponseWriter, r *http.Request) {
 		s.build.Stop()
 		s.dev.Stop()
 		s.log.Info("project opened", "root", opened.Info.Root, "kind", opened.Info.Kind, "id", opened.ID)
+		if err := s.recent.Add(opened.Info.Root, string(opened.Info.Kind)); err != nil {
+			s.log.Warn("recording recent project failed", "err", err)
+		}
 		s.writeJSON(w, http.StatusOK, projectResponse{Project: opened.Info, ID: opened.ID})
 
 	case errors.Is(err, ssg.ErrNotDetected):

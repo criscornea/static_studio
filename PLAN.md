@@ -121,12 +121,12 @@ Branch: feat/p11-recent-projects
 Goal: The open-project screen lists recently opened projects so the user opens one with a click instead of retyping the path.
 Done when: an `internal/recent` store keeps up to 10 entries (path, name, kind, opened-at) in `<os.UserConfigDir()>/static-studio/recent.json`, never in the project dir, written via temp file plus rename; only successful `POST /api/project/open` calls record an entry, most recent first, deduped by the cleaned absolute path; a missing or corrupt file reads as an empty list (logged), and an unavailable config dir disables recording without breaking open; `GET /api/recent` returns the entries with an `available` flag (false when the directory no longer exists) and `DELETE /api/recent` removes one entry by path (covered by the existing Origin/Host guard); `web/src/api/types.ts` and `client.ts` mirror the shapes; `ProjectPicker` shows the list, clicking an available entry runs the existing open flow, unavailable entries are shown greyed out with a remove action only; Go tests (store with `t.TempDir()` as config dir, handlers) and vitest (picker list, click-to-open, remove, unavailable) pass; `make check` green; ROADMAP item ticked and moved to CHANGELOG.
 Risk: low
-Status: todo
-- [ ] M11.1 Add the `internal/recent` store (load, add, remove, dedupe, cap, atomic write, injectable dir) with tests
-- [ ] M11.2 Record successful project opens in the recent store with a handler test
-- [ ] M11.3 Add `GET /api/recent` and `DELETE /api/recent` handlers with tests, including the `available` flag
-- [ ] M11.4 Add recent-project types and client functions in `web/src/api`
-- [ ] M11.5 Show the recent list in `ProjectPicker` with open and remove actions, with a vitest test
+Status: merged
+- [x] M11.1 Add the `internal/recent` store (load, add, remove, dedupe, cap, atomic write, injectable dir) with tests
+- [x] M11.2 Record successful project opens in the recent store with a handler test
+- [x] M11.3 Add `GET /api/recent` and `DELETE /api/recent` handlers with tests, including the `available` flag
+- [x] M11.4 Add recent-project types and client functions in `web/src/api`
+- [x] M11.5 Show the recent list in `ProjectPicker` with open and remove actions, with a vitest test
 
 ## Phase 12: Publish to GitHub Pages
 Branch: feat/p12-publish

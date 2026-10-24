@@ -12,6 +12,7 @@ import (
 	"github.com/criscornea/static_studio/internal/build"
 	"github.com/criscornea/static_studio/internal/devserver"
 	"github.com/criscornea/static_studio/internal/project"
+	"github.com/criscornea/static_studio/internal/recent"
 )
 
 // Server holds the dependencies shared by all handlers.
@@ -21,6 +22,7 @@ type Server struct {
 	project *project.Manager
 	build   *build.Runner
 	dev     *devserver.Server
+	recent  *recent.Store
 }
 
 // New returns a Server. A nil logger falls back to slog.Default,
@@ -29,8 +31,12 @@ func New(log *slog.Logger, assets fs.FS) *Server {
 	if log == nil {
 		log = slog.Default()
 	}
-	return &Server{log: log, assets: assets, project: project.NewManager(log), build: &build.Runner{Bin: "hugo"}, dev: &devserver.Server{Bin: "hugo"}}
+	return &Server{log: log, assets: assets, project: project.NewManager(log), build: &build.Runner{Bin: "hugo"}, dev: &devserver.Server{Bin: "hugo"}, recent: recent.New(log, "")}
 }
+
+// UseRecent sets the store for recent projects. New leaves it disabled so
+// tests never touch the real config directory.
+func (s *Server) UseRecent(r *recent.Store) { s.recent = r }
 
 // Close stops any running build and the dev server, then closes the open
 // project. Call it before shutting the HTTP server down.
@@ -50,6 +56,8 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /api/project/open", s.handleOpenProject)
 	mux.HandleFunc("GET /api/project", s.handleCurrentProject)
 	mux.HandleFunc("POST /api/project/close", s.handleCloseProject)
+	mux.HandleFunc("GET /api/recent", s.handleRecent)
+	mux.HandleFunc("DELETE /api/recent", s.handleRecentRemove)
 	mux.HandleFunc("GET /api/content", s.handleContent)
 	mux.HandleFunc("GET /api/page", s.handlePage)
 	mux.HandleFunc("GET /api/search", s.handleSearch)

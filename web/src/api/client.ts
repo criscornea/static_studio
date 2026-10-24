@@ -8,6 +8,7 @@ import {
   type RenamePageRequest,
   type Page,
   type PageFields,
+  type RecentProject,
   type Project,
   type SearchResults,
 } from './types'
@@ -94,6 +95,12 @@ export const api = {
     }),
   currentProject: () => request<Project>('/api/project', { withProject: false }),
   closeProject: () => request<void>('/api/project/close', { method: 'POST', withProject: false }),
+  recentProjects: () =>
+    request<{ recent: RecentProject[] }>('/api/recent', { withProject: false }).then(
+      (r) => r.recent,
+    ),
+  removeRecent: (path: string) =>
+    request<void>('/api/recent', { method: 'DELETE', body: { path }, withProject: false }),
   contentTree: () => request<ContentTree>('/api/content'),
   page: (path: string) => request<Page>(`/api/page?path=${encodeURIComponent(path)}`),
   archetypes: () =>
