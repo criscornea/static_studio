@@ -100,4 +100,56 @@ describe('RenamePageDialog', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('already exists')
     expect(onClose).not.toHaveBeenCalled()
   })
+
+  it('saves unsaved edits before renaming the open page', async () => {
+    stubBackend(() => new Response(JSON.stringify({ path: 'content/posts/b.md' }), { status: 200 }))
+    const fetchOk = globalThis.fetch
+    vi.stubGlobal('fetch', (input: RequestInfo, init?: RequestInit) => {
+      if (init?.method === 'PUT') {
+        calls.push({ method: 'PUT', url: String(input), body: null })
+        return Promise.resolve(new Response(JSON.stringify({ hash: 'h2' }), { status: 200 }))
+      }
+      return fetchOk(input, init)
+    })
+    usePageStore.setState({
+      path: 'content/a.md',
+      page: { path: 'content/a.md', format: '', fields: { title: '', draft: false }, body: 'old', hash: 'h1' },
+      draft: 'new',
+      fieldsDraft: { title: '', draft: false },
+      dirty: true,
+    })
+    const onClose = vi.fn<() => void>()
+    render(<RenamePageDialog path="content/a.md" onClose={onClose} />)
+    const input = screen.getByLabelText(/Path inside/)
+    await userEvent.clear(input)
+    await userEvent.type(input, 'posts/b.md')
+    await userEvent.click(screen.getByRole('button', { name: 'Rename' }))
+    await waitFor(() => expect(onClose).toHaveBeenCalled())
+    const order = calls.filter((c) => c.method !== 'GET').map((c) => c.method)
+    expect(order).toEqual(['PUT', 'POST'])
+  })
+
+  it('does not rename when the save fails', async () => {
+    stubBackend(() => new Response('{}', { status: 200 }))
+    const fetchOk = globalThis.fetch
+    vi.stubGlobal('fetch', (input: RequestInfo, init?: RequestInit) =>
+      init?.method === 'PUT'
+        ? Promise.resolve(new Response(JSON.stringify({ code: 'page_conflict', message: 'changed' }), { status: 409 }))
+        : fetchOk(input, init),
+    )
+    usePageStore.setState({
+      path: 'content/a.md',
+      page: { path: 'content/a.md', format: '', fields: { title: '', draft: false }, body: 'old', hash: 'h1' },
+      draft: 'new',
+      fieldsDraft: { title: '', draft: false },
+      dirty: true,
+    })
+    const onClose = vi.fn<() => void>()
+    render(<RenamePageDialog path="content/a.md" onClose={onClose} />)
+    await userEvent.type(screen.getByLabelText(/Path inside/), 'x')
+    await userEvent.click(screen.getByRole('button', { name: 'Rename' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('changed')
+    expect(calls.some((c) => c.method === 'POST')).toBe(false)
+    expect(onClose).not.toHaveBeenCalled()
+  })
 })

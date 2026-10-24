@@ -260,7 +260,130 @@ describe('page store frontmatter fields', () => {
     expect(store().page?.hash).toBe('h2')
 
     // Unchanged fields are not sent again.
+    store().setDraft('edited body')
     await store().save()
     expect((bodies[1] as { fields?: unknown }).fields).toBeUndefined()
+  })
+})
+
+describe('autosave and dirty state', () => {
+  const puts: unknown[] = []
+  let putStatus = 200
+
+  beforeEach(() => {
+    vi.useFakeTimers()
+    puts.length = 0
+    putStatus = 200
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_url: string, init?: RequestInit) => {
+        if (init?.method === 'PUT') {
+          puts.push(JSON.parse(init.body as string))
+          return Promise.resolve(
+            putStatus === 200
+              ? json(200, { hash: `h${puts.length}` })
+              : json(409, { code: 'page_conflict', message: 'changed outside' }),
+          )
+        }
+        return Promise.resolve(json(200, aPage('content/a.md', 'A')))
+      }),
+    )
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    store().clear()
+  })
+
+  it('tracks dirty and clears it when the draft matches again', async () => {
+    await store().load('content/a.md')
+    expect(store().dirty).toBe(false)
+    store().setDraft('x')
+    expect(store().dirty).toBe(true)
+    store().setDraft(store().page!.body)
+    expect(store().dirty).toBe(false)
+  })
+
+  it('debounces edits into one save and adopts the new hash', async () => {
+    await store().load('content/a.md')
+    store().setDraft('x')
+    await vi.advanceTimersByTimeAsync(1000)
+    store().setDraft('xy')
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(puts).toHaveLength(0)
+    await vi.advanceTimersByTimeAsync(600)
+    expect(puts).toEqual([{ path: 'content/a.md', body: 'xy', hash: 'hash-A' }])
+    expect(store().page?.hash).toBe('h1')
+    expect(store().dirty).toBe(false)
+  })
+
+  it('saves edits made during a save afterwards with the new hash', async () => {
+    await store().load('content/a.md')
+    store().setDraft('x')
+    const first = store().save()
+    await vi.advanceTimersByTimeAsync(0)
+    store().setDraft('xy')
+    await first
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(puts).toMatchObject([{ body: 'x', hash: 'hash-A' }, { body: 'xy', hash: 'h1' }])
+    expect(store().dirty).toBe(false)
+  })
+
+  it('flushes pending edits when switching pages', async () => {
+    await store().load('content/a.md')
+    store().setDraft('x')
+    await store().load('content/a.md')
+    expect(puts).toHaveLength(1)
+  })
+
+  it('stops autosave on a conflict and keeps the draft', async () => {
+    await store().load('content/a.md')
+    putStatus = 409
+    store().setDraft('x')
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(store().saveError?.code).toBe('page_conflict')
+    expect(store().dirty).toBe(true)
+    store().setDraft('xy')
+    await vi.advanceTimersByTimeAsync(5000)
+    expect(puts).toHaveLength(1)
+    expect(store().draft).toBe('xy')
+  })
+
+  it('does not retry a failed non-conflict save on a timer', async () => {
+    await store().load('content/a.md')
+    putStatus = 500
+    store().setDraft('x')
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(puts).toHaveLength(1)
+    await vi.advanceTimersByTimeAsync(10000)
+    expect(puts).toHaveLength(1)
+    expect(store().dirty).toBe(true)
+  })
+
+  it('saves unsaved edits before the project closes, and aborts if the user cancels', async () => {
+    await store().load('content/a.md')
+    putStatus = 500
+    store().setDraft('x')
+    const confirm = vi.fn<() => boolean>(() => false)
+    vi.stubGlobal('confirm', confirm)
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(json(500, { code: 'cannot_save_page', message: 'no' }))),
+    )
+    await useProjectStore.getState().close()
+    expect(confirm).toHaveBeenCalled()
+    expect(useProjectStore.getState().project).not.toBeNull()
+    expect(store().draft).toBe('x')
+  })
+
+  it('makes the old page uneditable while a new one loads', async () => {
+    await store().load('content/a.md')
+    holdRequests()
+    const p = store().load('content/b.md')
+    expect(store().page).toBeNull()
+    expect(store().draft).toBeNull()
+    respond(pageURL('content/b.md'), json(200, aPage('content/b.md', 'B')))
+    await p
+    expect(store().page?.path).toBe('content/b.md')
   })
 })

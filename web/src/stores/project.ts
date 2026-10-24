@@ -15,6 +15,12 @@ interface ProjectState {
   reset: () => void
 }
 
+// Registered by the page store: resolves false when the user keeps unsaved edits.
+let beforeLeave: (() => Promise<boolean>) | null = null
+export function setBeforeLeave(fn: (() => Promise<boolean>) | null) {
+  beforeLeave = fn
+}
+
 export const useProjectStore = create<ProjectState>()((set, get) => ({
   project: null,
   tree: null,
@@ -23,6 +29,9 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
 
   // Opens a project folder and loads its content tree.
   async open(path) {
+    if (get().project !== null && beforeLeave !== null && !(await beforeLeave())) {
+      return false
+    }
     set({ loading: true, error: null })
     try {
       const opened = await api.openProject(path)
@@ -60,6 +69,9 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
   },
 
   async close() {
+    if (beforeLeave !== null && !(await beforeLeave())) {
+      return
+    }
     try {
       await api.closeProject()
     } finally {

@@ -54,7 +54,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 - [ ] Preview: the real Hugo-rendered page from `hugo server`, loaded in an
   iframe from its own port (separate origin from the app)
 - [ ] Drag & drop images into `static/`, path inserted into the markdown
-- [ ] Autosave with debounce, unsaved-changes state, editor undo
+- [x] Autosave with debounce, unsaved-changes state, editor undo
 
 ⚠️ The editor stays raw markdown. Preview is template-accurate because Hugo
 renders it, not the app.

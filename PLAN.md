@@ -64,13 +64,13 @@ Branch: feat/p6-autosave
 Goal: Edits save automatically after a pause, with a visible unsaved-changes state and editor undo.
 Done when: the page store tracks a dirty flag and the last saved content hash; autosave fires after a debounce and on page switch, sending the hash and adopting the new hash from each response; a hash conflict stops autosave and shows the conflict; leaving with unsaved changes warns (beforeunload); CodeMirror history gives undo/redo; vitest covers debounce, dirty transitions and conflict.
 Risk: high (concurrency: overlapping saves and conflicts can lose edits)
-Status: todo
-- [ ] M6.1 Add a dirty flag and saved-hash tracking to the page store with tests
-- [ ] M6.2 Add debounced autosave with serialised in-flight saves and tests
-- [ ] M6.3 Stop autosave on a hash conflict and show it, with a test
-- [ ] M6.4 Show the unsaved/saving/saved state in `PageView`
-- [ ] M6.5 Warn on page switch or unload while saves are pending
-- [ ] M6.6 Enable CodeMirror history keybindings for undo and redo
+Status: merged
+- [x] M6.1 Add a dirty flag and saved-hash tracking to the page store with tests
+- [x] M6.2 Add debounced autosave with serialised in-flight saves and tests
+- [x] M6.3 Stop autosave on a hash conflict and show it, with a test
+- [x] M6.4 Show the unsaved/saving/saved state in `PageView`
+- [x] M6.5 Warn on page switch or unload while saves are pending
+- [x] M6.6 Enable CodeMirror history keybindings for undo and redo
 
 ## Phase 7: Image drag and drop
 Branch: feat/p7-image-drop

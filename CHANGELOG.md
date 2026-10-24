@@ -12,6 +12,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Autosave after a 1.5 s pause and on page switch, with saves serialised,
+  a Saved/Unsaved/Saving/Conflict indicator, a beforeunload warning and
+  editor undo/redo. A hash conflict stops autosave.
 - Frontmatter form (title, date, draft, tags) above the editor. `PUT /api/page`
   accepts optional `fields`; unknown keys are kept, comments and TOML key order
   are not.

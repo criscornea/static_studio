@@ -1,7 +1,7 @@
 import { useId, useState } from 'react'
 
 import { api } from '@/api/client'
-import { asApiError, type ApiError } from '@/api/types'
+import { ApiError, asApiError } from '@/api/types'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { usePageStore } from '@/stores/page'
+import { cancelAutosave, usePageStore } from '@/stores/page'
 import { useProjectStore } from '@/stores/project'
 
 interface RenamePageDialogProps {
@@ -52,6 +52,16 @@ function RenameForm({ path, onDone }: { path: string; onDone: () => void }) {
     setError(null)
     let next: string
     try {
+      if (openPath === path) {
+        cancelAutosave()
+        await usePageStore.getState().save()
+        const st = usePageStore.getState()
+        if (st.dirty || st.saveError) {
+          setError(st.saveError ?? new ApiError('cannot_save_page', 'Save the page before renaming it.', 0))
+          setSubmitting(false)
+          return
+        }
+      }
       const res = await api.renamePage({
         from: path,
         to: prefix + value.trim().replace(/^\/+/, ''),

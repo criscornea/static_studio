@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { defaultKeymap } from '@codemirror/commands'
+import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
 import { markdown } from '@codemirror/lang-markdown'
 import { EditorState } from '@codemirror/state'
 import { EditorView, keymap } from '@codemirror/view'
@@ -39,8 +39,10 @@ export function MarkdownEditor({ value, onChange, onSave }: Props) {
               },
             },
             ...defaultKeymap,
+            ...historyKeymap,
           ]),
           EditorState.lineSeparator.of(sep.current),
+          history(),
           markdown(),
           EditorView.lineWrapping,
           EditorView.updateListener.of((u) => {

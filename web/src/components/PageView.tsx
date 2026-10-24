@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { formatDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { fieldsEqual, usePageStore } from '@/stores/page'
+import { usePageStore } from '@/stores/page'
 
 function formatLabel(format: string | undefined): string {
   switch (format) {
@@ -40,7 +40,23 @@ export function PageView() {
   const saveError = usePageStore((s) => s.saveError)
   const setDraft = usePageStore((s) => s.setDraft)
   const save = usePageStore((s) => s.save)
+  const dirty = usePageStore((s) => s.dirty)
   const saving = page !== null && savingPath === page.path
+  const conflict = saveError?.code === 'page_conflict'
+  const status = saving ? 'Saving…' : conflict ? 'Conflict' : dirty ? 'Unsaved changes' : 'Saved'
+
+  // Warn before closing the tab while edits are unsaved or saving.
+  useEffect(() => {
+    if (!dirty && !saving) {
+      return
+    }
+    const onUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', onUnload)
+    return () => window.removeEventListener('beforeunload', onUnload)
+  }, [dirty, saving])
 
   // Ctrl/Cmd+S saves even when the editor is not focused.
   useEffect(() => {
@@ -70,8 +86,7 @@ export function PageView() {
     return <p className="text-sm text-muted-foreground">Loading…</p>
   }
 
-  const unchanged =
-    draft === page.body && (fieldsDraft === null || fieldsEqual(fieldsDraft, page.fields))
+  const unchanged = !dirty
   const date = formatDate(page.fields.date)
 
   return (
@@ -122,6 +137,9 @@ export function PageView() {
           >
             {saving ? 'Saving…' : 'Save'}
           </Button>
+          <span className="text-xs text-muted-foreground" role="status">
+            {status}
+          </span>
           <span className="text-xs text-muted-foreground">Ctrl/Cmd+S</span>
         </div>
         <MarkdownEditor
