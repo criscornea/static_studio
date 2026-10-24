@@ -125,3 +125,16 @@ describe('Sidebar', () => {
     expect(screen.getByRole('searchbox')).toHaveFocus()
   })
 })
+
+describe('Sidebar new page', () => {
+  it('opens the new page dialog from the plus button', async () => {
+    vi.stubGlobal('fetch', () =>
+      Promise.resolve(new Response(JSON.stringify({ archetypes: [] }), { status: 200 })),
+    )
+    render(<Sidebar />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'New page' }))
+
+    expect(await screen.findByLabelText('Name')).toBeInTheDocument()
+  })
+})

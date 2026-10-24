@@ -43,6 +43,13 @@ export type ApiErrorCode =
   | 'cannot_read_page'
   | 'missing_query'
   | 'cannot_search'
+  | 'invalid_name'
+  | 'invalid_folder'
+  | 'unknown_archetype'
+  | 'unsupported_archetype'
+  | 'invalid_archetype'
+  | 'page_exists'
+  | 'cannot_create_page'
 
 /** An error response from the backend, or a transport failure. */
 export class ApiError extends Error {
@@ -73,6 +80,22 @@ export interface Page {
   format: FrontmatterFormat
   fields: PageFields
   body: string
+}
+
+/** A template a new page can start from. */
+export interface Archetype {
+  name: string
+  // True for the fallback used when the project defines no default.
+  builtin?: boolean
+}
+
+export interface NewPageRequest {
+  // Empty lets the backend pick: the archetype named after the folder, else the default.
+  archetype: string
+  // Relative to the content directory. Empty means its root.
+  folder: string
+  // What the user typed. The backend derives the file name from it.
+  name: string
 }
 
 export interface SearchHit {

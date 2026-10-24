@@ -9,7 +9,9 @@ up() { local d; d="$(dirname "$f")"; while [[ "$d" == "$PWD"* ]]; do [[ -e "$d/$
 
 case "$f" in
   *.go)
-    if command -v goimports >/dev/null; then goimports -w "$f"; elif command -v gofmt >/dev/null; then gofmt -w "$f"; fi
+    d="$(up go.mod)"   # group the module's own imports separately, like golangci-lint local-prefixes
+    mod="$([[ -n "$d" ]] && awk '/^module /{print $2; exit}' "$d/go.mod")"
+    if command -v goimports >/dev/null; then goimports ${mod:+-local "$mod"} -w "$f"; elif command -v gofmt >/dev/null; then gofmt -w "$f"; fi
     ;;
   *.ts|*.tsx|*.js|*.jsx|*.mjs|*.cjs|*.vue|*.css|*.scss|*.html|*.json|*.yaml|*.yml)
     d="$(up node_modules/.bin/prettier)"   # only a locally installed prettier, never an npx download

@@ -1,11 +1,13 @@
 import {
   ApiError,
   type ApiErrorCode,
+  type Archetype,
   type ContentTree,
+  type NewPageRequest,
   type Page,
   type Project,
   type SearchResults,
-} from "./types";
+} from './types'
 
 /**
  * The id of the open project, sent with every request that touches project
@@ -44,7 +46,11 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
       body: body === undefined ? undefined : JSON.stringify(body),
     })
   } catch {
-    throw new ApiError('internal', 'The editor could not reach its backend. Is static_studio still running?', 0)
+    throw new ApiError(
+      'internal',
+      'The editor could not reach its backend. Is static_studio still running?',
+      0,
+    )
   }
 
   if (res.status === 204) {
@@ -86,6 +92,8 @@ export const api = {
   closeProject: () => request<void>('/api/project/close', { method: 'POST', withProject: false }),
   contentTree: () => request<ContentTree>('/api/content'),
   page: (path: string) => request<Page>(`/api/page?path=${encodeURIComponent(path)}`),
-  search: (query: string) =>
-    request<SearchResults>(`/api/search?q=${encodeURIComponent(query)}`),
+  archetypes: () =>
+    request<{ archetypes: Archetype[] }>('/api/archetypes').then((r) => r.archetypes),
+  createPage: (req: NewPageRequest) => request<Page>('/api/page', { method: 'POST', body: req }),
+  search: (query: string) => request<SearchResults>(`/api/search?q=${encodeURIComponent(query)}`),
 }

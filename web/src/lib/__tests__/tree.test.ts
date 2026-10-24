@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest'
 
 import type { ContentNode, PageFields } from '@/api/types'
-import { applyView, collectTags, defaultView, type TreeView } from '../tree'
+import {
+  applyView,
+  collectFolders,
+  collectTags,
+  defaultView,
+  folderOf,
+  type TreeView,
+} from '../tree'
 
 const page = (name: string, fields?: Partial<PageFields>): ContentNode => ({
   name,
@@ -117,5 +124,43 @@ describe('collectTags', () => {
 
   it('is empty when no page has tags', () => {
     expect(collectTags([page('a.md', { title: 'A' })])).toEqual([])
+  })
+})
+
+describe('collectFolders', () => {
+  it('lists nested folders relative to the content directory', () => {
+    const root: ContentNode = {
+      name: 'content',
+      path: 'content',
+      isDir: true,
+      children: [
+        {
+          ...dir('posts', dir('2024')),
+          children: [{ ...dir('2024'), path: 'content/posts/2024' }],
+        },
+        page('a.md'),
+        dir('about'),
+      ],
+    }
+
+    expect(collectFolders(root)).toEqual(['about', 'posts', 'posts/2024'])
+  })
+
+  it('is empty without a tree', () => {
+    expect(collectFolders(null)).toEqual([])
+  })
+})
+
+describe('folderOf', () => {
+  it('gives the page folder relative to the content directory', () => {
+    expect(folderOf('content/posts/2024/a.md', 'content')).toBe('posts/2024')
+    expect(folderOf('content/posts/a.md', 'content')).toBe('posts')
+  })
+
+  it('is empty for a page at the top level, no page or a foreign path', () => {
+    expect(folderOf('content/a.md', 'content')).toBe('')
+    expect(folderOf(null, 'content')).toBe('')
+    expect(folderOf('static/a.md', 'content')).toBe('')
+    expect(folderOf('contents/a.md', 'content')).toBe('')
   })
 })

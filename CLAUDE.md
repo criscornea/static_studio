@@ -30,27 +30,23 @@ Backend (`internal/`), wired in `cmd/studio/main.go` → `server.New(logger, web
 
 - `ssg` — `SSG` interface (Hugo/Astro implementations) and `Detect(dir)`, which yields an `ssg.Project` (root, kind, config file, content/asset dirs). Unsupported-but-recognised generators return `ErrUnsupported`.
 - `project` — `Manager` owns the single open project (mutex-guarded). Opening creates an `os.Root`; **all filesystem access to project files must go through `Open.Root()`** so traversal, absolute paths and symlink escapes are refused. Each open gets a random ID; API calls carry it and mismatches return `ErrStaleID`.
-- `content` — walks the content dir into a tree (`tree.go`) and loads a single page (`page.go`), operating on the confined root.
+- `content` — walks the content dir into a tree (`tree.go`), loads a single page (`page.go`), searches pages (`search.go`) and creates pages from archetypes (`archetype.go`, the only code that writes project files so far), operating on the confined root.
 - `frontmatter` — splits and parses YAML/TOML frontmatter from markdown.
 - `server` — `net/http` mux with method-prefixed patterns (`api.go` handlers, `server.go` routing). Unknown `/api/*` returns a JSON 404; everything else is an SPA handler over the embedded assets with index.html fallback (or a "no UI" message when assets are nil).
 
-Frontend (`web/`, React 19 + TS + Zustand + Vite + Tailwind v4 + shadcn/ui): `src/api/client.ts` and `types.ts` mirror the Go JSON shapes (keep in sync when changing API structs); state lives in `src/stores/{project,page}.ts`; components are `ProjectPicker`, `ContentTree`, `PageView` (`src/components/ui/` is generated shadcn code; add more with `npx shadcn@latest add <name>`). `web/embed.go` exposes `dist/` to the Go binary.
+Frontend (`web/`, React 19 + TS + Zustand + Vite + Tailwind v4 + shadcn/ui): `src/api/client.ts` and `types.ts` mirror the Go JSON shapes (keep in sync when changing API structs); state lives in `src/stores/{project,page,search,view}.ts`; pure tree sorting/filtering is in `src/lib/tree.ts`; components are `ProjectPicker`, `Sidebar` (search, sort/filter, `ContentTree`, `NewPageDialog`), `PageView` (`src/components/ui/` is generated shadcn code; add more with `yes n | npx shadcn@latest add <name>`, which declines overwriting existing components; afterwards replace `from "cn"` with `from "@/lib/utils"` in the new files and run `npm uninstall cn`, because the generator pulls in an unrelated third-party package). `web/embed.go` exposes `dist/` to the Go binary.
 
 CI (`.github/workflows/ci.yml`) has a Go job (tidy/gofmt diff, vet, race tests, golangci-lint) and a web job (type-check, lint, build, then `go build ./...` with the real embed).
 
-## Planning
+## Claude workflow
 
-- `ROADMAP.md` is the long-term list (built, next, out of scope, known shortcuts). `PLAN.md` breaks the current ROADMAP section into phases and milestones.
-- When a phase is done, tick its items in `ROADMAP.md` and move shipped items to `CHANGELOG.md`.
+Tooling copied from `vibe_starter` lives in `.claude/` (agents, skills, hooks, status line) and `scripts/`.
 
-## Workflow
-
-- `PLAN.md` is the source of truth for the current work: phases, milestones, status. Keep it current.
-- Planning: Opus (`planner` agent). Coding: Sonnet (`implementer` agent). Review: Opus (`code-reviewer` agent), only when the user agrees.
-- One branch per phase: `feat/p<N>-<slug>`. One commit per milestone. Push after each commit if a remote exists.
-- Merge into `main` only with a local squash merge, after the optional review.
-- Use `/run-plan` to execute PLAN.md.
-- Need the user? Write `BLOCKED: <reason>` in PLAN.md and stop.
+- Build check: `.claude/skills/build-check/check.sh` runs `scripts/check.sh` (`make check`, the same gates as CI) and prints only failures or `BUILD OK`.
+- `ROADMAP.md` is the long-term list (built, next, out of scope, known shortcuts). `PLAN.md` breaks it into phases and milestones. When a phase is done, tick its items in `ROADMAP.md` and move shipped items to `CHANGELOG.md`.
+- `PLAN.md` drives `/run-plan`: the `planner` agent (Opus) writes it, `implementer` (Sonnet) builds one phase per `feat/p<N>-<slug>` branch with one commit per milestone, `code-reviewer` (Opus) reviews only when the user agrees, then a local squash merge into `main`. Derive phases from `ROADMAP.md`; `/kickoff` is for new projects.
+- Need the user during an autopilot run? Write `BLOCKED: <reason>` in `PLAN.md` and stop.
+- Hooks: `guard.sh` blocks force pushes, `reset --hard`, `clean -f`, deleting main and `rm -r` on broad paths; `format.sh` formats each edited file (gofmt/goimports, local prettier); `stop-continue.sh` keeps the loop going while `PLAN.md` says `autopilot: on`.
 
 ## Token rules
 

@@ -31,20 +31,13 @@
       "Bash(go *)",
       "Bash(npm *)",
       "Bash(npx *)",
-      "Bash(pnpm *)",
-      "Bash(yarn *)",
-      "Bash(bun *)",
       "Bash(node *)",
-      "Bash(composer *)",
-      "Bash(php *)",
-      "Bash(vendor/bin/*)",
-      "Bash(bin/console *)",
-      "Bash(bin/phpunit *)",
       "Bash(make *)",
       "Bash(ls *)",
       "Bash(mkdir *)",
       "mcp__plugin_context7_context7",
-      "mcp__plugin_playwright_playwright"
+      "mcp__plugin_playwright_playwright",
+      "Bash(golangci-lint *)"
     ],
     "deny": [
       "Read(./.env)",

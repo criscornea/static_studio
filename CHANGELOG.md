@@ -5,6 +5,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Generated UI components no longer depend on the third-party `cn` package;
+  they use the local helper in `web/src/lib/utils.ts`.
+
 ### Added
 
 - Project detection for Hugo, covering both the `hugo.*` and legacy
@@ -28,6 +33,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Sort the file tree by name, title or date, filter it by draft status and
   tag, and search page titles, tags and bodies from a box in the sidebar
   (Ctrl/Cmd+K focuses it). Search is served by `GET /api/search`.
+- Create a page from the sidebar's plus button: choose a name, a folder and a
+  template (Hugo archetype, or a built-in default). The page is written
+  without ever overwriting an existing file, and opens straight away.
+  Served by `GET /api/archetypes` and `POST /api/page`.
 - Hugo's `contentDir` and `staticDir` are read from the config file instead
   of being hardcoded. Missing, invalid or out-of-project values fall back to
   the defaults.
