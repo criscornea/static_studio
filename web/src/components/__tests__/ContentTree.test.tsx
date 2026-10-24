@@ -52,4 +52,26 @@ describe('ContentTree file row', () => {
 
     expect(onSelect).toHaveBeenCalledWith('content/hello.md')
   })
+
+  it('shows rename and delete buttons only when handlers are given', async () => {
+    const onRename = vi.fn<(path: string) => void>()
+    const onDelete = vi.fn<(path: string) => void>()
+    render(
+      <ul>
+        <ContentTree
+          node={file('hello.md')}
+          selected={null}
+          onSelect={vi.fn<() => void>()}
+          onRename={onRename}
+          onDelete={onDelete}
+        />
+      </ul>,
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'Rename hello.md' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Delete hello.md' }))
+
+    expect(onRename).toHaveBeenCalledWith('content/hello.md')
+    expect(onDelete).toHaveBeenCalledWith('content/hello.md')
+  })
 })

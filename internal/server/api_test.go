@@ -689,3 +689,97 @@ func TestCreatePageErrors(t *testing.T) {
 		t.Errorf("existing page was overwritten: %q", data)
 	}
 }
+
+func (a *api) send(method, target, id, body string) *httptest.ResponseRecorder {
+	a.t.Helper()
+
+	var r io.Reader
+	if body != "" {
+		r = strings.NewReader(body)
+	}
+	req := httptest.NewRequest(method, "http://127.0.0.1:7777"+target, r)
+	if id != "" {
+		req.Header.Set("X-Project-ID", id)
+	}
+	rec := httptest.NewRecorder()
+	a.handler.ServeHTTP(rec, req)
+	return rec
+}
+
+func TestRenamePage(t *testing.T) {
+	dir := withPages(t)
+	a := newAPI(t)
+	id := decodeProject(t, a.open(dir)).ID
+
+	rec := a.send(http.MethodPost, "/api/page/rename", id, `{"from":"content/post.md","to":"content/blog/new.md"}`)
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"path":"content/blog/new.md"`) {
+		t.Fatalf("got %d %s", rec.Code, rec.Body)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "content/blog/new.md")); err != nil {
+		t.Fatal(err)
+	}
+
+	cases := []struct {
+		name, id, body string
+		status         int
+		code           string
+	}{
+		{"exists", id, `{"from":"content/blog/new.md","to":"content/broken.md"}`, 409, "page_exists"},
+		{"missing", id, `{"from":"content/none.md","to":"content/x.md"}`, 404, "page_not_found"},
+		{"outside from", id, `{"from":"static/x.md","to":"content/x.md"}`, 400, "not_editable"},
+		{"outside to", id, `{"from":"content/broken.md","to":"static/y.md"}`, 400, "not_editable"},
+		{"traversal", id, `{"from":"content/broken.md","to":"content/../y.md"}`, 400, "not_editable"},
+		{"empty", id, `{"from":"","to":""}`, 400, "missing_path"},
+		{"bad json", id, `nope`, 400, "bad_request"},
+		{"no id", "", `{"from":"content/broken.md","to":"content/z.md"}`, 409, "stale_project"},
+		{"stale id", "bogus", `{"from":"content/broken.md","to":"content/z.md"}`, 409, "stale_project"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			rec := a.send(http.MethodPost, "/api/page/rename", tc.id, tc.body)
+			if rec.Code != tc.status || decodeError(t, rec).Code != tc.code {
+				t.Fatalf("got %d %s", rec.Code, rec.Body)
+			}
+		})
+	}
+}
+
+func TestDeletePage(t *testing.T) {
+	dir := withPages(t)
+	a := newAPI(t)
+	id := decodeProject(t, a.open(dir)).ID
+
+	cases := []struct {
+		name, id, path string
+		status         int
+		code           string
+	}{
+		{"outside", id, "static/x.md", 400, "not_editable"},
+		{"traversal", id, "content/../static/x.md", 400, "not_editable"},
+		{"missing", id, "content/none.md", 404, "page_not_found"},
+		{"empty", id, "", 400, "missing_path"},
+		{"no id", "", "content/post.md", 409, "stale_project"},
+		{"stale id", "bogus", "content/post.md", 409, "stale_project"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			rec := a.send(http.MethodDelete, "/api/page?path="+url.QueryEscape(tc.path), tc.id, "")
+			if rec.Code != tc.status || decodeError(t, rec).Code != tc.code {
+				t.Fatalf("got %d %s", rec.Code, rec.Body)
+			}
+		})
+	}
+	for _, keep := range []string{"static/x.md", "content/post.md"} {
+		if _, err := os.Stat(filepath.Join(dir, keep)); err != nil {
+			t.Errorf("%s removed", keep)
+		}
+	}
+
+	rec := a.send(http.MethodDelete, "/api/page?path=content/post.md", id, "")
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("got %d %s", rec.Code, rec.Body)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "content/post.md")); !os.IsNotExist(err) {
+		t.Fatal("not deleted")
+	}
+}

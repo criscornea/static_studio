@@ -28,13 +28,13 @@ Branch: feat/p3-rename-delete
 Goal: Users can rename (or move) and delete a page from the sidebar.
 Done when: `POST /api/page/rename` and `DELETE /api/page` exist, require the project id, stay inside the content dir, refuse overwriting on rename and refuse non-editable files; the sidebar offers rename and delete with a confirm dialog; the tree and open page update; Go and vitest tests cover success and refusal paths.
 Risk: high (deletion of data, moving user files)
-Status: todo
-- [ ] M3.1 Add `content.RenamePage` with tests (no overwrite, confined, editable extensions only)
-- [ ] M3.2 Add `content.DeletePage` with tests (files only, confined, editable extensions only)
-- [ ] M3.3 Add rename and delete API handlers with handler tests
-- [ ] M3.4 Add client functions and types for rename and delete
-- [ ] M3.5 Add a rename dialog to the sidebar tree with a test
-- [ ] M3.6 Add a delete confirm dialog to the sidebar tree with a test
+Status: merged
+- [x] M3.1 Add `content.RenamePage` with tests (no overwrite, confined, editable extensions only)
+- [x] M3.2 Add `content.DeletePage` with tests (files only, confined, editable extensions only)
+- [x] M3.3 Add rename and delete API handlers with handler tests
+- [x] M3.4 Add client functions and types for rename and delete
+- [x] M3.5 Add a rename dialog to the sidebar tree with a test
+- [x] M3.6 Add a delete confirm dialog to the sidebar tree with a test
 
 ## Phase 4: Markdown editor with save
 Branch: feat/p4-editor

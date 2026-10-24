@@ -50,6 +50,8 @@ export type ApiErrorCode =
   | 'invalid_archetype'
   | 'page_exists'
   | 'cannot_create_page'
+  | 'cannot_rename_page'
+  | 'cannot_delete_page'
 
 /** An error response from the backend, or a transport failure. */
 export class ApiError extends Error {
@@ -96,6 +98,12 @@ export interface NewPageRequest {
   folder: string
   // What the user typed. The backend derives the file name from it.
   name: string
+}
+
+export interface RenamePageRequest {
+  // Full paths of the page, starting with the content directory.
+  from: string
+  to: string
 }
 
 export interface SearchHit {

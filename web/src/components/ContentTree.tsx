@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, Pencil, Trash2 } from 'lucide-react'
 
 import type { ContentNode } from '@/api/types'
 import { Badge } from '@/components/ui/badge'
@@ -10,11 +10,14 @@ interface ContentTreeProps {
   node: ContentNode
   selected: string | null
   onSelect: (path: string) => void
+  // When given, file rows show a rename or delete button.
+  onRename?: (path: string) => void
+  onDelete?: (path: string) => void
   // Nesting level, used for indentation. The root renders its children at 0.
   depth?: number
 }
 
-export function ContentTree({ node, selected, onSelect, depth = 0 }: ContentTreeProps) {
+export function ContentTree({ node, selected, onSelect, onRename, onDelete, depth = 0 }: ContentTreeProps) {
   // Each folder instance tracks its own state. Folders start expanded.
   const [expanded, setExpanded] = useState(true)
   const indent = { paddingLeft: `${depth * 0.75 + 0.5}rem` }
@@ -24,7 +27,7 @@ export function ContentTree({ node, selected, onSelect, depth = 0 }: ContentTree
     const date = formatDate(node.fields?.date, { dateStyle: 'medium' })
 
     return (
-      <li>
+      <li className="group relative">
         <button
           type="button"
           style={indent}
@@ -48,6 +51,32 @@ export function ContentTree({ node, selected, onSelect, depth = 0 }: ContentTree
             </span>
           )}
         </button>
+        {(onRename || onDelete) && (
+          <span className="absolute top-1 right-1 hidden gap-0.5 rounded-md bg-background/90 group-focus-within:flex group-hover:flex">
+            {onRename && (
+              <button
+                type="button"
+                aria-label={`Rename ${node.name}`}
+                title="Rename or move"
+                onClick={() => onRename(node.path)}
+                className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+              >
+                <Pencil className="size-3.5" />
+              </button>
+            )}
+            {onDelete && (
+              <button
+                type="button"
+                aria-label={`Delete ${node.name}`}
+                title="Delete"
+                onClick={() => onDelete(node.path)}
+                className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-destructive"
+              >
+                <Trash2 className="size-3.5" />
+              </button>
+            )}
+          </span>
+        )}
       </li>
     )
   }
@@ -72,6 +101,8 @@ export function ContentTree({ node, selected, onSelect, depth = 0 }: ContentTree
               node={child}
               selected={selected}
               onSelect={onSelect}
+              onRename={onRename}
+              onDelete={onDelete}
               depth={depth + 1}
             />
           ))}

@@ -2,7 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Plus, Search, X } from 'lucide-react'
 
 import { ContentTree } from '@/components/ContentTree'
+import { DeletePageDialog } from '@/components/DeletePageDialog'
 import { NewPageDialog } from '@/components/NewPageDialog'
+import { RenamePageDialog } from '@/components/RenamePageDialog'
 import { SearchResults } from '@/components/SearchResults'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -46,6 +48,8 @@ export function Sidebar() {
 
   const searchBox = useRef<HTMLInputElement>(null)
   const [creating, setCreating] = useState(false)
+  const [renaming, setRenaming] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState<string | null>(null)
   const searching = search.query.trim() !== ''
 
   // Cmd/Ctrl+K jumps to the search box from anywhere, like a native app.
@@ -176,6 +180,8 @@ export function Sidebar() {
                   node={child}
                   selected={selected}
                   onSelect={(path) => void load(path)}
+                  onRename={setRenaming}
+                  onDelete={setDeleting}
                 />
               ))}
             </ul>
@@ -193,6 +199,8 @@ export function Sidebar() {
       </ScrollArea>
 
       <NewPageDialog open={creating} onOpenChange={setCreating} />
+      <RenamePageDialog path={renaming} onClose={() => setRenaming(null)} />
+      <DeletePageDialog path={deleting} onClose={() => setDeleting(null)} />
     </div>
   )
 }

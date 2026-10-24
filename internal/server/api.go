@@ -287,3 +287,88 @@ func (s *Server) handlePage(w http.ResponseWriter, r *http.Request) {
 			"This page could not be read. Check that you have permission to read it.")
 	}
 }
+
+type renamePageRequest struct {
+	From string `json:"from"`
+	To   string `json:"to"`
+}
+
+type renamePageResponse struct {
+	Path string `json:"path"`
+}
+
+func (s *Server) handleRenamePage(w http.ResponseWriter, r *http.Request) {
+	open, ok := s.requireProject(w, r)
+	if !ok {
+		return
+	}
+
+	var req renamePageRequest
+	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 8<<10))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&req); err != nil {
+		s.writeError(w, http.StatusBadRequest, "bad_request", "The request could not be read.")
+		return
+	}
+	if req.From == "" || req.To == "" {
+		s.writeError(w, http.StatusBadRequest, "missing_path", "No page was given.")
+		return
+	}
+
+	to, err := content.RenamePage(open.Root(), open.Info.ContentDir, req.From, req.To)
+	switch {
+	case err == nil:
+		s.log.Info("page renamed", "from", req.From, "to", to)
+		s.writeJSON(w, http.StatusOK, renamePageResponse{Path: to})
+
+	case errors.Is(err, content.ErrNotEditable):
+		s.writeError(w, http.StatusBadRequest, "not_editable",
+			"This file can't be renamed here. Only pages inside the content folder can be moved, and they must keep a page file extension.")
+
+	case errors.Is(err, content.ErrNotFound):
+		s.writeError(w, http.StatusNotFound, "page_not_found",
+			"This page no longer exists. It may have been moved or deleted outside the editor.")
+
+	case errors.Is(err, content.ErrPageExists):
+		s.writeError(w, http.StatusConflict, "page_exists",
+			"A page with this name already exists in that folder.")
+
+	default:
+		s.log.Warn("renaming a page failed", "from", req.From, "to", req.To, "err", err)
+		s.writeError(w, http.StatusInternalServerError, "cannot_rename_page",
+			"The page could not be renamed. Check that you have permission to write to the content folder.")
+	}
+}
+
+func (s *Server) handleDeletePage(w http.ResponseWriter, r *http.Request) {
+	open, ok := s.requireProject(w, r)
+	if !ok {
+		return
+	}
+
+	name := r.URL.Query().Get("path")
+	if name == "" {
+		s.writeError(w, http.StatusBadRequest, "missing_path", "No page was given.")
+		return
+	}
+
+	err := content.DeletePage(open.Root(), open.Info.ContentDir, name)
+	switch {
+	case err == nil:
+		s.log.Info("page deleted", "path", name)
+		w.WriteHeader(http.StatusNoContent)
+
+	case errors.Is(err, content.ErrNotEditable):
+		s.writeError(w, http.StatusBadRequest, "not_editable",
+			"This file can't be deleted here. Only pages inside the content folder can be deleted.")
+
+	case errors.Is(err, content.ErrNotFound):
+		s.writeError(w, http.StatusNotFound, "page_not_found",
+			"This page no longer exists. It may have been moved or deleted outside the editor.")
+
+	default:
+		s.log.Warn("deleting a page failed", "path", name, "err", err)
+		s.writeError(w, http.StatusInternalServerError, "cannot_delete_page",
+			"The page could not be deleted. Check that you have permission to write to the content folder.")
+	}
+}

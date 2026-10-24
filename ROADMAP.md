@@ -39,7 +39,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 - [x] Create a page from an archetype
 - [x] CSRF hardening: `Origin` check on mutating endpoints, `Host` check
   against DNS rebinding
-- [ ] Rename and delete a page
+- [x] Rename and delete a page
 - [x] Atomic writes (temp file + rename)
 
 🎯 **Milestone:** content management without a text editor.
@@ -134,6 +134,9 @@ Deliberate simplifications, recorded so they don't become invisible.
   custom `archetypeDir` are not supported. A new page's title comes from the
   archetype (the file name, title-cased), not from what the user typed.
 - The content tree only lists `.md`, `.markdown`, `.mdx` and `.html`.
+- `RenamePage` on a filesystem without hard links falls back to Lstat then
+  rename, so a file created at the target in between would be overwritten
+  (TOCTOU). With hard links the move cannot overwrite.
 - `Manager.Close` is not called on server shutdown; it becomes relevant
   alongside subprocess cleanup.
 - `internal/server` writes responses via two `Server` methods. If that layer

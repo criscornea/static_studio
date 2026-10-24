@@ -4,6 +4,7 @@ import {
   type Archetype,
   type ContentTree,
   type NewPageRequest,
+  type RenamePageRequest,
   type Page,
   type Project,
   type SearchResults,
@@ -21,7 +22,7 @@ export function setProjectID(id: string | null): void {
 }
 
 interface RequestOptions {
-  method?: 'GET' | 'POST'
+  method?: 'GET' | 'POST' | 'DELETE'
   body?: unknown
   // Send the project id. Defaults to true.
   withProject?: boolean
@@ -95,5 +96,9 @@ export const api = {
   archetypes: () =>
     request<{ archetypes: Archetype[] }>('/api/archetypes').then((r) => r.archetypes),
   createPage: (req: NewPageRequest) => request<Page>('/api/page', { method: 'POST', body: req }),
+  renamePage: (req: RenamePageRequest) =>
+    request<{ path: string }>('/api/page/rename', { method: 'POST', body: req }),
+  deletePage: (path: string) =>
+    request<void>(`/api/page?path=${encodeURIComponent(path)}`, { method: 'DELETE' }),
   search: (query: string) => request<SearchResults>(`/api/search?q=${encodeURIComponent(query)}`),
 }

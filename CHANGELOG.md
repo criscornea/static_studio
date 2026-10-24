@@ -12,6 +12,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Rename/move and delete a page: `POST /api/page/rename` and `DELETE /api/page`
+  (confined to the content dir, never overwrite, editable files only) with
+  sidebar rename and delete-confirm dialogs.
+
 - Atomic, root-confined file writes (temp file, fsync, rename); new pages
   are published by hard link so an existing file is never replaced.
 - `/api` requests with a non-loopback `Host` (DNS rebinding) or a mutating
