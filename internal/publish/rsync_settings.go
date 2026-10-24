@@ -99,8 +99,9 @@ func (s Settings) validateRsync() (Settings, error) {
 			return s, fmt.Errorf("%w: the destination path is empty or has a character that is not allowed", ErrInvalid)
 		}
 	}
+	// 0 means "not set": ssh uses its own default port.
 	if s.RsyncPort < 0 || s.RsyncPort > 65535 {
-		return s, fmt.Errorf("%w: the port must be between 1 and 65535", ErrInvalid)
+		return s, fmt.Errorf("%w: the port must be between 1 and 65535 (leave it empty for the ssh default)", ErrInvalid)
 	}
 	if id := s.RsyncIdentity; id != "" {
 		if err := checkPlain("the identity file", id); err != nil {

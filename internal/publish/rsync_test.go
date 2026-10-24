@@ -152,6 +152,8 @@ func TestRsyncFailuresAreReadable(t *testing.T) {
 		{"ssh: connect to host h port 22: Connection refused", "could not be reached"},
 		{"ssh: connect to host h port 22: Connection timed out", "could not be reached"},
 		{"bash: rsync: command not found", "not installed on the server"},
+		{`rsync: mkdir "/var/www/x" failed: Permission denied (13)`, "rsync failed"},
+		{"u@h: Permission denied, please try again.", "refused the login"},
 		{"something else", "rsync failed"},
 	}
 	for _, c := range cases {
@@ -286,5 +288,25 @@ func TestJobRsyncLocalPathEndToEnd(t *testing.T) {
 		if del == (err == nil) {
 			t.Errorf("delete=%v but stale exists=%v", del, err == nil)
 		}
+	}
+}
+
+func TestRsyncRefusesOverlappingLocalDest(t *testing.T) {
+	bin, argvFile := fakeRsync(t, "", 0)
+	p := &Publisher{RsyncBin: bin}
+	root := site(t, "x")
+	proj := root.Name()
+	for _, d := range []string{"/", proj, proj + "/public", proj + "/sub/out", filepath.Dir(proj)} {
+		s := Settings{Target: TargetRsync, RsyncDest: d, RsyncDelete: true}
+		if err := p.Publish(t.Context(), root, s, func(string) {}); !errors.Is(err, ErrInvalid) {
+			t.Errorf("dest %q: err = %v", d, err)
+		}
+	}
+	if _, err := os.Stat(argvFile); err == nil {
+		t.Fatal("rsync ran")
+	}
+	out := filepath.Join(t.TempDir(), "out")
+	if err := p.Publish(t.Context(), root, Settings{Target: TargetRsync, RsyncDest: out}, func(string) {}); err != nil {
+		t.Fatalf("separate dest refused: %v", err)
 	}
 }

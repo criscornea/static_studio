@@ -292,7 +292,7 @@ function PublishForm() {
             Cancel
           </Button>
         ) : (
-          <Button disabled={!loaded || !ready} onClick={() => void publish()}>
+          <Button disabled={!loaded || !ready || confirmDel} onClick={() => void publish()}>
             {isRsync && dryRun ? 'Publish (dry run)' : 'Publish'}
           </Button>
         )}

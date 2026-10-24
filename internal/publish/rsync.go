@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -56,6 +57,11 @@ func (p *Publisher) Rsync(ctx context.Context, root *os.Root, s Settings, emit f
 	s, err := s.Validate()
 	if err != nil {
 		return err
+	}
+	if !IsRemote(s.RsyncDest) {
+		if err := checkLocalDest(s.RsyncDest, root.Name()); err != nil {
+			return err
+		}
 	}
 	rsyncBin, sshBin := p.RsyncBin, p.SSH
 	if rsyncBin == "" {
@@ -131,7 +137,7 @@ func rsyncFailure(lines []string, cause error) error {
 	switch {
 	case has("host key verification failed", "remote host identification has changed", "no matching host key"):
 		return errors.New("the server's host key is unknown or has changed. Connect once with ssh in a terminal to check and accept it, then publish again")
-	case has("permission denied", "authentication failed", "too many authentication failures"):
+	case has("permission denied (publickey", "permission denied, please try again", "authentication failed", "too many authentication failures"):
 		return errors.New("the server refused the login. Check the user name and that your SSH key or agent is set up for it")
 	case has("could not resolve hostname", "name or service not known", "nodename nor servname"):
 		return errors.New("the host name could not be found. Check the destination")
@@ -140,5 +146,49 @@ func rsyncFailure(lines []string, cause error) error {
 	case has("rsync: command not found", "rsync: not found"):
 		return errors.New("rsync is not installed on the server")
 	}
+	last := ""
+	for i := len(lines) - 1; i >= 0; i-- {
+		if t := strings.TrimSpace(lines[i]); t != "" {
+			last = t
+			break
+		}
+	}
+	if last != "" {
+		return fmt.Errorf("rsync failed: %s (%w)", last, cause)
+	}
 	return fmt.Errorf("rsync failed: %w", cause)
+}
+
+// checkLocalDest refuses a local destination that is, contains or sits inside
+// the project root: with --delete rsync would remove project files or
+// unrelated data.
+func checkLocalDest(dest, projectRoot string) error {
+	resolve := func(p string) string {
+		p = filepath.Clean(p)
+		// Resolve the longest existing prefix so symlinks cannot hide an overlap.
+		rest := ""
+		for q := p; ; q = filepath.Dir(q) {
+			if r, err := filepath.EvalSymlinks(q); err == nil {
+				return filepath.Join(r, rest)
+			}
+			if filepath.Dir(q) == q {
+				return p
+			}
+			rest = filepath.Join(filepath.Base(q), rest)
+		}
+	}
+	d, r := resolve(dest), resolve(projectRoot)
+	if d == filepath.Dir(d) {
+		return fmt.Errorf("%w: the destination may not be the file system root", ErrInvalid)
+	}
+	if within(d, r) || within(r, d) {
+		return fmt.Errorf("%w: a local destination may not be the project folder, a folder containing it, or inside it", ErrInvalid)
+	}
+	return nil
+}
+
+// within reports whether path is equal to or below base.
+func within(path, base string) bool {
+	rel, err := filepath.Rel(base, path)
+	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
