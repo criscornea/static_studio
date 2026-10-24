@@ -150,3 +150,79 @@ Status: merged
 - [x] M13.3 Add tests for uncovered write, path and process failure paths
 - [x] M13.4 Write the README (problem, quickstart, architecture, scope)
 - [x] M13.5 Add a release workflow building cross-platform binaries on tags
+
+## Phase 14: Readable Hugo config errors
+Branch: feat/p14-config-errors
+Goal: An unreadable, oversized or invalid Hugo config stops the project from opening with a readable message instead of silently falling back to default directories.
+Done when: `SSG.Dirs` returns an error; a missing optional config is still not an error, but a config that exists and cannot be read, exceeds `maxConfigSize` or fails to parse yields `ssg.ErrInvalidConfig` wrapping the file name and parser message (line number when the parser gives one); `POST /api/project/open` maps it to a 4xx JSON error with a dedicated code; the open screen shows the file and reason in plain language; Go tests cover TOML, YAML and JSON syntax errors, oversize and unreadable files; vitest covers the message mapping; `make check` green.
+Risk: low
+Status: todo
+- [ ] M14.1 Return an error from `readConfig` and `SSG.Dirs`, distinguishing missing from invalid, with tests
+- [ ] M14.2 Add `ssg.ErrInvalidConfig` with file and parser detail, propagated through `Detect`
+- [ ] M14.3 Map `ErrInvalidConfig` to a JSON error code in the open handler with a server test
+- [ ] M14.4 Show the config error on the open screen via the readable-message map
+- [ ] M14.5 Update ROADMAP.md, CHANGELOG.md and the known-shortcuts note
+
+## Phase 15: Merged config directory and environment overrides
+Branch: feat/p15-config-merge
+Goal: `contentDir` and `staticDir` are resolved the way Hugo resolves them: root config, `config/_default/*`, `config/<environment>/*` and `HUGO_*` environment variables merged in Hugo's order.
+Done when: a `config` loader in `internal/ssg` merges the root config file with every `config/_default/*.{toml,yaml,yml,json}` (files named after a top-level key such as `languages.toml` or `module.toml` nest under that key) following Hugo's documented precedence; `config/<env>/` is overlaid where env is `HUGO_ENVIRONMENT`, else `development` (the dev server's default); `HUGO_CONTENTDIR` and `HUGO_STATICDIR` override the merged values and still pass `configDir` confinement; the environment is injected so tests do not touch the process env; invalid files in the config dir surface `ErrInvalidConfig` from Phase 14; table tests cover each precedence step; `make check` green.
+Risk: low
+Status: todo
+- [ ] M15.1 Add a case-insensitive deep merge of config maps with tests
+- [ ] M15.2 Load and merge `config/_default/*` on top of the root config file
+- [ ] M15.3 Overlay `config/<environment>/*` selected by `HUGO_ENVIRONMENT`
+- [ ] M15.4 Apply `HUGO_CONTENTDIR` and `HUGO_STATICDIR` overrides from an injected environment
+- [ ] M15.5 Update ROADMAP.md, CHANGELOG.md and the known-shortcuts note
+
+## Phase 16: Resolve every content directory
+Branch: feat/p16-content-dirs
+Goal: Per-language `contentDir` values and project-local module mounts are discovered, and the tree and search show pages from all of them.
+Done when: `ssg.Project` gains `ContentDirs []ContentDir{Path, Lang}` (primary first, deduplicated; `ContentDir` kept as the primary for compatibility) and `types.ts` mirrors it; `languages.<lang>.contentDir` entries are added; `module.mounts` with target `content` or `content/...` are added, and per Hugo, any content mount replaces the implicit `contentDir` mount; the first `static` mount source sets `AssetDir`; mount sources that are absolute, escape the root or belong to imported modules are skipped and logged, never followed; `GET /api/content` returns one root per content dir and the sidebar renders them with a language label; search walks every content dir; Go tests cover language dirs, mounts, the implicit-mount rule and refused sources; vitest covers the multi-root tree; `make check` green.
+Risk: high (security: config-controlled paths feed path confinement; public API shape change)
+Status: todo
+- [ ] M16.1 Collect per-language `contentDir` values into a deduplicated `ContentDirs` list
+- [ ] M16.2 Add content and static module mounts, skipping sources outside the project
+- [ ] M16.3 Expose `contentDirs` in the project JSON and `types.ts`
+- [ ] M16.4 Return one tree root per content dir from `GET /api/content`
+- [ ] M16.5 Render multiple labelled roots in `ContentTree`
+- [ ] M16.6 Search across every content dir
+
+## Phase 17: Edit pages in every content directory
+Branch: feat/p17-multi-dir-edit
+Goal: Pages in any resolved content dir can be opened, saved, created, renamed and deleted with the same confinement guarantees as the primary dir.
+Done when: a single `content.Dirs` check replaces the `contentDir` prefix checks in read, save, rename, delete and create, accepting a path only when it lies inside one resolved content dir (rename may move between dirs only if both are resolved); `POST /api/page` accepts a target content dir validated against the resolved set; `NewPageDialog` offers a content-dir picker when there is more than one; `RenamePageDialog` accepts a path in any content dir; Go tests prove paths outside every resolved dir, including sibling-prefix names like `content-old/`, are refused for each operation; vitest covers both dialogs; `make check` green; ROADMAP, CHANGELOG and known shortcuts updated (per-language preview URLs stay a separate shortcut).
+Risk: high (security: write-path confinement; data writes)
+Status: todo
+- [ ] M17.1 Add a `content.Dirs` membership check with sibling-prefix tests
+- [ ] M17.2 Use the dir-set check in read, save and delete
+- [ ] M17.3 Use the dir-set check in rename, allowing moves between resolved dirs
+- [ ] M17.4 Accept a target content dir in page creation and the new-page dialog
+- [ ] M17.5 Accept any content dir in the rename dialog
+- [ ] M17.6 Update ROADMAP.md, CHANGELOG.md and the known-shortcuts note
+
+## Phase 18: Close the save, rename and delete race window
+Branch: feat/p18-toctou
+Goal: A file changed by an external editor between the check and the write is never overwritten or deleted unseen.
+Done when: save and delete use grab-then-verify: the file is first moved atomically to a hidden sibling, its hash is checked on the moved copy, and on mismatch it is restored with a no-overwrite link and `ErrConflict` is returned; the new content is put in place with a no-overwrite link, so a file recreated at the name in between is kept and reported as a conflict; `DELETE /api/page` requires the hash the client last read (the client reads the page first when deleting from the sidebar); rename verifies after linking that the moved file is the one checked (`os.SameFile`) and undoes on mismatch; on filesystems without hard links the old behaviour remains and is documented; a test hook between check and write simulates an external writer for each operation under `-race`; no hidden temp or backup file is left after success or failure; `make check` green.
+Risk: high (data writes, deletion of data, public API change, concurrency)
+Status: todo
+- [ ] M18.1 Add grab and restore helpers in `atomic.go` with no-overwrite tests
+- [ ] M18.2 Verify the hash on the grabbed copy in `SavePage`
+- [ ] M18.3 Require the page hash for `DELETE /api/page` in handler, client and sidebar
+- [ ] M18.4 Delete only the grabbed copy after its hash is verified
+- [ ] M18.5 Verify the moved file's identity in `RenamePage`
+- [ ] M18.6 Update ROADMAP.md, CHANGELOG.md and the known-shortcuts note
+
+## Phase 19: Cached page index for tree and search
+Branch: feat/p19-page-index
+Goal: Loading the tree and searching do not re-read unchanged pages, so a site with thousands of pages stays fast.
+Done when: a `content.Index` owned by each open project caches per-page frontmatter fields and search text, keyed by path and validated by size, modification time and file identity on each lookup, so an external edit is picked up on the next load without a file watcher or new dependency; save, create, rename and delete update or drop their entries; the index is dropped on project close; it is safe under `-race` with concurrent tree, search and save calls; benchmarks on a generated 5,000-page site show warm tree and search at least 5x faster than the baseline; search semantics (case-insensitive substring, title and tag hits first, 50-hit cap) are unchanged; `make check` green.
+Risk: high (concurrency; a stale cache shows wrong content)
+Status: todo
+- [ ] M19.1 Add tree and search benchmarks over a generated 5,000-page site
+- [ ] M19.2 Add `content.Index` with stat-validated entries and staleness tests
+- [ ] M19.3 Read tree frontmatter through the index
+- [ ] M19.4 Match search queries against indexed text
+- [ ] M19.5 Own one index per open project and update it on writes
+- [ ] M19.6 Update ROADMAP.md, CHANGELOG.md and the known-shortcuts note
