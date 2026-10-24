@@ -5,6 +5,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Desktop-style app shell: fixed viewport, title bar, activity bar,
+  resizable sidebar, status bar (project, save, preview server, build).
+- Light and dark themes following the OS, with a persisted override;
+  compact design tokens.
+- Sidebar width and collapsed state persist; Ctrl/Cmd+B toggles it.
+- Project picker restyled as a centered welcome screen.
+
 ### Fixed
 
 - An unreadable, oversized or invalid Hugo config now stops the project

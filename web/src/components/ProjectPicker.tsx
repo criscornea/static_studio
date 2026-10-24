@@ -50,9 +50,10 @@ export function ProjectPicker() {
   }
 
   return (
-    <section className="mx-auto mt-16 max-w-[34rem] px-6">
-      <h1 className="mb-1 text-2xl font-semibold">static_studio</h1>
-      <p className="mb-6 text-muted-foreground">Open the folder that contains your website.</p>
+    <div className="flex h-full items-center justify-center overflow-auto bg-sidebar p-6">
+    <section className="w-full max-w-[32rem] rounded-lg border bg-background p-6 shadow-sm">
+      <h1 className="mb-1 text-xl font-semibold">Static Studio</h1>
+      <p className="mb-5 text-muted-foreground">Open the folder that contains your website.</p>
 
       <form
         className="flex gap-2"
@@ -82,11 +83,11 @@ export function ProjectPicker() {
       )}
 
       {recent.length > 0 && (
-        <div className="mt-8">
-          <h2 className="mb-2 text-sm font-medium">Recent projects</h2>
-          <ul className="divide-y rounded-md border">
+        <div className="mt-6">
+          <h2 className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">Recent projects</h2>
+          <ul className="max-h-64 divide-y overflow-auto rounded-md border">
             {recent.map((entry) => (
-              <li key={entry.path} className="flex items-center gap-2 px-3 py-2">
+              <li key={entry.path} className="flex items-center gap-2 px-3 py-1.5 hover:bg-accent/50">
                 {entry.available ? (
                   <button
                     type="button"
@@ -121,9 +122,10 @@ export function ProjectPicker() {
         </div>
       )}
 
-      <p className="mt-8 text-sm text-muted-foreground">
+      <p className="mt-6 text-xs text-muted-foreground">
         This is the folder with your <code>hugo.toml</code> in it.
       </p>
     </section>
+    </div>
   )
 }

@@ -75,7 +75,7 @@ export function Sidebar() {
   const filtered = !isDefaultView({ sort, status, tag })
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full min-h-0 flex-col bg-sidebar text-sidebar-foreground">
       <div className="space-y-2 border-b p-2">
         <div className="flex gap-2">
           <div className="relative flex-1">

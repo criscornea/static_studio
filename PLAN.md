@@ -168,13 +168,13 @@ Branch: feat/p15-app-shell
 Goal: The open project shows as a fixed-viewport desktop editor shell with dark and light themes that follow the OS.
 Done when: the document never scrolls (`html`, `body` and `#root` are fixed to the viewport; only panes scroll internally); the shell is a grid of a title bar, an activity bar, a resizable sidebar, the main area and a status bar; a theme store applies the `.dark` class from `prefers-color-scheme`, reacts to OS changes and lets the user override with light, dark or system (persisted in `localStorage`); design tokens give compact density (13px UI text, 28px rows and controls, small radius, Geist UI font, a monospace font for code and paths) and tuned light and dark palettes; the sidebar width and collapsed state persist across reloads and Ctrl/Cmd+B toggles it; the status bar shows the project name, save state, preview-server state and build state; the project picker is a centered welcome screen with recent projects; vitest covers the theme store and the sidebar toggle; Playwright check in both themes once at the end; `make check` green.
 Risk: low
-Status: todo
-- [ ] M15.1 Add a theme store following `prefers-color-scheme` with a persisted override and tests
-- [ ] M15.2 Retune the design tokens in `index.css` for compact density and both palettes
-- [ ] M15.3 Replace the page layout in `App.tsx` with a fixed-viewport shell grid
-- [ ] M15.4 Persist the sidebar size and collapsed state with a Ctrl/Cmd+B toggle
-- [ ] M15.5 Add a status bar for project, save, preview-server and build state
-- [ ] M15.6 Restyle `ProjectPicker` as a welcome screen
+Status: merged
+- [x] M15.1 Add a theme store following `prefers-color-scheme` with a persisted override and tests
+- [x] M15.2 Retune the design tokens in `index.css` for compact density and both palettes
+- [x] M15.3 Replace the page layout in `App.tsx` with a fixed-viewport shell grid
+- [x] M15.4 Persist the sidebar size and collapsed state with a Ctrl/Cmd+B toggle
+- [x] M15.5 Add a status bar for project, save, preview-server and build state
+- [x] M15.6 Restyle `ProjectPicker` as a welcome screen
 
 ## Phase 16: Explorer sidebar
 Branch: feat/p16-explorer
