@@ -13,11 +13,15 @@ interface Props {
   /** Uploads an image and resolves to its site path. Enables image drop. */
   onUploadImage?: (file: File) => Promise<string>
   onUploadError?: (err: unknown) => void
+  /** Moves the cursor to this 1-based line when jumpLine or jumpToken changes. */
+  jumpLine?: number | null
+  /** A new value re-triggers the jump to the same line. */
+  jumpToken?: unknown
 }
 
 
 /** CodeMirror 6 raw markdown editor. Remount (via key) to load a different document. */
-export function MarkdownEditor({ value, onChange, onSave, onUploadImage, onUploadError }: Props) {
+export function MarkdownEditor({ value, onChange, onSave, onUploadImage, onUploadError, jumpLine, jumpToken }: Props) {
   const host = useRef<HTMLDivElement>(null)
   const view = useRef<EditorView | null>(null)
   // Latest callbacks, so the editor is created once.
@@ -90,6 +94,15 @@ export function MarkdownEditor({ value, onChange, onSave, onUploadImage, onUploa
     // Created once per mount; value is only the initial document.
      
   }, [])
+
+  useEffect(() => {
+    const v = view.current
+    if (v && jumpLine) {
+      const line = v.state.doc.line(Math.min(Math.max(jumpLine, 1), v.state.doc.lines))
+      v.dispatch({ selection: { anchor: line.from }, effects: EditorView.scrollIntoView(line.from, { y: 'center' }) })
+      v.focus()
+    }
+  }, [jumpLine, jumpToken])
 
   // Adopt external changes to value (e.g. after reload) without echoing them.
   useEffect(() => {

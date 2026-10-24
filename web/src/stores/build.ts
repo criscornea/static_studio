@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 
 import { api } from '@/api/client'
-import { asApiError, type BuildEvent } from '@/api/types'
+import { asApiError, type BuildEvent, type BuildProblem } from '@/api/types'
 
 /** Older lines are dropped so a chatty build cannot grow the page forever. */
 export const maxLines = 5000
@@ -12,7 +12,12 @@ interface BuildState {
   status: BuildStatus
   lines: string[]
   error: string | null
+  problems: BuildProblem[]
+  /** A requested editor jump, consumed by the page view. */
+  jump: { file: string; line: number } | null
 
+  /** Asks the page view to move its cursor to a build error. */
+  jumpTo: (problem: BuildProblem) => void
   start: () => Promise<void>
   cancel: () => Promise<void>
   reset: () => void
@@ -45,7 +50,11 @@ export const useBuildStore = create<BuildState>()((set, get) => {
         return
       }
 
-      set({ status: ev.ok ? 'succeeded' : 'failed', error: ev.ok ? null : (ev.error ?? null) })
+      set({
+        status: ev.ok ? 'succeeded' : 'failed',
+        error: ev.ok ? null : (ev.error ?? null),
+        problems: ev.problems ?? [],
+      })
       closeSource()
     }
 
@@ -62,12 +71,18 @@ export const useBuildStore = create<BuildState>()((set, get) => {
     status: 'idle',
     lines: [],
     error: null,
+    problems: [],
+    jump: null,
+
+    jumpTo(problem) {
+      set({ jump: { file: problem.file, line: problem.line } })
+    },
 
     async start() {
       if (get().status === 'running') {
         return
       }
-      set({ status: 'running', lines: [], error: null })
+      set({ status: 'running', lines: [], error: null, problems: [], jump: null })
 
       try {
         await api.startBuild()
@@ -88,7 +103,7 @@ export const useBuildStore = create<BuildState>()((set, get) => {
 
     reset() {
       closeSource()
-      set({ status: 'idle', lines: [], error: null })
+      set({ status: 'idle', lines: [], error: null, problems: [], jump: null })
     },
   }
 })

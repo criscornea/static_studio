@@ -115,3 +115,16 @@ func truncate(s string) string {
 	}
 	return s
 }
+
+func TestReadPageBodyLine(t *testing.T) {
+	fsys := pageFS()
+	for path, want := range map[string]int{"content/yaml.md": 4, "content/plain.md": 1} {
+		got, err := ReadPage(fsys, "content", path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got.BodyLine != want {
+			t.Errorf("%s BodyLine = %d, want %d", path, got.BodyLine, want)
+		}
+	}
+}

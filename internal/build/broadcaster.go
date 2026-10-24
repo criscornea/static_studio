@@ -12,6 +12,8 @@ type Event struct {
 	// OK and Error are set on "done" events.
 	OK    bool   `json:"ok,omitempty"`
 	Error string `json:"error,omitempty"`
+	// Problems lists file errors parsed from the output. Set on "done" events.
+	Problems []Problem `json:"problems,omitempty"`
 }
 
 const maxHistory = 10000

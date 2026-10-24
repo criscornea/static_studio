@@ -26,6 +26,7 @@ const created: Page = {
   format: 'toml',
   fields: { title: 'Hello World', draft: true },
   body: '',
+  bodyLine: 1,
   hash: 'h',
 }
 

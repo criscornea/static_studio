@@ -268,3 +268,29 @@ func TestSavePageFields(t *testing.T) {
 		}
 	}
 }
+
+func TestSavePageFieldsCRLF(t *testing.T) {
+	root, dir := openTestRoot(t)
+	writeTest(t, dir, "content/y.md", "---\r\ntitle: Y\r\nweight: 3\r\n---\r\nold\r\n")
+	writeTest(t, dir, "content/t.md", "+++\r\ntitle = 'T'\r\nweight = 3\r\n+++\r\nold\r\n")
+
+	for _, tc := range []struct{ name, fence string }{
+		{"content/y.md", "---\r\n"}, {"content/t.md", "+++\r\n"},
+	} {
+		data, err := os.ReadFile(filepath.Join(dir, tc.name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		f := &frontmatter.Fields{Title: "New", Draft: true, Tags: []string{"a"}}
+		if _, err := SavePage(root, "content", tc.name, "body\r\n", hashBytes(data), f); err != nil {
+			t.Fatalf("%s: %v", tc.name, err)
+		}
+		got, _ := os.ReadFile(filepath.Join(dir, tc.name))
+		s := string(got)
+		head := strings.TrimSuffix(s, "body\r\n")
+		if !strings.HasPrefix(s, tc.fence) || !strings.HasSuffix(head, tc.fence) ||
+			strings.Contains(strings.ReplaceAll(head, "\r\n", ""), "\n") || !strings.Contains(s, "New") {
+			t.Errorf("%s: got %q", tc.name, s)
+		}
+	}
+}

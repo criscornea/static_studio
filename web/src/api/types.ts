@@ -92,6 +92,8 @@ export interface Page {
   format: FrontmatterFormat
   fields: PageFields
   body: string
+  /** 1-based line of the file where the body starts. */
+  bodyLine: number
   /** sha256 of the file bytes; sent back on save. */
   hash: string
 }
@@ -146,6 +148,16 @@ export interface BuildEvent {
   line?: string
   ok?: boolean
   error?: string
+  problems?: BuildProblem[]
+}
+
+/** A build error tied to a line of a project file. */
+export interface BuildProblem {
+  /** Slash-separated, relative to the project root. */
+  file: string
+  line: number
+  column?: number
+  message: string
 }
 
 /** State of the Hugo preview server. */

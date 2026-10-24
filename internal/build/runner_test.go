@@ -149,3 +149,26 @@ func TestRunLongLineKeepsReading(t *testing.T) {
 		t.Fatalf("lines = %d, last = %q", len(lines), lines[len(lines)-1])
 	}
 }
+
+func TestStartReportsProblems(t *testing.T) {
+	dir := t.TempDir()
+	r := &Runner{Bin: fakeBin(t, `echo 'ERROR error building site: "'"$PWD"'/content/a.md:4:2": bad yaml'; exit 1`)}
+	if err := r.Start(dir); err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.After(5 * time.Second)
+	for r.Running() {
+		select {
+		case <-deadline:
+			t.Fatal("build did not finish")
+		case <-time.After(10 * time.Millisecond):
+		}
+	}
+	history, _, cancel := r.Events.Subscribe()
+	defer cancel()
+	done := history[len(history)-1]
+	want := []Problem{{File: "content/a.md", Line: 4, Column: 2, Message: "error building site: bad yaml"}}
+	if done.OK || !slices.Equal(done.Problems, want) {
+		t.Fatalf("done = %+v", done)
+	}
+}

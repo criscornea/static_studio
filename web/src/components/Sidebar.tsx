@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/select'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { applyView, collectTags, isDefaultView, type SortKey, type StatusFilter } from '@/lib/tree'
+import { useBuildStore } from '@/stores/build'
 import { usePageStore } from '@/stores/page'
 import { useProjectStore } from '@/stores/project'
 import { useSearchStore } from '@/stores/search'
@@ -41,6 +42,8 @@ const allTags = '__all__'
 export function Sidebar() {
   const tree = useProjectStore((s) => s.tree)
   const selected = usePageStore((s) => s.path)
+  const problems = useBuildStore((s) => s.problems)
+  const errorPaths = useMemo(() => new Set(problems.map((p) => p.file)), [problems])
   const load = usePageStore((s) => s.load)
 
   const search = useSearchStore()
@@ -182,6 +185,7 @@ export function Sidebar() {
                   onSelect={(path) => void load(path)}
                   onRename={setRenaming}
                   onDelete={setDeleting}
+                  errorPaths={errorPaths}
                 />
               ))}
             </ul>

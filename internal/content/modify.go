@@ -245,6 +245,11 @@ func rewriteHead(doc *frontmatter.Document, head []byte, f frontmatter.Fields) (
 	if bytes.HasPrefix(head, []byte{0xEF, 0xBB, 0xBF}) {
 		prefix = head[:3]
 	}
+	// Follow the line ending of the opening fence line.
+	if first, _, ok := bytes.Cut(head[len(prefix):], []byte("\n")); ok && bytes.HasSuffix(first, []byte("\r")) {
+		fence = strings.TrimSuffix(fence, "\n") + "\r\n"
+		meta = bytes.ReplaceAll(meta, []byte("\n"), []byte("\r\n"))
+	}
 	out := append([]byte{}, prefix...)
 	out = append(out, fence...)
 	out = append(out, meta...)

@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { formatDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { useBuildStore } from '@/stores/build'
 import { usePageStore } from '@/stores/page'
 
 function formatLabel(format: string | undefined): string {
@@ -50,6 +51,11 @@ export function PageView() {
   const saving = page !== null && savingPath === page.path
   const conflict = saveError?.code === 'page_conflict'
   const status = saving ? 'Saving…' : conflict ? 'Conflict' : dirty ? 'Unsaved changes' : 'Saved'
+  const jump = useBuildStore((s) => s.jump)
+  // A build error on this page: a body line for the editor, else a frontmatter line.
+  const bodyJump = jump && page && jump.file === page.path ? jump.line - page.bodyLine + 1 : null
+  const editorLine = bodyJump !== null && bodyJump >= 1 ? bodyJump : null
+  const frontmatterLine = jump && page && jump.file === page.path && editorLine === null ? jump.line : null
 
   // Warn before closing the tab while edits are unsaved or saving.
   useEffect(() => {
@@ -136,7 +142,7 @@ export function PageView() {
           </Alert>
         )}
         <FrontmatterForm
-          key={page.path}
+          key={`form-${page.path}`}
           fields={fieldsDraft ?? page.fields}
           onChange={setFieldsDraft}
         />
@@ -154,9 +160,16 @@ export function PageView() {
           <span className="text-xs text-muted-foreground">Ctrl/Cmd+S</span>
           <PreviewButton open={previewing} onToggle={() => setPreviewing((v) => !v)} />
         </div>
-        {previewing && <PreviewFrame key={page.path} path={page.path} />}
+        {previewing && <PreviewFrame key={`preview-${page.path}`} path={page.path} />}
+        {frontmatterLine !== null && (
+          <Alert variant="destructive" className="mb-3">
+            <AlertDescription>The build reported an error in the frontmatter at line {frontmatterLine}.</AlertDescription>
+          </Alert>
+        )}
         <MarkdownEditor
-          key={page.path}
+          key={`editor-${page.path}`}
+          jumpLine={editorLine}
+          jumpToken={jump}
           value={draft ?? page.body}
           onChange={setDraft}
           onSave={() => void save()}

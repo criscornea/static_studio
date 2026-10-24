@@ -111,10 +111,10 @@ Branch: feat/p10-build-errors
 Goal: Hugo build errors are parsed and shown next to the page they belong to.
 Done when: a parser extracts file, line and message from Hugo error output; build status exposes structured errors; the tree marks affected pages and the editor jumps to the line; parser tests use real Hugo error samples.
 Risk: low
-Status: todo
-- [ ] M10.1 Add a Hugo error-line parser with sample-based tests
-- [ ] M10.2 Expose parsed errors in the build status API
-- [ ] M10.3 Mark pages with errors in the tree and jump to the line in the editor
+Status: merged
+- [x] M10.1 Add a Hugo error-line parser with sample-based tests
+- [x] M10.2 Expose parsed errors in the build status API
+- [x] M10.3 Mark pages with errors in the tree and jump to the line in the editor
 
 ## Phase 11: Publish to GitHub Pages
 Branch: feat/p11-publish

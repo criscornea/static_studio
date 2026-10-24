@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { useBuildStore } from '@/stores/build'
+import { usePageStore } from '@/stores/page'
 
 const statusText = {
   idle: '',
@@ -27,6 +28,9 @@ export function BuildPanel() {
   const status = useBuildStore((s) => s.status)
   const lines = useBuildStore((s) => s.lines)
   const error = useBuildStore((s) => s.error)
+  const problems = useBuildStore((s) => s.problems)
+  const jumpTo = useBuildStore((s) => s.jumpTo)
+  const load = usePageStore((s) => s.load)
   const cancel = useBuildStore((s) => s.cancel)
   const reset = useBuildStore((s) => s.reset)
   const log = useRef<HTMLPreElement>(null)
@@ -59,6 +63,28 @@ export function BuildPanel() {
           </Button>
         )}
       </div>
+      {problems.length > 0 && (
+        <ul aria-label="Build errors" className="max-h-32 overflow-auto px-4 pb-2 text-sm">
+          {problems.map((p, i) => (
+            <li key={i}>
+              {p.file.startsWith('content/') ? (
+                <button
+                  type="button"
+                  onClick={() => void load(p.file).then(() => jumpTo(p))}
+                  className="text-left text-destructive hover:underline"
+                >
+                  {p.file}:{p.line}
+                </button>
+              ) : (
+                <span className="text-destructive">
+                  {p.file}:{p.line}
+                </span>
+              )}
+              <span className="ml-2 text-muted-foreground">{p.message}</span>
+            </li>
+          ))}
+        </ul>
+      )}
       <pre
         ref={log}
         className="h-48 overflow-auto bg-muted px-4 py-2 font-mono text-xs whitespace-pre-wrap"

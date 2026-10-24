@@ -113,7 +113,7 @@ describe('RenamePageDialog', () => {
     })
     usePageStore.setState({
       path: 'content/a.md',
-      page: { path: 'content/a.md', format: '', fields: { title: '', draft: false }, body: 'old', hash: 'h1' },
+      page: { path: 'content/a.md', format: '', fields: { title: '', draft: false }, body: 'old', bodyLine: 1, hash: 'h1' },
       draft: 'new',
       fieldsDraft: { title: '', draft: false },
       dirty: true,
@@ -139,7 +139,7 @@ describe('RenamePageDialog', () => {
     )
     usePageStore.setState({
       path: 'content/a.md',
-      page: { path: 'content/a.md', format: '', fields: { title: '', draft: false }, body: 'old', hash: 'h1' },
+      page: { path: 'content/a.md', format: '', fields: { title: '', draft: false }, body: 'old', bodyLine: 1, hash: 'h1' },
       draft: 'new',
       fieldsDraft: { title: '', draft: false },
       dirty: true,

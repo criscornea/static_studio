@@ -15,7 +15,7 @@ const aProject: Project = {
 }
 
 function aPage(path: string, title: string): Page {
-  return { path, format: 'yaml', fields: { title, draft: false }, body: `Body of ${title}\n`, hash: `hash-${title}` }
+  return { path, format: 'yaml', fields: { title, draft: false }, body: `Body of ${title}\n`, bodyLine: 1, hash: `hash-${title}` }
 }
 
 const pageURL = (path: string) => `/api/page?path=${encodeURIComponent(path)}`

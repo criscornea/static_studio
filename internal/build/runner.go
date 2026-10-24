@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+	"slices"
 	"sync"
 	"time"
 )
@@ -17,6 +18,9 @@ var ErrBusy = errors.New("a build is already running")
 
 // maxLine bounds one output line so a runaway program cannot exhaust memory.
 const maxLine = 1 << 20
+
+// maxProblems bounds how many parsed errors one build reports.
+const maxProblems = 100
 
 // waitDelay bounds how long Wait lingers for output after the process ends or
 // is killed, for example when a grandchild still holds the pipe.
@@ -92,10 +96,14 @@ func (r *Runner) Start(dir string) error {
 		defer r.release()
 		defer cancel()
 
+		var problems []Problem
 		err := r.run(ctx, dir, func(l string) {
 			r.Events.Publish(Event{Kind: "line", Line: l})
+			if p, ok := ParseLine(dir, l); ok && len(problems) < maxProblems && !slices.Contains(problems, p) {
+				problems = append(problems, p)
+			}
 		})
-		done := Event{Kind: "done", OK: err == nil}
+		done := Event{Kind: "done", OK: err == nil, Problems: problems}
 		if err != nil {
 			done.Error = err.Error()
 		}

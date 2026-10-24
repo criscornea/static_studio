@@ -12,6 +12,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Build errors: Hugo error lines are parsed into file, line and message and sent
+  as `problems` on the build stream's `done` event. The tree marks affected pages,
+  the build panel lists them, and clicking one opens the page and moves the editor
+  to the line. Pages now also report `bodyLine`.
 - Preview: start/stop a `hugo server` bound to 127.0.0.1 on a free port
   (`GET /api/devserver`, `POST /api/devserver/start`, `POST /api/devserver/stop`).
   The Preview button shows the open page in an iframe loaded directly from the

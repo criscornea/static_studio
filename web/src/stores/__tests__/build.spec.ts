@@ -61,6 +61,20 @@ describe('build store', () => {
     expect(es.closed).toBe(true)
   })
 
+  it('keeps parsed problems from the done event and clears them on reset', async () => {
+    stubFetch(202, { started: true })
+    await store().start()
+    const problem = { file: 'content/a.md', line: 3, message: 'bad yaml' }
+    FakeSource.last!.emit({ kind: 'done', ok: false, error: 'exit status 1', problems: [problem] })
+    expect(store().problems).toEqual([problem])
+
+    store().jumpTo(problem)
+    expect(store().jump).toEqual({ file: 'content/a.md', line: 3 })
+    store().reset()
+    expect(store().problems).toEqual([])
+    expect(store().jump).toBeNull()
+  })
+
   it('reports a failed build', async () => {
     stubFetch(202, { started: true })
     await store().start()

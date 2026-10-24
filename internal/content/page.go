@@ -1,6 +1,7 @@
 package content
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -27,6 +28,8 @@ type Page struct {
 	Format frontmatter.Format  `json:"format"`
 	Fields *frontmatter.Fields `json:"fields"`
 	Body   string              `json:"body"`
+	// BodyLine is the 1-based line of the file where Body starts.
+	BodyLine int `json:"bodyLine"`
 	// Hash is the sha256 of the file bytes, hex encoded. Saves send it back.
 	Hash string `json:"hash"`
 }
@@ -63,11 +66,12 @@ func ReadPage(fsys fs.FS, contentDir, name string) (*Page, error) {
 	}
 
 	return &Page{
-		Path:   name,
-		Format: doc.Format,
-		Fields: fields,
-		Body:   string(doc.Body),
-		Hash:   hashBytes(data),
+		Path:     name,
+		Format:   doc.Format,
+		Fields:   fields,
+		Body:     string(doc.Body),
+		BodyLine: 1 + bytes.Count(data[:len(data)-len(doc.Body)], []byte("\n")),
+		Hash:     hashBytes(data),
 	}, nil
 }
 

@@ -13,11 +13,13 @@ interface ContentTreeProps {
   // When given, file rows show a rename or delete button.
   onRename?: (path: string) => void
   onDelete?: (path: string) => void
+  // Paths of pages the last build reported errors for.
+  errorPaths?: ReadonlySet<string>
   // Nesting level, used for indentation. The root renders its children at 0.
   depth?: number
 }
 
-export function ContentTree({ node, selected, onSelect, onRename, onDelete, depth = 0 }: ContentTreeProps) {
+export function ContentTree({ node, selected, onSelect, onRename, onDelete, errorPaths, depth = 0 }: ContentTreeProps) {
   // Each folder instance tracks its own state. Folders start expanded.
   const [expanded, setExpanded] = useState(true)
   const indent = { paddingLeft: `${depth * 0.75 + 0.5}rem` }
@@ -39,6 +41,11 @@ export function ContentTree({ node, selected, onSelect, onRename, onDelete, dept
         >
           <span className="flex items-center gap-2">
             <span className="min-w-0 flex-1 truncate">{title || node.name}</span>
+            {errorPaths?.has(node.path) && (
+              <Badge variant="destructive" className="shrink-0" title="The last build reported an error here">
+                Error
+              </Badge>
+            )}
             {node.fields?.draft && (
               <Badge variant="secondary" className="shrink-0">
                 Draft
@@ -103,6 +110,7 @@ export function ContentTree({ node, selected, onSelect, onRename, onDelete, dept
               onSelect={onSelect}
               onRename={onRename}
               onDelete={onDelete}
+              errorPaths={errorPaths}
               depth={depth + 1}
             />
           ))}

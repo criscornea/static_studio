@@ -21,9 +21,12 @@ server: web-stub ## run the server
 	go run $(CMD)
 
 run: SHELL := /bin/bash
-run: web-stub ## run the server and the vite dev server together (Ctrl+C stops both)
+run: build-dev ## run the server and the vite dev server together (Ctrl+C stops both)
 	@trap 'trap - EXIT INT TERM; kill 0' EXIT INT TERM; \
-	go run $(CMD) & \
+	$(DIST)/$(BINARY) & \
+	until curl -sf http://127.0.0.1:7777/api/health >/dev/null; do \
+		kill -0 $$! 2>/dev/null || exit 1; sleep 0.2; \
+	done; \
 	(cd web && npm run dev) & \
 	wait -n
 
