@@ -18,7 +18,7 @@ func newTestServer() *Server {
 }
 
 func TestHealth(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/api/health", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://127.0.0.1:7777/api/health", nil)
 	rec := httptest.NewRecorder()
 
 	newTestServer().Routes().ServeHTTP(rec, req)
@@ -42,7 +42,7 @@ func TestHealth(t *testing.T) {
 }
 
 func TestPostToHealthIsNotFound(t *testing.T) {
-	req := httptest.NewRequest(http.MethodPost, "/api/health", nil)
+	req := httptest.NewRequest(http.MethodPost, "http://127.0.0.1:7777/api/health", nil)
 	rec := httptest.NewRecorder()
 
 	New(slog.New(slog.DiscardHandler), nil).Routes().ServeHTTP(rec, req)
@@ -63,7 +63,7 @@ func testAssets() fs.FS {
 }
 
 func TestSPAFallbackForUnknownRoute(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/projects/42/edit", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://127.0.0.1:7777/projects/42/edit", nil)
 	rec := httptest.NewRecorder()
 
 	New(slog.New(slog.DiscardHandler), testAssets()).Routes().ServeHTTP(rec, req)
@@ -77,7 +77,7 @@ func TestSPAFallbackForUnknownRoute(t *testing.T) {
 }
 
 func TestUnknownAPIRouteIs404JSON(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/api/nope", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://127.0.0.1:7777/api/nope", nil)
 	rec := httptest.NewRecorder()
 
 	New(slog.New(slog.DiscardHandler), testAssets()).Routes().ServeHTTP(rec, req)

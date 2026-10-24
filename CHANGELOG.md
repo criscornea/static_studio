@@ -12,6 +12,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- `/api` requests with a non-loopback `Host` (DNS rebinding) or a mutating
+  request with a foreign `Origin` are refused with 403; the Vite dev origin
+  works because `Origin` must match `Host`.
 - Project detection for Hugo, covering both the `hugo.*` and legacy
   `config.*` file names and the `config/_default/` layout. Astro projects
   are recognised and rejected with a clear message rather than being

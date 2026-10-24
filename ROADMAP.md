@@ -37,7 +37,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 - [x] Show metadata in the UI: title, date, tags, draft status
 - [x] Sort, filter, full-text search across content
 - [x] Create a page from an archetype
-- [ ] CSRF hardening: `Origin` check on mutating endpoints, `Host` check
+- [x] CSRF hardening: `Origin` check on mutating endpoints, `Host` check
   against DNS rebinding
 - [ ] Rename and delete a page
 - [ ] Atomic writes (temp file + rename)
@@ -116,6 +116,10 @@ Deliberate simplifications, recorded so they don't become invisible.
   config file only. Per-language `contentDir`, module mounts, merged
   `config/_default/*` files and `HUGO_*` environment overrides are ignored,
   and an unreadable or invalid config silently falls back to the defaults.
+- The `/api` host guard accepts a loopback Host (`127.0.0.1`, `::1`,
+  `localhost`) on any port, not only the server's own. Rebinding still fails
+  because a foreign name is rejected, and the Vite dev proxy forwards
+  `Host: localhost:5173`, which a fixed-port check would break.
 - Search reads every page on each query, and the content tree reads every
   page's frontmatter on each load, with no index or cache. Search is a
   case-insensitive substring match over title, tags and body (no stemming,
@@ -136,4 +140,3 @@ Deliberate simplifications, recorded so they don't become invisible.
   alongside subprocess cleanup.
 - `internal/server` writes responses via two `Server` methods. If that layer
   grows, extract an `internal/httpx` package.
-- No `Origin` check on mutating endpoints yet.

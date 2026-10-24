@@ -6,11 +6,11 @@ Branch: feat/p1-origin-check
 Goal: Mutating `/api` requests from foreign origins or rebound hostnames are refused before more write features land.
 Done when: a middleware on POST/PUT/DELETE `/api` routes rejects requests whose `Origin` is not the app's own (`http://127.0.0.1:<port>` or `http://localhost:<port>`), allowing the Vite dev proxy origin `http://localhost:5173` in dev; `/api` requests whose `Host` is not 127.0.0.1/localhost:<port> are rejected to block DNS rebinding; tests cover allowed, missing and foreign `Origin` and foreign `Host`; ROADMAP item ticked and the known shortcut removed.
 Risk: high (security)
-Status: todo
-- [ ] M1.1 Add a `Host` check middleware against 127.0.0.1/localhost:<port> with tests
-- [ ] M1.2 Add an `Origin` check middleware for mutating methods with tests, allowing localhost:5173 in dev
-- [ ] M1.3 Apply both middlewares to `/api` routes in `server.go`
-- [ ] M1.4 Update ROADMAP.md, CHANGELOG.md and the known-shortcuts note
+Status: merged
+- [x] M1.1 Add a `Host` check middleware against 127.0.0.1/localhost:<port> with tests
+- [x] M1.2 Add an `Origin` check middleware for mutating methods with tests, allowing localhost:5173 in dev
+- [x] M1.3 Apply both middlewares to `/api` routes in `server.go`
+- [x] M1.4 Update ROADMAP.md, CHANGELOG.md and the known-shortcuts note
 
 ## Phase 2: Atomic writes
 Branch: feat/p2-atomic-writes

@@ -18,6 +18,8 @@ export default defineConfig({
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:7777',
+        // internal/server/guard.go requires false: true rewrites Host, and
+        // every dev POST then gets a 403.
         changeOrigin: false,
       },
     },

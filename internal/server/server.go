@@ -48,7 +48,7 @@ func (s *Server) Routes() http.Handler {
 		mux.HandleFunc("/", s.handleNoUI)
 	}
 
-	return mux
+	return s.apiGuard(mux)
 }
 
 func (s *Server) handleAPINotFound(w http.ResponseWriter, r *http.Request) {

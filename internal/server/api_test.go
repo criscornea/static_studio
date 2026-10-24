@@ -48,7 +48,7 @@ func (a *api) do(method, target, body string) *httptest.ResponseRecorder {
 	if body != "" {
 		r = strings.NewReader(body)
 	}
-	req := httptest.NewRequest(method, target, r)
+	req := httptest.NewRequest(method, "http://127.0.0.1:7777"+target, r)
 	rec := httptest.NewRecorder()
 	a.handler.ServeHTTP(rec, req)
 	return rec
@@ -224,7 +224,7 @@ func withContent(t *testing.T) string {
 func (a *api) content(id string) *httptest.ResponseRecorder {
 	a.t.Helper()
 
-	req := httptest.NewRequest(http.MethodGet, "/api/content", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://127.0.0.1:7777/api/content", nil)
 	if id != "" {
 		req.Header.Set("X-Project-ID", id)
 	}
@@ -275,7 +275,7 @@ func TestContentAcceptsQueryParameterID(t *testing.T) {
 	opened := decodeProject(t, a.open(withContent(t)))
 
 	target := "/api/content?projectId=" + url.QueryEscape(opened.ID)
-	req := httptest.NewRequest(http.MethodGet, target, nil)
+	req := httptest.NewRequest(http.MethodGet, "http://127.0.0.1:7777"+target, nil)
 	rec := httptest.NewRecorder()
 	a.handler.ServeHTTP(rec, req)
 
@@ -387,7 +387,7 @@ func withPages(t *testing.T) string {
 func (a *api) page(id, path string) *httptest.ResponseRecorder {
 	a.t.Helper()
 
-	req := httptest.NewRequest(http.MethodGet, "/api/page?path="+url.QueryEscape(path), nil)
+	req := httptest.NewRequest(http.MethodGet, "http://127.0.0.1:7777/api/page?path="+url.QueryEscape(path), nil)
 	if id != "" {
 		req.Header.Set("X-Project-ID", id)
 	}
@@ -497,7 +497,7 @@ func TestPageRequiresProjectID(t *testing.T) {
 func (a *api) search(id, query string) *httptest.ResponseRecorder {
 	a.t.Helper()
 
-	req := httptest.NewRequest(http.MethodGet, "/api/search?q="+url.QueryEscape(query), nil)
+	req := httptest.NewRequest(http.MethodGet, "http://127.0.0.1:7777/api/search?q="+url.QueryEscape(query), nil)
 	if id != "" {
 		req.Header.Set("X-Project-ID", id)
 	}
@@ -577,7 +577,7 @@ func TestSearchErrors(t *testing.T) {
 func (a *api) createPage(id, body string) *httptest.ResponseRecorder {
 	a.t.Helper()
 
-	req := httptest.NewRequest(http.MethodPost, "/api/page", strings.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, "http://127.0.0.1:7777/api/page", strings.NewReader(body))
 	if id != "" {
 		req.Header.Set("X-Project-ID", id)
 	}
@@ -597,7 +597,7 @@ func TestArchetypes(t *testing.T) {
 	a := newAPI(t)
 	opened := decodeProject(t, a.open(dir))
 
-	req := httptest.NewRequest(http.MethodGet, "/api/archetypes", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://127.0.0.1:7777/api/archetypes", nil)
 	req.Header.Set("X-Project-ID", opened.ID)
 	rec := httptest.NewRecorder()
 	a.handler.ServeHTTP(rec, req)

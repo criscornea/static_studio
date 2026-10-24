@@ -280,7 +280,7 @@ type archetypeData struct {
 
 func renderArchetype(source string, data archetypeData, now time.Time) ([]byte, error) {
 	funcs := template.FuncMap{
-		"replace": func(input, old, replacement string) string { return strings.ReplaceAll(input, old, replacement) },
+		"replace": strings.ReplaceAll,
 		"title":   titleCase,
 		"lower":   strings.ToLower,
 		"upper":   strings.ToUpper,
