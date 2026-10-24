@@ -9,7 +9,15 @@ interface PageState {
   page: Page | null
   loading: boolean
   error: ApiError | null
+  // Editor text; null until a page is loaded. Differs from page.body when unsaved.
+  draft: string | null
+  // Path being saved, or null. Only a save of the same path is blocked.
+  savingPath: string | null
+  // Why the last save failed, including a hash conflict (code page_conflict).
+  saveError: ApiError | null
 
+  setDraft: (text: string) => void
+  save: () => Promise<void>
   load: (path: string) => Promise<void>
   clear: () => void
 }
@@ -18,27 +26,30 @@ interface PageState {
 // load has started since, so fast clicking can't show a stale page.
 let latest = 0
 
-export const usePageStore = create<PageState>()((set) => ({
+export const usePageStore = create<PageState>()((set, get) => ({
   path: null,
   page: null,
   loading: false,
   error: null,
+  draft: null,
+  savingPath: null,
+  saveError: null,
 
   async load(next) {
     const request = ++latest
-    set({ path: next, loading: true, error: null })
+    set({ path: next, loading: true, error: null, saveError: null })
 
     try {
       const loaded = await api.page(next)
       if (request !== latest) {
         return
       }
-      set({ page: loaded })
+      set({ page: loaded, draft: loaded.body })
     } catch (err) {
       if (request !== latest) {
         return
       }
-      set({ page: null, error: asApiError(err) })
+      set({ page: null, draft: null, error: asApiError(err) })
     } finally {
       if (request === latest) {
         set({ loading: false })
@@ -46,9 +57,39 @@ export const usePageStore = create<PageState>()((set) => ({
     }
   },
 
+  setDraft(text) {
+    set({ draft: text })
+  },
+
+  async save() {
+    const { page, draft, savingPath } = get()
+    if (page === null || draft === null || savingPath === page.path) {
+      return
+    }
+    set({ savingPath: page.path, saveError: null })
+    try {
+      const { hash } = await api.savePage(page.path, draft, page.hash)
+      const current = get().page
+      if (current === page) {
+        set({ page: { ...page, body: draft, hash } })
+      } else if (current?.path === page.path) {
+        // Page was reloaded meanwhile: merge only what the save changed.
+        set({ page: { ...current, body: draft, hash } })
+      }
+    } catch (err) {
+      if (get().page?.path === page.path) {
+        set({ saveError: asApiError(err) })
+      }
+    } finally {
+      if (get().savingPath === page.path) {
+        set({ savingPath: null })
+      }
+    }
+  },
+
   clear() {
     latest++
-    set({ path: null, page: null, error: null, loading: false })
+    set({ path: null, page: null, draft: null, error: null, saveError: null, loading: false })
   },
 }))
 

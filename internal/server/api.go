@@ -372,3 +372,66 @@ func (s *Server) handleDeletePage(w http.ResponseWriter, r *http.Request) {
 			"The page could not be deleted. Check that you have permission to write to the content folder.")
 	}
 }
+
+type savePageRequest struct {
+	Path string `json:"path"`
+	Body string `json:"body"`
+	Hash string `json:"hash"`
+}
+
+type savePageResponse struct {
+	Hash string `json:"hash"`
+}
+
+// maxSaveRequest leaves room for a maxPageSize body plus JSON escaping.
+const maxSaveRequest = 8 << 20
+
+func (s *Server) handleSavePage(w http.ResponseWriter, r *http.Request) {
+	open, ok := s.requireProject(w, r)
+	if !ok {
+		return
+	}
+
+	var req savePageRequest
+	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxSaveRequest))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&req); err != nil {
+		s.writeError(w, http.StatusBadRequest, "bad_request", "The request could not be read.")
+		return
+	}
+	if req.Path == "" {
+		s.writeError(w, http.StatusBadRequest, "missing_path", "No page was given.")
+		return
+	}
+
+	hash, err := content.SavePage(open.Root(), open.Info.ContentDir, req.Path, req.Body, req.Hash)
+	switch {
+	case err == nil:
+		s.writeJSON(w, http.StatusOK, savePageResponse{Hash: hash})
+
+	case errors.Is(err, content.ErrNotEditable):
+		s.writeError(w, http.StatusBadRequest, "not_editable",
+			"This file can't be saved here. Only pages inside the content folder can be edited.")
+
+	case errors.Is(err, content.ErrNotFound):
+		s.writeError(w, http.StatusNotFound, "page_not_found",
+			"This page no longer exists. It may have been moved or deleted outside the editor.")
+
+	case errors.Is(err, content.ErrConflict):
+		s.writeError(w, http.StatusConflict, "page_conflict",
+			"This page was changed outside the editor since you opened it. Reload it to see the latest version.")
+
+	case errors.Is(err, content.ErrTooLarge):
+		s.writeError(w, http.StatusUnprocessableEntity, "page_too_large",
+			"This page is too large to save in the editor.")
+
+	case errors.Is(err, frontmatter.ErrInvalid), errors.Is(err, frontmatter.ErrUnterminated):
+		s.writeError(w, http.StatusUnprocessableEntity, "invalid_frontmatter",
+			"The settings block at the top of this page could not be read, so it was not saved.")
+
+	default:
+		s.log.Warn("saving page failed", "path", req.Path, "err", err)
+		s.writeError(w, http.StatusInternalServerError, "cannot_save_page",
+			"The page could not be saved. Check that you have permission to write to the content folder.")
+	}
+}

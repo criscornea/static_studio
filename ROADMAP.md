@@ -49,7 +49,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 
 **Goal:** the core. This is where it becomes real.
 
-- [ ] CodeMirror 6 as the markdown editor
+- [x] CodeMirror 6 as the markdown editor
 - [ ] Frontmatter as a **form**, not as text
 - [ ] Preview: the real Hugo-rendered page from `hugo server`, loaded in an
   iframe from its own port (separate origin from the app)
@@ -120,6 +120,9 @@ Deliberate simplifications, recorded so they don't become invisible.
   `localhost`) on any port, not only the server's own. Rebinding still fails
   because a foreign name is rejected, and the Vite dev proxy forwards
   `Host: localhost:5173`, which a fixed-port check would break.
+- Saving, renaming and deleting are serialised by an in-process mutex only.
+  An external editor can still change a file between the hash check and the
+  write (TOCTOU); the window is small and not closed.
 - Search reads every page on each query, and the content tree reads every
   page's frontmatter on each load, with no index or cache. Search is a
   case-insensitive substring match over title, tags and body (no stemming,

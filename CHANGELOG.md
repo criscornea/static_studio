@@ -12,6 +12,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- CodeMirror 6 markdown editor with save (button and Ctrl/Cmd+S). Pages carry a
+  sha256 hash; `PUT /api/page` keeps frontmatter verbatim, writes atomically and
+  returns 409 when the file changed on disk.
+
 - Rename/move and delete a page: `POST /api/page/rename` and `DELETE /api/page`
   (confined to the content dir, never overwrite, editable files only) with
   sidebar rename and delete-confirm dialogs.

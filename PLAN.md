@@ -41,12 +41,12 @@ Branch: feat/p4-editor
 Goal: A page opens in a CodeMirror 6 raw markdown editor and can be saved back to disk.
 Done when: page load returns a sha256 hash of the file bytes; `PUT /api/page` takes that hash back, saves the body via the atomic helper keeping the existing frontmatter verbatim, and returns a conflict when the on-disk hash differs; `PageView` shows a CodeMirror 6 editor with markdown highlighting and a save action (button and Ctrl/Cmd+S); tests cover save, hash conflict and refusal.
 Risk: high (overwrites user files; lost-update concurrency between app and external editors)
-Status: todo
-- [ ] M4.1 Return a sha256 content hash of the file bytes from page load
-- [ ] M4.2 Add `content.SavePage` that writes body plus original frontmatter atomically after a hash check
-- [ ] M4.3 Add the `PUT /api/page` handler with tests for success, hash conflict and non-editable paths
-- [ ] M4.4 Add a CodeMirror 6 editor component to `PageView`
-- [ ] M4.5 Add save to the page store with a Ctrl/Cmd+S binding and a conflict message
+Status: merged
+- [x] M4.1 Return a sha256 content hash of the file bytes from page load
+- [x] M4.2 Add `content.SavePage` that writes body plus original frontmatter atomically after a hash check
+- [x] M4.3 Add the `PUT /api/page` handler with tests for success, hash conflict and non-editable paths
+- [x] M4.4 Add a CodeMirror 6 editor component to `PageView`
+- [x] M4.5 Add save to the page store with a Ctrl/Cmd+S binding and a conflict message
 
 ## Phase 5: Frontmatter as a form
 Branch: feat/p5-frontmatter-form

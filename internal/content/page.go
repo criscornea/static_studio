@@ -1,6 +1,8 @@
 package content
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -25,6 +27,8 @@ type Page struct {
 	Format frontmatter.Format  `json:"format"`
 	Fields *frontmatter.Fields `json:"fields"`
 	Body   string              `json:"body"`
+	// Hash is the sha256 of the file bytes, hex encoded. Saves send it back.
+	Hash string `json:"hash"`
 }
 
 func ReadPage(fsys fs.FS, contentDir, name string) (*Page, error) {
@@ -63,6 +67,7 @@ func ReadPage(fsys fs.FS, contentDir, name string) (*Page, error) {
 		Format: doc.Format,
 		Fields: fields,
 		Body:   string(doc.Body),
+		Hash:   hashBytes(data),
 	}, nil
 }
 
@@ -76,4 +81,9 @@ func checkPagePath(contentDir, name string) error {
 		return ErrNotEditable
 	}
 	return nil
+}
+
+func hashBytes(data []byte) string {
+	sum := sha256.Sum256(data)
+	return hex.EncodeToString(sum[:])
 }

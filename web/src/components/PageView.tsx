@@ -1,5 +1,8 @@
+import { useEffect } from 'react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { MarkdownEditor } from '@/components/MarkdownEditor'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { formatDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { usePageStore } from '@/stores/page'
@@ -29,6 +32,24 @@ export function PageView() {
   const page = usePageStore((s) => s.page)
   const loading = usePageStore((s) => s.loading)
   const error = usePageStore((s) => s.error)
+  const draft = usePageStore((s) => s.draft)
+  const savingPath = usePageStore((s) => s.savingPath)
+  const saveError = usePageStore((s) => s.saveError)
+  const setDraft = usePageStore((s) => s.setDraft)
+  const save = usePageStore((s) => s.save)
+  const saving = page !== null && savingPath === page.path
+
+  // Ctrl/Cmd+S saves even when the editor is not focused.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's' && !e.defaultPrevented) {
+        e.preventDefault()
+        void save()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [save])
 
   if (path === null) {
     return <p className="text-sm text-muted-foreground">Select a page.</p>
@@ -77,9 +98,29 @@ export function PageView() {
         <p className="font-mono text-xs text-muted-foreground">{page.path}</p>
       </header>
 
-      <pre className="mt-6 whitespace-pre-wrap border-t pt-6 font-mono text-sm leading-relaxed">
-        {page.body}
-      </pre>
+      <div className="mt-6 border-t pt-6">
+        {saveError && (
+          <Alert variant="destructive" className="mb-3">
+            <AlertDescription>{saveError.message}</AlertDescription>
+          </Alert>
+        )}
+        <div className="mb-2 flex items-center gap-3">
+          <Button
+            size="sm"
+            onClick={() => void save()}
+            disabled={saving || draft === page.body}
+          >
+            {saving ? 'Saving…' : 'Save'}
+          </Button>
+          <span className="text-xs text-muted-foreground">Ctrl/Cmd+S</span>
+        </div>
+        <MarkdownEditor
+          key={page.path}
+          value={draft ?? page.body}
+          onChange={setDraft}
+          onSave={() => void save()}
+        />
+      </div>
     </article>
   )
 }

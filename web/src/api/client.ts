@@ -22,7 +22,7 @@ export function setProjectID(id: string | null): void {
 }
 
 interface RequestOptions {
-  method?: 'GET' | 'POST' | 'DELETE'
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
   body?: unknown
   // Send the project id. Defaults to true.
   withProject?: boolean
@@ -96,6 +96,8 @@ export const api = {
   archetypes: () =>
     request<{ archetypes: Archetype[] }>('/api/archetypes').then((r) => r.archetypes),
   createPage: (req: NewPageRequest) => request<Page>('/api/page', { method: 'POST', body: req }),
+  savePage: (path: string, body: string, hash: string) =>
+    request<{ hash: string }>('/api/page', { method: 'PUT', body: { path, body, hash } }),
   renamePage: (req: RenamePageRequest) =>
     request<{ path: string }>('/api/page/rename', { method: 'POST', body: req }),
   deletePage: (path: string) =>

@@ -52,6 +52,8 @@ export type ApiErrorCode =
   | 'cannot_create_page'
   | 'cannot_rename_page'
   | 'cannot_delete_page'
+  | 'cannot_save_page'
+  | 'page_conflict'
 
 /** An error response from the backend, or a transport failure. */
 export class ApiError extends Error {
@@ -82,6 +84,8 @@ export interface Page {
   format: FrontmatterFormat
   fields: PageFields
   body: string
+  /** sha256 of the file bytes; sent back on save. */
+  hash: string
 }
 
 /** A template a new page can start from. */

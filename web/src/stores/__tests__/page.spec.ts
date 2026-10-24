@@ -15,7 +15,7 @@ const aProject: Project = {
 }
 
 function aPage(path: string, title: string): Page {
-  return { path, format: 'yaml', fields: { title, draft: false }, body: `Body of ${title}\n` }
+  return { path, format: 'yaml', fields: { title, draft: false }, body: `Body of ${title}\n`, hash: `hash-${title}` }
 }
 
 const pageURL = (path: string) => `/api/page?path=${encodeURIComponent(path)}`
@@ -187,5 +187,58 @@ describe('clearing', () => {
     useProjectStore.setState({ project: null })
 
     expect(store().page).toBeNull()
+  })
+})
+
+describe('save', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    store().clear()
+  })
+
+  it('sends the hash and adopts the new one', async () => {
+    const calls: { url: string; init?: RequestInit }[] = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string, init?: RequestInit) => {
+        calls.push({ url, init })
+        if (init?.method === 'PUT') {
+          return Promise.resolve(json(200, { hash: 'h2' }))
+        }
+        return Promise.resolve(json(200, aPage('content/a.md', 'A')))
+      }),
+    )
+    await store().load('content/a.md')
+    store().setDraft('edited')
+    await store().save()
+
+    expect(JSON.parse(calls[1]!.init?.body as string)).toEqual({
+      path: 'content/a.md',
+      body: 'edited',
+      hash: 'hash-A',
+    })
+    expect(store().page).toMatchObject({ body: 'edited', hash: 'h2' })
+    expect(store().saveError).toBeNull()
+  })
+
+  it('keeps the draft and reports a conflict', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_url: string, init?: RequestInit) =>
+        Promise.resolve(
+          init?.method === 'PUT'
+            ? json(409, { code: 'page_conflict', message: 'changed outside' })
+            : json(200, aPage('content/a.md', 'A')),
+        ),
+      ),
+    )
+    await store().load('content/a.md')
+    store().setDraft('edited')
+    await store().save()
+
+    expect(store().saveError?.code).toBe('page_conflict')
+    expect(store().draft).toBe('edited')
+    expect(store().page?.hash).toBe('hash-A')
+    expect(store().savingPath).toBeNull()
   })
 })

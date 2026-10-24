@@ -783,3 +783,65 @@ func TestDeletePage(t *testing.T) {
 		t.Fatal("not deleted")
 	}
 }
+
+func (a *api) savePage(id, body string) *httptest.ResponseRecorder {
+	a.t.Helper()
+
+	req := httptest.NewRequest(http.MethodPut, "http://127.0.0.1:7777/api/page", strings.NewReader(body))
+	if id != "" {
+		req.Header.Set("X-Project-ID", id)
+	}
+	rec := httptest.NewRecorder()
+	a.handler.ServeHTTP(rec, req)
+	return rec
+}
+
+func TestSavePage(t *testing.T) {
+	dir := withPages(t)
+	a := newAPI(t)
+	id := decodeProject(t, a.open(dir)).ID
+
+	var page struct {
+		Hash string `json:"hash"`
+	}
+	rec := a.page(id, "content/post.md")
+	if err := json.Unmarshal(rec.Body.Bytes(), &page); err != nil || page.Hash == "" {
+		t.Fatalf("no hash in page response: %v %s", err, rec.Body)
+	}
+
+	save := func(path, body, hash string) *httptest.ResponseRecorder {
+		b, _ := json.Marshal(map[string]string{"path": path, "body": body, "hash": hash})
+		return a.savePage(id, string(b))
+	}
+
+	rec = save("content/post.md", "new body\n", page.Hash)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("save: %d %s", rec.Code, rec.Body)
+	}
+	got, _ := os.ReadFile(filepath.Join(dir, "content/post.md"))
+	if string(got) != "---\ntitle: A Post\ndraft: true\n---\nnew body\n" {
+		t.Fatalf("file: %q", got)
+	}
+
+	// Old hash is now stale.
+	rec = save("content/post.md", "again", page.Hash)
+	if rec.Code != http.StatusConflict || decodeError(t, rec).Code != "page_conflict" {
+		t.Fatalf("conflict: %d %s", rec.Code, rec.Body)
+	}
+
+	rec = save("static/x.md", "x", "")
+	if rec.Code != http.StatusBadRequest || decodeError(t, rec).Code != "not_editable" {
+		t.Fatalf("outside content: %d %s", rec.Code, rec.Body)
+	}
+	rec = save("content/nope.md", "x", "")
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("missing: %d", rec.Code)
+	}
+	rec = save("", "x", "")
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("no path: %d", rec.Code)
+	}
+	if rec := a.savePage("", `{"path":"content/post.md","body":"x","hash":""}`); rec.Code == http.StatusOK {
+		t.Fatal("save without project id succeeded")
+	}
+}

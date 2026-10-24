@@ -182,3 +182,60 @@ func TestRenamePageCaseOnly(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestSavePage(t *testing.T) {
+	root, dir := openTestRoot(t)
+	writeTest(t, dir, "content/a.md", "---\ntitle: A\n---\nold\n")
+	writeTest(t, dir, "content/plain.md", "old\n")
+	writeTest(t, dir, "content/img.png", "x")
+	if err := os.Mkdir(filepath.Join(dir, "content/d.md"), 0o750); err != nil {
+		t.Fatal(err)
+	}
+
+	read := func(name string) []byte {
+		b, err := os.ReadFile(filepath.Join(dir, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return b
+	}
+
+	data := read("content/a.md")
+	h, err := SavePage(root, "content", "content/a.md", "new\n", hashBytes(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := read("content/a.md")
+	if string(got) != "---\ntitle: A\n---\nnew\n" {
+		t.Fatalf("got %q", got)
+	}
+	if h != hashBytes(got) {
+		t.Fatal("returned hash does not match file")
+	}
+
+	// Stale hash: file untouched.
+	if _, err := SavePage(root, "content", "content/a.md", "x", hashBytes(data)); !errors.Is(err, ErrConflict) {
+		t.Fatalf("got %v, want ErrConflict", err)
+	}
+	if string(read("content/a.md")) != string(got) {
+		t.Fatal("file changed on conflict")
+	}
+
+	// No frontmatter.
+	p := read("content/plain.md")
+	if _, err := SavePage(root, "content", "content/plain.md", "n", hashBytes(p)); err != nil {
+		t.Fatal(err)
+	}
+	if string(read("content/plain.md")) != "n" {
+		t.Fatal("plain page not saved")
+	}
+
+	for _, name := range []string{"content/img.png", "content/d.md", "static/x.md", "../x.md", "content/.h/a.md"} {
+		if _, err := SavePage(root, "content", name, "x", ""); !errors.Is(err, ErrNotEditable) {
+			t.Errorf("%s: got %v, want ErrNotEditable", name, err)
+		}
+	}
+	if _, err := SavePage(root, "content", "content/missing.md", "x", ""); !errors.Is(err, ErrNotFound) {
+		t.Errorf("missing: got %v", err)
+	}
+}
