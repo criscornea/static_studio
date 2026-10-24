@@ -40,7 +40,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 - [x] CSRF hardening: `Origin` check on mutating endpoints, `Host` check
   against DNS rebinding
 - [ ] Rename and delete a page
-- [ ] Atomic writes (temp file + rename)
+- [x] Atomic writes (temp file + rename)
 
 🎯 **Milestone:** content management without a text editor.
 📓 **Blog:** "All about the Frontmatter (current wip)"
@@ -133,8 +133,6 @@ Deliberate simplifications, recorded so they don't become invisible.
   following Hugo's title-case style. Archetype folders (page bundles) and a
   custom `archetypeDir` are not supported. A new page's title comes from the
   archetype (the file name, title-cased), not from what the user typed.
-- New pages are created with `O_EXCL` and removed again if the write fails,
-  but not yet via temp file + rename; that is the atomic-writes item.
 - The content tree only lists `.md`, `.markdown`, `.mdx` and `.html`.
 - `Manager.Close` is not called on server shutdown; it becomes relevant
   alongside subprocess cleanup.

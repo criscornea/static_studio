@@ -17,11 +17,11 @@ Branch: feat/p2-atomic-writes
 Goal: Every write to a project file goes through a confined temp-file-plus-rename helper, so a crash never leaves a half-written page.
 Done when: `internal/content` has a tested atomic write helper on `os.Root` (temp file in the same dir, fsync, rename, cleanup on failure, refuses escapes); page creation uses it while still never overwriting an existing file; `make check` green; ROADMAP item ticked and the matching "Known shortcut" removed.
 Risk: high (data writes; a bug can corrupt or lose user pages)
-Status: todo
-- [ ] M2.1 Add `writeFileAtomic(root, name, data, perm)` in `internal/content` with tests for success, temp cleanup on failure and traversal refusal
-- [ ] M2.2 Add a no-overwrite variant (link or exclusive-create semantics) with a test proving an existing file is never replaced
-- [ ] M2.3 Switch archetype page creation to the no-overwrite atomic helper
-- [ ] M2.4 Update ROADMAP.md, CHANGELOG.md and the known-shortcuts note
+Status: merged
+- [x] M2.1 Add `writeFileAtomic(root, name, data, perm)` in `internal/content` with tests for success, temp cleanup on failure and traversal refusal
+- [x] M2.2 Add a no-overwrite variant (link or exclusive-create semantics) with a test proving an existing file is never replaced
+- [x] M2.3 Switch archetype page creation to the no-overwrite atomic helper
+- [x] M2.4 Update ROADMAP.md, CHANGELOG.md and the known-shortcuts note
 
 ## Phase 3: Rename and delete a page
 Branch: feat/p3-rename-delete

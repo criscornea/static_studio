@@ -12,6 +12,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Atomic, root-confined file writes (temp file, fsync, rename); new pages
+  are published by hard link so an existing file is never replaced.
 - `/api` requests with a non-loopback `Host` (DNS rebinding) or a mutating
   request with a foreign `Origin` are refused with 403; the Vite dev origin
   works because `Origin` must match `Host`.

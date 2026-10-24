@@ -139,32 +139,13 @@ func CreatePage(root *os.Root, contentDir string, req NewPage, now time.Time) (*
 	if err := root.MkdirAll(dir, 0o750); err != nil {
 		return nil, fmt.Errorf("creating %s: %w", dir, err)
 	}
-	if err := writeNew(root, file, rendered); err != nil {
+	if err := writeFileAtomicNew(root, file, rendered, 0o600); err != nil {
+		if errors.Is(err, fs.ErrExist) {
+			return nil, ErrPageExists
+		}
 		return nil, err
 	}
 	return ReadPage(fsys, contentDir, file)
-}
-
-// writeNew creates name with data, failing if it already exists. A write
-// that fails half way removes the file, so no partial page is left behind.
-func writeNew(root *os.Root, name string, data []byte) error {
-	f, err := root.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
-	if errors.Is(err, fs.ErrExist) {
-		return ErrPageExists
-	}
-	if err != nil {
-		return fmt.Errorf("creating %s: %w", name, err)
-	}
-
-	_, err = f.Write(data)
-	if closeErr := f.Close(); err == nil {
-		err = closeErr
-	}
-	if err != nil {
-		_ = root.Remove(name)
-		return fmt.Errorf("writing %s: %w", name, err)
-	}
-	return nil
 }
 
 // Slugify turns a page name into a file name: lower case letters and digits
