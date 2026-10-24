@@ -17,8 +17,8 @@ Loop over phases in order, skipping `Status: merged`:
 1. **Implement** (Status `todo` or `in-progress`): spawn the `implementer` agent with prompt `Implement Phase <n> of PLAN.md.`
    - Report `blocked`: stop the loop and show the user the BLOCKED line.
 2. **Review gate** (Status `review`): run `git diff --shortstat main...<branch>`.
-   - Ask the user (AskUserQuestion, one question: "Review Phase <n> with Opus before merge?") only if `Risk: high` OR more than 10 files OR more than 400 changed lines.
-   - Otherwise skip the review without asking.
+   - Ask the user (AskUserQuestion, one question: "Review Phase <n> with Opus before merge?") only if `Risk: high`.
+   - Any other risk (low, medium) is an automatic pass: skip the review without asking, whatever the file or line count.
 3. **Review** (user said yes): spawn `code-reviewer` with prompt `Review branch <branch> for Phase <n>.`
    - `NO ISSUES FOUND`: go to step 4.
    - Findings: spawn `implementer` with `On branch <branch>, fix these review findings, one commit, then run build-check:` plus the findings. One fix round only. Show remaining critical findings to the user.
