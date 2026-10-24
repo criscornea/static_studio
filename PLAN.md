@@ -221,12 +221,12 @@ Branch: feat/p19-config-merge
 Goal: `contentDir` and `staticDir` are resolved the way Hugo resolves them: root config, `config/_default/*`, `config/<environment>/*` and `HUGO_*` environment variables merged in Hugo's order.
 Done when: a `config` loader in `internal/ssg` merges the root config file with every `config/_default/*.{toml,yaml,yml,json}` (files named after a top-level key such as `languages.toml` or `module.toml` nest under that key) following Hugo's documented precedence; `config/<env>/` is overlaid where env is `HUGO_ENVIRONMENT`, else `development` (the dev server's default); `HUGO_CONTENTDIR` and `HUGO_STATICDIR` override the merged values and still pass `configDir` confinement; the environment is injected so tests do not touch the process env; invalid files in the config dir surface `ErrInvalidConfig` from Phase 14; table tests cover each precedence step; `make check` green.
 Risk: low
-Status: todo
-- [ ] M19.1 Add a case-insensitive deep merge of config maps with tests
-- [ ] M19.2 Load and merge `config/_default/*` on top of the root config file
-- [ ] M19.3 Overlay `config/<environment>/*` selected by `HUGO_ENVIRONMENT`
-- [ ] M19.4 Apply `HUGO_CONTENTDIR` and `HUGO_STATICDIR` overrides from an injected environment
-- [ ] M19.5 Update ROADMAP.md, CHANGELOG.md and the known-shortcuts note
+Status: merged
+- [x] M19.1 Add a case-insensitive deep merge of config maps with tests
+- [x] M19.2 Load and merge `config/_default/*` on top of the root config file
+- [x] M19.3 Overlay `config/<environment>/*` selected by `HUGO_ENVIRONMENT`
+- [x] M19.4 Apply `HUGO_CONTENTDIR` and `HUGO_STATICDIR` overrides from an injected environment
+- [x] M19.5 Update ROADMAP.md, CHANGELOG.md and the known-shortcuts note
 
 ## Phase 20: Resolve every content directory
 Branch: feat/p20-content-dirs

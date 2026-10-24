@@ -31,6 +31,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- `contentDir` and `staticDir` are resolved from the merged Hugo config:
+  root file, `config/_default/*`, `config/<environment>/*` (from
+  `HUGO_ENVIRONMENT`, else `development`) and the `HUGO_CONTENTDIR` and
+  `HUGO_STATICDIR` environment variables.
+
 - App chrome is not text-selectable, uses the default cursor and shows
   focus rings only for keyboard focus; editor text, logs and inputs stay
   selectable.

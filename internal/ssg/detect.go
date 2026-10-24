@@ -8,7 +8,7 @@ import (
 )
 
 // detectors are tried in order; the first match wins.
-var detectors = []SSG{hugo{}, astro{}}
+var detectors = []SSG{hugo{env: os.Getenv}, astro{}}
 
 // Detect identifies the generator used by the project rooted at dir.
 // It returns ErrNotDetected or ErrUnsupported when the directory cannot be used.

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"os"
 	"path"
 	"strings"
 
@@ -21,17 +22,38 @@ const (
 	maxConfigSize = 1 << 20 // 1 MiB
 )
 
-type hugo struct{}
+// hugo reads its environment through env, so tests need not touch the process
+// environment. A nil env means os.Getenv.
+type hugo struct {
+	env func(string) string
+}
 
 func (hugo) Kind() Kind      { return KindHugo }
 func (hugo) Supported() bool { return true }
 
-// Dirs reads contentDir and staticDir from the top level of the Hugo config.
-// Per-language overrides and module mounts are not followed.
-func (hugo) Dirs(fsys fs.FS, configFile string) (string, string, error) {
+// Dirs reads contentDir and staticDir from the merged Hugo config: the root
+// config file, then config/_default/*, then config/<environment>/*, then
+// HUGO_CONTENTDIR and HUGO_STATICDIR. Per-language overrides and module
+// mounts are not followed.
+func (h hugo) Dirs(fsys fs.FS, configFile string) (string, string, error) {
 	raw, err := readConfig(fsys, configFile)
 	if err != nil {
 		return "", "", err
+	}
+	raw = mergeConfig(nil, raw)
+
+	for _, dir := range []string{"config/_default", "config/" + h.environment()} {
+		if err := mergeConfigDir(fsys, dir, raw); err != nil {
+			return "", "", err
+		}
+	}
+
+	if v := strings.TrimSpace(h.getenv("HUGO_CONTENTDIR")); v != "" {
+		raw["contentdir"] = v
+	}
+	if v := strings.TrimSpace(h.getenv("HUGO_STATICDIR")); v != "" {
+		// Hugo splits list values from the environment on whitespace.
+		raw["staticdir"] = strings.Fields(v)[0]
 	}
 
 	contentDir := configDir(raw["contentdir"], hugoDefaultContentDir)
@@ -39,6 +61,58 @@ func (hugo) Dirs(fsys fs.FS, configFile string) (string, string, error) {
 	assetDir := configDir(firstOf(raw["staticdir"]), hugoDefaultAssetDir)
 
 	return contentDir, assetDir, nil
+}
+
+// getenv reads the injected environment, or the process environment when none
+// was injected.
+func (h hugo) getenv(key string) string {
+	if h.env != nil {
+		return h.env(key)
+	}
+	return os.Getenv(key)
+}
+
+// environment is the Hugo environment whose config directory is overlaid:
+// HUGO_ENVIRONMENT, else "development", the dev server's default.
+func (h hugo) environment() string {
+	if e := strings.TrimSpace(h.getenv("HUGO_ENVIRONMENT")); e != "" {
+		return e
+	}
+	return "development"
+}
+
+// mergeConfigDir merges every config file in dir into raw, in file name
+// order. A file named hugo or config holds top-level keys; any other file
+// nests under the key named after it (languages.toml under "languages"). A
+// missing directory is fine; an invalid file is a *ConfigError.
+func mergeConfigDir(fsys fs.FS, dir string, raw map[string]any) error {
+	if !fs.ValidPath(dir) {
+		return nil
+	}
+	entries, err := fs.ReadDir(fsys, dir)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return &ConfigError{File: dir, Reason: "the directory cannot be read (" + reasonOf(err) + ")"}
+	}
+	for _, e := range entries {
+		ext := strings.ToLower(path.Ext(e.Name()))
+		if e.IsDir() || (ext != ".toml" && ext != ".yaml" && ext != ".yml" && ext != ".json") {
+			continue
+		}
+		part, err := readConfig(fsys, dir+"/"+e.Name())
+		if err != nil {
+			return err
+		}
+		key := strings.ToLower(strings.TrimSuffix(e.Name(), path.Ext(e.Name())))
+		if key == "hugo" || key == "config" {
+			mergeConfig(raw, part)
+		} else {
+			mergeConfig(raw, map[string]any{key: part})
+		}
+	}
+	return nil
 }
 
 // hugoConfigs are checked in order. Hugo itself accepts all of these;
