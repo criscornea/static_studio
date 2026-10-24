@@ -44,6 +44,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("PUT /api/page", s.handleSavePage)
 	mux.HandleFunc("POST /api/page/rename", s.handleRenamePage)
 	mux.HandleFunc("DELETE /api/page", s.handleDeletePage)
+	mux.HandleFunc("POST /api/asset", s.handleAsset)
 
 	if s.assets != nil {
 		mux.Handle("/", s.spaHandler(s.assets))

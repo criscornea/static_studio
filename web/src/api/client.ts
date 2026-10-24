@@ -33,7 +33,8 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   const { method = 'GET', body, withProject = true } = options
 
   const headers = new Headers()
-  if (body != undefined) {
+  const isForm = body instanceof FormData
+  if (body != undefined && !isForm) {
     headers.set('Content-Type', 'application/json')
   }
   if (withProject && projectID !== null) {
@@ -45,7 +46,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     res = await fetch(path, {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
     })
   } catch {
     throw new ApiError(
@@ -103,5 +104,10 @@ export const api = {
     request<{ path: string }>('/api/page/rename', { method: 'POST', body: req }),
   deletePage: (path: string) =>
     request<void>(`/api/page?path=${encodeURIComponent(path)}`, { method: 'DELETE' }),
+  uploadAsset: (file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    return request<{ path: string }>('/api/asset', { method: 'POST', body: form })
+  },
   search: (query: string) => request<SearchResults>(`/api/search?q=${encodeURIComponent(query)}`),
 }

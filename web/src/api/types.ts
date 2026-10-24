@@ -54,6 +54,11 @@ export type ApiErrorCode =
   | 'cannot_delete_page'
   | 'cannot_save_page'
   | 'page_conflict'
+  | 'asset_too_large'
+  | 'asset_type'
+  | 'asset_name'
+  | 'asset_exists'
+  | 'cannot_save_asset'
 
 /** An error response from the backend, or a transport failure. */
 export class ApiError extends Error {

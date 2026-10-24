@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"time"
 
@@ -435,5 +436,68 @@ func (s *Server) handleSavePage(w http.ResponseWriter, r *http.Request) {
 		s.log.Warn("saving page failed", "path", req.Path, "err", err)
 		s.writeError(w, http.StatusInternalServerError, "cannot_save_page",
 			"The page could not be saved. Check that you have permission to write to the content folder.")
+	}
+}
+
+type assetResponse struct {
+	Path string `json:"path"`
+}
+
+func (s *Server) handleAsset(w http.ResponseWriter, r *http.Request) {
+	open, ok := s.requireProject(w, r)
+	if !ok {
+		return
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, content.MaxAssetSize+(1<<20))
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		var tooBig *http.MaxBytesError
+		if errors.As(err, &tooBig) {
+			s.writeError(w, http.StatusRequestEntityTooLarge, "asset_too_large",
+				"This image is too large. The limit is 10 MB.")
+			return
+		}
+		s.writeError(w, http.StatusBadRequest, "bad_request", "The request could not be read.")
+		return
+	}
+	defer func() { _ = file.Close() }()
+
+	data, err := io.ReadAll(io.LimitReader(file, content.MaxAssetSize+1))
+	if err != nil {
+		s.writeError(w, http.StatusBadRequest, "bad_request", "The request could not be read.")
+		return
+	}
+
+	urlPath, err := content.SaveAsset(open.Root(), open.Info.AssetDir, header.Filename, data)
+	switch {
+	case err == nil:
+		s.log.Info("asset saved", "path", urlPath)
+		s.writeJSON(w, http.StatusCreated, assetResponse{Path: urlPath})
+
+	case errors.Is(err, content.ErrAssetTooLarge):
+		s.writeError(w, http.StatusRequestEntityTooLarge, "asset_too_large",
+			"This image is too large. The limit is 10 MB.")
+
+	case errors.Is(err, content.ErrAssetType):
+		s.writeError(w, http.StatusUnsupportedMediaType, "asset_type",
+			"Only PNG, JPEG, GIF and WebP images can be added.")
+
+	case errors.Is(err, content.ErrAssetName):
+		s.writeError(w, http.StatusBadRequest, "asset_name",
+			"This file name can't be used. Rename the image and try again.")
+
+	case errors.Is(err, content.ErrAssetExists):
+		s.writeError(w, http.StatusConflict, "asset_exists",
+			"An image with this name already exists. Rename the image and try again.")
+
+	case errors.Is(err, content.ErrNotEditable):
+		s.writeError(w, http.StatusBadRequest, "not_editable",
+			"The image folder can't be written to.")
+
+	default:
+		s.log.Warn("saving asset failed", "err", err)
+		s.writeError(w, http.StatusInternalServerError, "cannot_save_asset",
+			"The image could not be saved. Check that you have permission to write to the asset folder.")
 	}
 }

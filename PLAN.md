@@ -77,10 +77,10 @@ Branch: feat/p7-image-drop
 Goal: Dropping an image into the editor stores it in the asset dir and inserts a markdown image link.
 Done when: `POST /api/asset` accepts multipart uploads (size limit, image types only, no overwrite, confined to the asset dir) via the atomic helper; dropping onto the editor uploads and inserts `![](/path)` at the cursor; tests cover upload limits and refusal.
 Risk: high (security: file upload into the project)
-Status: todo
-- [ ] M7.1 Add `content.SaveAsset` with tests for type, size, name collision and confinement
-- [ ] M7.2 Add the `POST /api/asset` handler with tests
-- [ ] M7.3 Add editor drop handling that uploads and inserts the image link
+Status: merged
+- [x] M7.1 Add `content.SaveAsset` with tests for type, size, name collision and confinement
+- [x] M7.2 Add the `POST /api/asset` handler with tests
+- [x] M7.3 Add editor drop handling that uploads and inserts the image link
 
 ## Phase 8: Build with streamed output
 Branch: feat/p8-build

@@ -12,6 +12,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Drop an image onto the editor to upload it to `<assetDir>/images/` and insert
+  `![](/images/name.png)`. `POST /api/asset` accepts PNG, JPEG, GIF and WebP up to
+  10 MB, checks the bytes, never overwrites (a clash adds `-1`, `-2`, ...; a name
+  with no usable characters gets a generated one) and stays inside the project.
 - Autosave after a 1.5 s pause and on page switch, with saves serialised,
   a Saved/Unsaved/Saving/Conflict indicator, a beforeunload warning and
   editor undo/redo. A hash conflict stops autosave.

@@ -1,4 +1,5 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { api } from '@/api/client'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { FrontmatterForm } from '@/components/FrontmatterForm'
 import { MarkdownEditor } from '@/components/MarkdownEditor'
@@ -29,7 +30,10 @@ function Meta({ label, children }: { label: string; children: React.ReactNode })
 }
 
 export function PageView() {
+  const [uploadError, setUploadError] = useState<{ path: string | null; message: string } | null>(null)
   const path = usePageStore((s) => s.path)
+  // Errors belong to the page they happened on.
+  const uploadMessage = uploadError?.path === path ? uploadError.message : null
   const page = usePageStore((s) => s.page)
   const loading = usePageStore((s) => s.loading)
   const error = usePageStore((s) => s.error)
@@ -119,6 +123,11 @@ export function PageView() {
       </header>
 
       <div className="mt-6 border-t pt-6">
+        {uploadMessage && (
+          <Alert variant="destructive" className="mb-3">
+            <AlertDescription>{uploadMessage}</AlertDescription>
+          </Alert>
+        )}
         {saveError && (
           <Alert variant="destructive" className="mb-3">
             <AlertDescription>{saveError.message}</AlertDescription>
@@ -147,6 +156,13 @@ export function PageView() {
           value={draft ?? page.body}
           onChange={setDraft}
           onSave={() => void save()}
+          onUploadImage={async (file) => {
+            setUploadError(null)
+            return (await api.uploadAsset(file)).path
+          }}
+          onUploadError={(err) =>
+            setUploadError({ path, message: err instanceof Error ? err.message : String(err) })
+          }
         />
       </div>
     </article>
