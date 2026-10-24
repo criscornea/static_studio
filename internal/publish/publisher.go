@@ -15,10 +15,13 @@ import (
 	"github.com/criscornea/static_studio/internal/build"
 )
 
-// Publisher pushes a directory of built files to a branch of a git remote.
+// Publisher publishes built files: to a branch of a git remote, or with rsync.
 type Publisher struct {
 	// Git is the git binary. Empty means "git".
 	Git string
+	// RsyncBin and SSH are the rsync and ssh programs. Empty means the PATH names.
+	RsyncBin string
+	SSH      string
 }
 
 // gitEnv keeps git from waiting on a terminal that does not exist and limits

@@ -90,7 +90,7 @@ func (j *Job) run(ctx context.Context, builder *build.Runner, root *os.Root, s S
 		return errors.New("the site build failed, so nothing was published")
 	}
 
-	return j.Publisher.Push(ctx, root, s, line)
+	return j.Publisher.Publish(ctx, root, s, line)
 }
 
 // Stop cancels the running publish, if any, and waits a short while for it to

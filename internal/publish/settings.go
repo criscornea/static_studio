@@ -27,9 +27,26 @@ var ErrInvalid = errors.New("invalid publish settings")
 
 // Settings say where a project is published.
 type Settings struct {
+	// Target is TargetGitHubPages or TargetRsync. Empty means GitHub Pages so
+	// settings saved before targets existed load unchanged.
+	Target string `json:"target"`
 	Remote string `json:"remote"`
 	Branch string `json:"branch"`
+
+	// Rsync fields apply when Target is TargetRsync. No credentials are kept:
+	// ssh uses the user's own agent, keys, config and known_hosts.
+	RsyncDest     string `json:"rsyncDest"`
+	RsyncPort     int    `json:"rsyncPort"`
+	RsyncIdentity string `json:"rsyncIdentity"`
+	RsyncDelete   bool   `json:"rsyncDelete"`
+	RsyncDryRun   bool   `json:"rsyncDryRun"`
 }
+
+// Publish targets.
+const (
+	TargetGitHubPages = "github-pages"
+	TargetRsync       = "rsync"
+)
 
 var branchRe = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._/-]*$`)
 
@@ -63,6 +80,15 @@ func (s Settings) Validate() (Settings, error) {
 	s.Branch = strings.TrimSpace(s.Branch)
 	if s.Branch == "" {
 		s.Branch = DefaultBranch
+	}
+	switch s.Target {
+	case "":
+		s.Target = TargetGitHubPages
+	case TargetGitHubPages:
+	case TargetRsync:
+		return s.validateRsync()
+	default:
+		return s, fmt.Errorf("%w: the publish target is not supported", ErrInvalid)
 	}
 	switch {
 	case s.Remote == "":
@@ -147,6 +173,9 @@ func (s *Store) Get(project string) Settings {
 	got := s.load()[key(project)]
 	if got.Branch == "" {
 		got.Branch = DefaultBranch
+	}
+	if got.Target == "" {
+		got.Target = TargetGitHubPages
 	}
 	return got
 }
