@@ -1,9 +1,11 @@
 import { useEffect, useRef } from 'react'
 
-import { Hammer } from 'lucide-react'
+import { Hammer, Terminal } from 'lucide-react'
 
+import { EmptyState } from '@/components/EmptyState'
 import { IconButton } from '@/components/IconButton'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import { useLayoutStore } from '@/stores/layout'
 import { useBuildStore } from '@/stores/build'
 import { usePageStore } from '@/stores/page'
@@ -44,6 +46,7 @@ export function BuildPanel() {
   const jumpTo = useBuildStore((s) => s.jumpTo)
   const load = usePageStore((s) => s.load)
   const cancel = useBuildStore((s) => s.cancel)
+  const start = useBuildStore((s) => s.start)
   const reset = useBuildStore((s) => s.reset)
   const log = useRef<HTMLPreElement>(null)
 
@@ -58,7 +61,7 @@ export function BuildPanel() {
     <section aria-label="Build output" className="flex h-full min-h-0 flex-col">
       <div className="flex shrink-0 items-center gap-2 px-4 py-1.5">
         <span role="status" className="flex-1 text-sm">
-          {status === 'idle' ? 'No build output yet.' : statusText[status]}
+          {statusText[status]}
           {error && <span className="ml-2 text-destructive">{error}</span>}
         </span>
         {status === 'idle' ? null : status === 'running' ? (
@@ -93,9 +96,23 @@ export function BuildPanel() {
           ))}
         </ul>
       )}
+      {status === 'idle' && lines.length === 0 && (
+        <EmptyState
+          icon={Terminal}
+          className="flex-1 bg-muted"
+          text="No build output yet."
+          action={{
+            label: 'Build site',
+            onClick: () => void start(),
+          }}
+        />
+      )}
       <pre
         ref={log}
-        className="min-h-0 flex-1 overflow-auto bg-muted px-4 py-2 font-mono text-xs whitespace-pre-wrap"
+        className={cn(
+          'min-h-0 flex-1 overflow-auto bg-muted px-4 py-2 font-mono text-xs whitespace-pre-wrap',
+          status === 'idle' && lines.length === 0 && 'hidden',
+        )}
       >
         {lines.join('\n')}
       </pre>

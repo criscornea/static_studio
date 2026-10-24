@@ -46,6 +46,7 @@ describe('PageView preview pane', () => {
   })
 
   it('shows the preview beside the editor only while it is open', async () => {
+    vi.spyOn(api, 'devServer').mockReturnValue(new Promise(() => {}))
     useDevServerStore.setState({ running: true, ready: true })
     await usePageStore.getState().load('content/a.md')
     render(<PageView />)

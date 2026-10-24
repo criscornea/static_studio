@@ -11,3 +11,6 @@ globalThis.ResizeObserver ??= class {
   unobserve() {}
   disconnect() {}
 }
+
+// jsdom has no scrollIntoView, which cmdk calls for the highlighted item.
+Element.prototype.scrollIntoView ??= () => {}

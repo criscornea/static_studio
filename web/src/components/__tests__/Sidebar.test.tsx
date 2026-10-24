@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -7,6 +7,8 @@ import { defaultView } from '@/lib/tree'
 import { useProjectStore } from '@/stores/project'
 import { useSearchStore } from '@/stores/search'
 import { useViewStore } from '@/stores/view'
+import { useUiStore } from '@/stores/ui'
+import { AppDialogs } from '../AppDialogs'
 import { Sidebar } from '../Sidebar'
 
 const tree: ContentNode = {
@@ -117,10 +119,10 @@ describe('Sidebar', () => {
     await waitFor(() => expect(box).toHaveValue(''))
   })
 
-  it('focuses the search box on Ctrl+K', async () => {
+  it('focuses the search box when the focus command asks', () => {
     render(<Sidebar />)
 
-    await userEvent.keyboard('{Control>}k{/Control}')
+    act(() => useUiStore.getState().requestSearchFocus())
 
     expect(screen.getByRole('searchbox')).toHaveFocus()
   })
@@ -131,10 +133,33 @@ describe('Sidebar new page', () => {
     vi.stubGlobal('fetch', () =>
       Promise.resolve(new Response(JSON.stringify({ archetypes: [] }), { status: 200 })),
     )
-    render(<Sidebar />)
+    render(
+      <>
+        <Sidebar />
+        <AppDialogs />
+      </>,
+    )
 
     await userEvent.click(screen.getByRole('button', { name: 'New page' }))
 
     expect(await screen.findByLabelText('Name')).toBeInTheDocument()
+  })
+})
+
+describe('Sidebar empty and loading states', () => {
+  it('shows skeletons while the tree loads', () => {
+    useProjectStore.setState({ tree: null })
+    render(<Sidebar />)
+    expect(screen.getByRole('status')).toHaveTextContent('Loading pages')
+  })
+
+  it('offers a new page when the content dir is empty', async () => {
+    useProjectStore.setState({
+      tree: { name: 'content', path: 'content', isDir: true, children: [] },
+    })
+    render(<Sidebar />)
+    expect(screen.getByText('No content files yet.')).toBeInTheDocument()
+    await userEvent.click(screen.getAllByRole('button', { name: 'New page' }).at(-1)!)
+    expect(useUiStore.getState().newPage).not.toBeNull()
   })
 })

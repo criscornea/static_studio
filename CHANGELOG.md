@@ -22,6 +22,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   CodeMirror editor following the app theme; collapsible properties panel;
   resizable side-by-side preview; resizable build log panel toggled from
   the status bar or Ctrl/Cmd+J. Panel sizes and open states persist.
+- Command palette (Ctrl/Cmd+Shift+P) and quick-open for pages (Ctrl/Cmd+P),
+  both backed by one command registry and one global shortcut handler that
+  leaves keys to the editor and open dialogs; a keyboard shortcuts dialog
+  (Ctrl/Cmd+/) lists every binding.
+- Finished empty and loading states (icon, one line, action; skeletons)
+  in the sidebar, search, editor, preview and build log.
+
+### Changed
+
+- App chrome is not text-selectable, uses the default cursor and shows
+  focus rings only for keyboard focus; editor text, logs and inputs stay
+  selectable.
 
 ### Fixed
 

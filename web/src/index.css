@@ -139,6 +139,42 @@
     font-size: 0.8125rem;
     @apply bg-background text-foreground;
     margin: 0;
+    /* This is an app, not a web page: chrome is not selectable and has the default cursor. */
+    cursor: default;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  a,
+  button,
+  [role='button'],
+  [role='tab'],
+  [role='menuitem'],
+  [role='option'],
+  summary,
+  label {
+    cursor: default;
+  }
+  img,
+  a {
+    -webkit-user-drag: none;
+  }
+  /* Content people read, copy or edit stays selectable. */
+  input,
+  textarea,
+  [contenteditable='true'],
+  .cm-editor,
+  pre,
+  code,
+  kbd,
+  [role='alert'],
+  .selectable {
+    cursor: text;
+    user-select: text;
+    -webkit-user-select: text;
+  }
+  /* Focus rings only for keyboard focus; a mouse click leaves no ring. */
+  :focus:not(:focus-visible) {
+    outline: none;
   }
   code,
   kbd,

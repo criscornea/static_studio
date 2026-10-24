@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Files } from 'lucide-react'
 
+import { AppDialogs } from '@/components/AppDialogs'
 import { BuildPanel } from '@/components/BuildPanel'
 import { EditorHeader } from '@/components/EditorHeader'
 import { PageView } from '@/components/PageView'
@@ -10,8 +11,7 @@ import { Button } from '@/components/ui/button'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
 import { StatusBar } from '@/components/StatusBar'
 import { ThemeButton } from '@/components/ThemeButton'
-import { useBuildLogShortcut } from '@/hooks/useBuildLogShortcut'
-import { useSidebarShortcut } from '@/hooks/useSidebarShortcut'
+import { useCommandShortcuts } from '@/hooks/useCommandShortcuts'
 import { useLayoutStore } from '@/stores/layout'
 import { selectIsOpen, useProjectStore } from '@/stores/project'
 
@@ -28,8 +28,7 @@ export default function App() {
   const buildLogOpen = useLayoutStore((s) => s.buildLogOpen)
   const buildLogSize = useLayoutStore((s) => s.buildLogSize)
   const setBuildLogSize = useLayoutStore((s) => s.setBuildLogSize)
-  useSidebarShortcut()
-  useBuildLogShortcut()
+  useCommandShortcuts()
 
   // The backend holds the open project, so a page reload reconnects to it.
   useEffect(() => {
@@ -79,7 +78,12 @@ export default function App() {
         >
           {!collapsed && (
             <>
-              <ResizablePanel id="sidebar" defaultSize={`${sidebarSize}%`} minSize="12%" maxSize="45%">
+              <ResizablePanel
+                id="sidebar"
+                defaultSize={`${sidebarSize}%`}
+                minSize="12%"
+                maxSize="45%"
+              >
                 <Sidebar />
               </ResizablePanel>
               <ResizableHandle />
@@ -123,6 +127,7 @@ export default function App() {
       </div>
 
       <StatusBar />
+      <AppDialogs />
     </div>
   )
 }

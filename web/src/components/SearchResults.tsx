@@ -1,6 +1,7 @@
 import type { ApiError, SearchResults as Results } from '@/api/types'
-import { FileText } from 'lucide-react'
+import { FileSearch, FileText } from 'lucide-react'
 
+import { SkeletonRows } from '@/components/EmptyState'
 import { Highlight } from '@/components/Highlight'
 import { cn } from '@/lib/utils'
 
@@ -30,14 +31,20 @@ export function SearchResults({
   }
 
   if (results === null) {
-    return <p className="text-sm text-muted-foreground">Searching…</p>
+    return <SkeletonRows count={4} label="Searching…" />
   }
 
   if (results.hits.length === 0) {
     return (
-      <p className={cn('text-sm text-muted-foreground', loading && 'opacity-50')}>
-        No pages match “{query.trim()}”.
-      </p>
+      <div
+        className={cn(
+          'flex flex-col items-center gap-2 px-4 py-6 text-center text-sm text-muted-foreground',
+          loading && 'opacity-50',
+        )}
+      >
+        <FileSearch className="size-6 opacity-60" aria-hidden />
+        <p>No pages match “{query.trim()}”.</p>
+      </div>
     )
   }
 

@@ -6,6 +6,7 @@ import {
   collectFolders,
   collectTags,
   defaultView,
+  flattenPages,
   folderOf,
   type TreeView,
 } from '../tree'
@@ -162,5 +163,30 @@ describe('folderOf', () => {
     expect(folderOf(null, 'content')).toBe('')
     expect(folderOf('static/a.md', 'content')).toBe('')
     expect(folderOf('contents/a.md', 'content')).toBe('')
+  })
+})
+
+describe('flattenPages', () => {
+  it('lists files depth first with a title fallback', () => {
+    const nodes: ContentNode[] = [
+      {
+        name: 'posts',
+        path: 'content/posts',
+        isDir: true,
+        children: [
+          {
+            name: 'a.md',
+            path: 'content/posts/a.md',
+            isDir: false,
+            fields: { title: 'A', draft: true },
+          },
+        ],
+      },
+      { name: 'b.md', path: 'content/b.md', isDir: false },
+    ]
+    expect(flattenPages(nodes)).toEqual([
+      { path: 'content/posts/a.md', title: 'A', draft: true },
+      { path: 'content/b.md', title: 'b.md', draft: false },
+    ])
   })
 })

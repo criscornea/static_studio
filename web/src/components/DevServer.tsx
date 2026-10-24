@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 
 import { api } from '@/api/client'
 import { asApiError } from '@/api/types'
-import { Eye } from 'lucide-react'
+import { Eye, MonitorOff } from 'lucide-react'
 
+import { EmptyState, SkeletonRows } from '@/components/EmptyState'
 import { IconButton } from '@/components/IconButton'
 import { cn } from '@/lib/utils'
 import { useDevServerStore } from '@/stores/devserver'
@@ -74,6 +75,9 @@ export function PreviewButton({ open, onToggle }: { open: boolean; onToggle: () 
  */
 export function PreviewFrame({ path }: { path: string }) {
   const ready = useDevServerStore((s) => s.ready)
+  const running = useDevServerStore((s) => s.running)
+  const busy = useDevServerStore((s) => s.busy)
+  const start = useDevServerStore((s) => s.start)
   // Keyed by path so a result always belongs to the page it was asked for.
   const [result, setResult] = useState<{ url?: string; error?: string } | null>(null)
 
@@ -102,13 +106,23 @@ export function PreviewFrame({ path }: { path: string }) {
   }, [path, ready])
 
   if (!ready) {
-    return <p className="p-3 text-sm text-muted-foreground">The preview server is not running.</p>
+    if (running) {
+      return <SkeletonRows label="Starting the preview server" className="p-4" />
+    }
+    return (
+      <EmptyState
+        icon={MonitorOff}
+        className="h-full"
+        text="The preview server is not running."
+        action={busy ? undefined : { label: 'Start server', onClick: () => void start() }}
+      />
+    )
   }
   if (result?.error) {
     return <p className="p-3 text-sm text-destructive">{result.error}</p>
   }
   if (!result?.url) {
-    return <p className="p-3 text-sm text-muted-foreground">Loading preview...</p>
+    return <SkeletonRows label="Loading preview..." className="p-4" />
   }
 
   return (

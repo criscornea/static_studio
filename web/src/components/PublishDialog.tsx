@@ -17,22 +17,30 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { usePublishStore } from '@/stores/publish'
+import { useUiStore } from '@/stores/ui'
 
 /** The header button that opens the publish dialog. */
 export function PublishButton() {
-  const [open, setOpen] = useState(false)
+  const setOpen = useUiStore((s) => s.setPublishOpen)
 
   return (
-    <>
-      <IconButton label="Publish" onClick={() => setOpen(true)}>
-        <Upload />
-      </IconButton>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <PublishForm />
-        </DialogContent>
-      </Dialog>
-    </>
+    <IconButton label="Publish" shortcut="Ctrl+Shift+U" onClick={() => setOpen(true)}>
+      <Upload />
+    </IconButton>
+  )
+}
+
+/** The publish dialog. Rendered once at the app level so a command can open it. */
+export function PublishDialog() {
+  const open = useUiStore((s) => s.publishOpen)
+  const setOpen = useUiStore((s) => s.setPublishOpen)
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent>
+        <PublishForm />
+      </DialogContent>
+    </Dialog>
   )
 }
 

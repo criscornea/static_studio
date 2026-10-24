@@ -207,14 +207,14 @@ Branch: feat/p18-commands
 Goal: Every action is reachable from the keyboard through a command palette and shortcuts, and every empty or loading state looks finished.
 Done when: a command registry lists each action (open page, new page, rename, delete, save, toggle sidebar, toggle preview, toggle build log, build, publish, start or stop the preview server, switch theme, close project) with its shortcut; one global key handler dispatches shortcuts and does not steal keys the CodeMirror editor or open dialogs handle; Ctrl/Cmd+Shift+P opens the command palette and Ctrl/Cmd+P opens quick-open over page titles and paths using the existing search; a shortcuts dialog lists all bindings; empty states (no page selected, empty content dir, no search hits, preview server stopped, empty build log) show an icon, one line of text and the relevant action; loading states use skeletons; app chrome is not text-selectable, uses the default cursor and shows focus rings only for keyboard focus; vitest covers the registry, shortcut dispatch and palette filtering; Playwright check once at the end; ROADMAP.md and CHANGELOG.md updated; `make check` green.
 Risk: low
-Status: todo
-- [ ] M18.1 Add a command registry with a global shortcut handler and tests
-- [ ] M18.2 Add the shadcn `command` component as the command palette on Ctrl/Cmd+Shift+P
-- [ ] M18.3 Add quick-open for pages on Ctrl/Cmd+P
-- [ ] M18.4 Add a keyboard shortcuts dialog
-- [ ] M18.5 Add polished empty and loading states across sidebar, editor, preview and build log
-- [ ] M18.6 Remove web-page behaviour from app chrome (selection, cursors, focus rings)
-- [ ] M18.7 Update ROADMAP.md and CHANGELOG.md
+Status: merged
+- [x] M18.1 Add a command registry with a global shortcut handler and tests
+- [x] M18.2 Add the shadcn `command` component as the command palette on Ctrl/Cmd+Shift+P
+- [x] M18.3 Add quick-open for pages on Ctrl/Cmd+P
+- [x] M18.4 Add a keyboard shortcuts dialog
+- [x] M18.5 Add polished empty and loading states across sidebar, editor, preview and build log
+- [x] M18.6 Remove web-page behaviour from app chrome (selection, cursors, focus rings)
+- [x] M18.7 Update ROADMAP.md and CHANGELOG.md
 
 ## Phase 19: Merged config directory and environment overrides
 Branch: feat/p19-config-merge

@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
+import { FileText } from 'lucide-react'
+
 import { api } from '@/api/client'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { EmptyState, SkeletonRows } from '@/components/EmptyState'
 import { PreviewFrame } from '@/components/DevServer'
 import { FrontmatterForm } from '@/components/FrontmatterForm'
 import { MarkdownEditor } from '@/components/MarkdownEditor'
@@ -9,6 +12,7 @@ import { cn } from '@/lib/utils'
 import { useLayoutStore } from '@/stores/layout'
 import { useBuildStore } from '@/stores/build'
 import { usePageStore } from '@/stores/page'
+import { useUiStore } from '@/stores/ui'
 
 export function PageView() {
   const previewing = useLayoutStore((s) => s.previewOpen)
@@ -31,6 +35,7 @@ export function PageView() {
   const setDraft = usePageStore((s) => s.setDraft)
   const save = usePageStore((s) => s.save)
   const dirty = usePageStore((s) => s.dirty)
+  const setQuickOpen = useUiStore((s) => s.setQuickOpenOpen)
   const saving = page !== null && savingPath === page.path
   const jump = useBuildStore((s) => s.jump)
   // A build error on this page: a body line for the editor, else a frontmatter line.
@@ -52,20 +57,15 @@ export function PageView() {
     return () => window.removeEventListener('beforeunload', onUnload)
   }, [dirty, saving])
 
-  // Ctrl/Cmd+S saves even when the editor is not focused.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's' && !e.defaultPrevented) {
-        e.preventDefault()
-        void save()
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [save])
-
   if (path === null) {
-    return <p className="p-6 text-sm text-muted-foreground">Select a page.</p>
+    return (
+      <EmptyState
+        icon={FileText}
+        className="h-full"
+        text="Select a page to start editing."
+        action={{ label: 'Open page...', onClick: () => setQuickOpen(true) }}
+      />
+    )
   }
 
   if (error) {
@@ -77,9 +77,8 @@ export function PageView() {
   }
 
   if (page === null) {
-    return <p className="p-6 text-sm text-muted-foreground">Loading…</p>
+    return <SkeletonRows count={8} label="Loading page" className="p-6" />
   }
-
 
   return (
     <article className={cn('flex h-full min-h-0 flex-col', loading && 'opacity-50')}>
@@ -119,26 +118,31 @@ export function PageView() {
         }}
       >
         <ResizablePanel id="editor" minSize="25%">
-        <MarkdownEditor
-          key={`editor-${page.path}`}
-          jumpLine={editorLine}
-          jumpToken={jump}
-          value={draft ?? page.body}
-          onChange={setDraft}
-          onSave={() => void save()}
-          onUploadImage={async (file) => {
-            setUploadError(null)
-            return (await api.uploadAsset(file)).path
-          }}
-          onUploadError={(err) =>
-            setUploadError({ path, message: err instanceof Error ? err.message : String(err) })
-          }
-        />
+          <MarkdownEditor
+            key={`editor-${page.path}`}
+            jumpLine={editorLine}
+            jumpToken={jump}
+            value={draft ?? page.body}
+            onChange={setDraft}
+            onSave={() => void save()}
+            onUploadImage={async (file) => {
+              setUploadError(null)
+              return (await api.uploadAsset(file)).path
+            }}
+            onUploadError={(err) =>
+              setUploadError({ path, message: err instanceof Error ? err.message : String(err) })
+            }
+          />
         </ResizablePanel>
         {previewing && (
           <>
             <ResizableHandle />
-            <ResizablePanel id="preview" defaultSize={`${previewSize}%`} minSize="20%" maxSize="75%">
+            <ResizablePanel
+              id="preview"
+              defaultSize={`${previewSize}%`}
+              minSize="20%"
+              maxSize="75%"
+            >
               <PreviewFrame key={`preview-${page.path}`} path={page.path} />
             </ResizablePanel>
           </>

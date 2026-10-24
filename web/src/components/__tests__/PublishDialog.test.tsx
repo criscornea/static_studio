@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { usePublishStore } from '@/stores/publish'
-import { PublishButton } from '../PublishDialog'
+import { PublishButton, PublishDialog } from '../PublishDialog'
 
 let puts: unknown[] = []
 
@@ -44,7 +44,12 @@ afterEach(() => {
 describe('PublishDialog', () => {
   it('loads settings, saves them and starts a publish', async () => {
     const user = userEvent.setup()
-    render(<PublishButton />)
+    render(
+      <>
+        <PublishButton />
+        <PublishDialog />
+      </>,
+    )
     await user.click(screen.getByRole('button', { name: 'Publish' }))
 
     const remote = await screen.findByLabelText('Remote')

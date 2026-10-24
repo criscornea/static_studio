@@ -122,3 +122,18 @@ export function folderOf(pagePath: string | null, contentDir: string): string {
   const slash = relative.lastIndexOf('/')
   return slash < 0 ? '' : relative.slice(0, slash)
 }
+
+export interface PageEntry {
+  path: string
+  title: string
+  draft: boolean
+}
+
+/** Every file in the tree as a flat list, in tree order. */
+export function flattenPages(nodes: ContentNode[]): PageEntry[] {
+  return nodes.flatMap((n) =>
+    n.isDir
+      ? flattenPages(n.children ?? [])
+      : [{ path: n.path, title: n.fields?.title || n.name, draft: n.fields?.draft === true }],
+  )
+}

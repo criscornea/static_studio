@@ -1,11 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronsDownUp, ListFilter, Plus, Search, X } from 'lucide-react'
+import { useEffect, useMemo, useRef } from 'react'
+import { ChevronsDownUp, FilePlus, ListFilter, Plus, Search, X } from 'lucide-react'
 
 import { ContentTree, TreeRoot } from '@/components/ContentTree'
-import { DeletePageDialog } from '@/components/DeletePageDialog'
-import { NewPageDialog } from '@/components/NewPageDialog'
-import { RenamePageDialog } from '@/components/RenamePageDialog'
 import { SearchResults } from '@/components/SearchResults'
+import { EmptyState, SkeletonRows } from '@/components/EmptyState'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -32,6 +30,7 @@ import { useBuildStore } from '@/stores/build'
 import { usePageStore } from '@/stores/page'
 import { useProjectStore } from '@/stores/project'
 import { useSearchStore } from '@/stores/search'
+import { useUiStore } from '@/stores/ui'
 import { useViewStore } from '@/stores/view'
 
 const sortLabels: Record<SortKey, string> = {
@@ -83,30 +82,21 @@ export function Sidebar() {
 
   const searchBox = useRef<HTMLInputElement>(null)
   const contentDir = useProjectStore((s) => s.project?.contentDir ?? 'content')
-  const [creating, setCreating] = useState(false)
-  // Undefined lets the dialog pick the open page's folder.
-  const [newFolder, setNewFolder] = useState<string | undefined>()
-  const [renaming, setRenaming] = useState<string | null>(null)
-  const [deleting, setDeleting] = useState<string | null>(null)
+  const openNewPage = useUiStore((s) => s.openNewPage)
+  const openRename = useUiStore((s) => s.openRename)
+  const openDelete = useUiStore((s) => s.openDelete)
+  const focusRequested = useUiStore((s) => s.searchFocusRequested)
+  const clearSearchFocus = useUiStore((s) => s.clearSearchFocus)
   const searching = search.query.trim() !== ''
 
-  // Cmd/Ctrl+K jumps to the search box from anywhere, like a native app.
+  // The focus-search command (Ctrl/Cmd+K) lands here.
   useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault()
-        searchBox.current?.focus()
-        searchBox.current?.select()
-      }
+    if (focusRequested) {
+      searchBox.current?.focus()
+      searchBox.current?.select()
+      clearSearchFocus()
     }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [])
-
-  function openNewPage(folder: string | undefined) {
-    setNewFolder(folder === '' ? undefined : folder)
-    setCreating(true)
-  }
+  }, [focusRequested, clearSearchFocus])
 
   const nodes = useMemo(() => tree?.children ?? [], [tree])
   const tags = useMemo(() => collectTags(nodes), [nodes])
@@ -246,8 +236,8 @@ export function Sidebar() {
                     node={child}
                     selected={selected}
                     onSelect={(path) => void load(path)}
-                    onRename={setRenaming}
-                    onDelete={setDeleting}
+                    onRename={openRename}
+                    onDelete={openDelete}
                     onNewPage={(node) =>
                       openNewPage(folderOf(node.isDir ? `${node.path}/x` : node.path, contentDir))
                     }
@@ -255,22 +245,23 @@ export function Sidebar() {
                   />
                 ))}
               </TreeRoot>
+            ) : tree === null ? (
+              <SkeletonRows count={7} label="Loading pages" />
+            ) : filtered ? (
+              <EmptyState
+                icon={ListFilter}
+                text="No pages match this filter."
+                action={{ label: 'Show all pages', onClick: view.reset }}
+              />
             ) : (
-              <div className="space-y-2 px-3 py-2 text-sm text-muted-foreground">
-                <p>{filtered ? 'No pages match this filter.' : 'No content files yet.'}</p>
-                {filtered && (
-                  <Button variant="outline" size="sm" onClick={view.reset}>
-                    Show all pages
-                  </Button>
-                )}
-              </div>
+              <EmptyState
+                icon={FilePlus}
+                text="No content files yet."
+                action={{ label: 'New page', onClick: () => openNewPage('') }}
+              />
             )}
           </nav>
         </ScrollArea>
-
-        <NewPageDialog open={creating} onOpenChange={setCreating} folder={newFolder} />
-        <RenamePageDialog path={renaming} onClose={() => setRenaming(null)} />
-        <DeletePageDialog path={deleting} onClose={() => setDeleting(null)} />
       </div>
     </TooltipProvider>
   )
