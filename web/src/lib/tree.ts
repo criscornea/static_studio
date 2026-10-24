@@ -94,3 +94,31 @@ function timeOf(node: ContentNode): number | null {
   const time = raw ? Date.parse(raw) : NaN
   return Number.isNaN(time) ? null : time
 }
+
+/** Every folder under the content directory, as paths relative to it. */
+export function collectFolders(root: ContentNode | null): string[] {
+  const folders: string[] = []
+  const visit = (node: ContentNode, prefix: string) => {
+    for (const child of node.children ?? []) {
+      if (child.isDir) {
+        const folder = prefix + child.name
+        folders.push(folder)
+        visit(child, folder + '/')
+      }
+    }
+  }
+  if (root) {
+    visit(root, '')
+  }
+  return folders.sort((a, b) => a.localeCompare(b))
+}
+
+/** The folder of a page path, relative to the content directory. Empty for the root. */
+export function folderOf(pagePath: string | null, contentDir: string): string {
+  if (!pagePath?.startsWith(contentDir + '/')) {
+    return ''
+  }
+  const relative = pagePath.slice(contentDir.length + 1)
+  const slash = relative.lastIndexOf('/')
+  return slash < 0 ? '' : relative.slice(0, slash)
+}

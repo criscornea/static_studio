@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef } from 'react'
-import { Search, X } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Plus, Search, X } from 'lucide-react'
 
 import { ContentTree } from '@/components/ContentTree'
+import { NewPageDialog } from '@/components/NewPageDialog'
 import { SearchResults } from '@/components/SearchResults'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -44,6 +45,7 @@ export function Sidebar() {
   const view = useViewStore()
 
   const searchBox = useRef<HTMLInputElement>(null)
+  const [creating, setCreating] = useState(false)
   const searching = search.query.trim() !== ''
 
   // Cmd/Ctrl+K jumps to the search box from anywhere, like a native app.
@@ -68,30 +70,41 @@ export function Sidebar() {
   return (
     <div className="flex h-full flex-col">
       <div className="space-y-2 border-b p-2">
-        <div className="relative">
-          <Search className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            ref={searchBox}
-            type="search"
-            value={search.query}
-            onChange={(e) => search.setQuery(e.target.value)}
-            onKeyDown={(e) => e.key === 'Escape' && search.clear()}
-            placeholder="Search pages  (Ctrl+K)"
-            aria-label="Search pages"
-            spellCheck={false}
-            autoComplete="off"
-            className="h-8 px-7 [&::-webkit-search-cancel-button]:hidden"
-          />
-          {searching && (
-            <button
-              type="button"
-              aria-label="Clear search"
-              onClick={search.clear}
-              className="absolute top-1/2 right-2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              <X className="size-3.5" />
-            </button>
-          )}
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              ref={searchBox}
+              type="search"
+              value={search.query}
+              onChange={(e) => search.setQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Escape' && search.clear()}
+              placeholder="Search pages  (Ctrl+K)"
+              aria-label="Search pages"
+              spellCheck={false}
+              autoComplete="off"
+              className="h-8 px-7 [&::-webkit-search-cancel-button]:hidden"
+            />
+            {searching && (
+              <button
+                type="button"
+                aria-label="Clear search"
+                onClick={search.clear}
+                className="absolute top-1/2 right-2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="size-3.5" />
+              </button>
+            )}
+          </div>
+          <Button
+            variant="outline"
+            size="icon-sm"
+            aria-label="New page"
+            title="New page"
+            onClick={() => setCreating(true)}
+          >
+            <Plus />
+          </Button>
         </div>
 
         {!searching && (
@@ -178,6 +191,8 @@ export function Sidebar() {
           )}
         </nav>
       </ScrollArea>
+
+      <NewPageDialog open={creating} onOpenChange={setCreating} />
     </div>
   )
 }

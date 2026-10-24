@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/criscornea/static_studio/internal/content"
 	"github.com/criscornea/static_studio/internal/frontmatter"
@@ -137,6 +138,83 @@ func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.writeJSON(w, http.StatusOK, contentResponse{Root: tree})
+}
+
+// archetypesResponse lists the templates a new page can start from.
+type archetypesResponse struct {
+	Archetypes []content.Archetype `json:"archetypes"`
+}
+
+func (s *Server) handleArchetypes(w http.ResponseWriter, r *http.Request) {
+	open, ok := s.requireProject(w, r)
+	if !ok {
+		return
+	}
+
+	s.writeJSON(w, http.StatusOK, archetypesResponse{Archetypes: content.Archetypes(open.Root().FS())})
+}
+
+type createPageRequest struct {
+	Archetype string `json:"archetype"`
+	Folder    string `json:"folder"`
+	Name      string `json:"name"`
+}
+
+func (s *Server) handleCreatePage(w http.ResponseWriter, r *http.Request) {
+	open, ok := s.requireProject(w, r)
+	if !ok {
+		return
+	}
+
+	var req createPageRequest
+	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 8<<10))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&req); err != nil {
+		s.writeError(w, http.StatusBadRequest, "bad_request", "The request could not be read.")
+		return
+	}
+
+	page, err := content.CreatePage(open.Root(), open.Info.ContentDir, content.NewPage{
+		Archetype: req.Archetype,
+		Folder:    req.Folder,
+		Name:      req.Name,
+	}, time.Now())
+	switch {
+	case err == nil:
+		s.log.Info("page created", "path", page.Path)
+		s.writeJSON(w, http.StatusCreated, page)
+
+	case errors.Is(err, content.ErrInvalidName):
+		s.writeError(w, http.StatusBadRequest, "invalid_name",
+			"Give the page a name with at least one letter or number.")
+
+	case errors.Is(err, content.ErrInvalidFolder):
+		s.writeError(w, http.StatusBadRequest, "invalid_folder",
+			"That folder name can't be used. It can't contain \"..\" or start with a dot.")
+
+	case errors.Is(err, content.ErrUnknownArchetype):
+		s.writeError(w, http.StatusBadRequest, "unknown_archetype",
+			"That template no longer exists. Pick another one.")
+
+	case errors.Is(err, content.ErrUnsupportedArchetype):
+		s.log.Info("unsupported archetype", "archetype", req.Archetype, "err", err)
+		s.writeError(w, http.StatusUnprocessableEntity, "unsupported_archetype",
+			"This template uses features Static Studio can't fill in yet. Pick another template.")
+
+	case errors.Is(err, content.ErrInvalidArchetype):
+		s.log.Info("invalid archetype", "archetype", req.Archetype, "err", err)
+		s.writeError(w, http.StatusUnprocessableEntity, "invalid_archetype",
+			"This template would create a page with a broken settings block. Fix the template or pick another one.")
+
+	case errors.Is(err, content.ErrPageExists):
+		s.writeError(w, http.StatusConflict, "page_exists",
+			"A page with this name already exists in that folder.")
+
+	default:
+		s.log.Warn("creating a page failed", "root", open.Info.Root, "err", err)
+		s.writeError(w, http.StatusInternalServerError, "cannot_create_page",
+			"The page could not be created. Check that you have permission to write to the content folder.")
+	}
 }
 
 // maxQueryLength caps a search query. Longer ones cannot be typed by hand.

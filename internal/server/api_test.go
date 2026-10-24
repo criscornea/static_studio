@@ -573,3 +573,119 @@ func TestSearchErrors(t *testing.T) {
 		})
 	}
 }
+
+func (a *api) createPage(id, body string) *httptest.ResponseRecorder {
+	a.t.Helper()
+
+	req := httptest.NewRequest(http.MethodPost, "/api/page", strings.NewReader(body))
+	if id != "" {
+		req.Header.Set("X-Project-ID", id)
+	}
+	rec := httptest.NewRecorder()
+	a.handler.ServeHTTP(rec, req)
+	return rec
+}
+
+func TestArchetypes(t *testing.T) {
+	dir := newHugoDir(t)
+	if err := os.MkdirAll(filepath.Join(dir, "archetypes"), 0o750); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "archetypes", "posts.md"), nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	a := newAPI(t)
+	opened := decodeProject(t, a.open(dir))
+
+	req := httptest.NewRequest(http.MethodGet, "/api/archetypes", nil)
+	req.Header.Set("X-Project-ID", opened.ID)
+	rec := httptest.NewRecorder()
+	a.handler.ServeHTTP(rec, req)
+
+	var got struct {
+		Archetypes []struct {
+			Name    string `json:"name"`
+			Builtin bool   `json:"builtin"`
+		} `json:"archetypes"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Archetypes) != 2 || got.Archetypes[0].Name != "default" || !got.Archetypes[0].Builtin ||
+		got.Archetypes[1].Name != "posts" || got.Archetypes[1].Builtin {
+		t.Errorf("archetypes = %+v, want builtin default, then posts", got.Archetypes)
+	}
+}
+
+func TestCreatePage(t *testing.T) {
+	dir := newHugoDir(t)
+	a := newAPI(t)
+	opened := decodeProject(t, a.open(dir))
+
+	rec := a.createPage(opened.ID, `{"folder":"posts","name":"Hello World"}`)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want 201 (body: %s)", rec.Code, rec.Body)
+	}
+
+	var got content.Page
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Path != "content/posts/hello-world.md" || got.Fields == nil || got.Fields.Title != "Hello World" {
+		t.Errorf("page = %+v", got)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "content", "posts", "hello-world.md")); err != nil {
+		t.Errorf("file not written: %v", err)
+	}
+
+	// The new page shows up in the tree and can be opened.
+	if rec := a.content(opened.ID); !strings.Contains(rec.Body.String(), "hello-world.md") {
+		t.Errorf("tree does not list the new page: %s", rec.Body)
+	}
+	if rec := a.page(opened.ID, got.Path); rec.Code != http.StatusOK {
+		t.Errorf("page status = %d, want 200", rec.Code)
+	}
+}
+
+func TestCreatePageErrors(t *testing.T) {
+	dir := newHugoDir(t)
+	if err := os.MkdirAll(filepath.Join(dir, "content"), 0o750); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "content", "taken.md"), []byte("keep"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	a := newAPI(t)
+	opened := decodeProject(t, a.open(dir))
+
+	tests := []struct {
+		name     string
+		id       string
+		body     string
+		status   int
+		wantCode string
+	}{
+		{"bad json", opened.ID, `{`, http.StatusBadRequest, "bad_request"},
+		{"unknown field", opened.ID, `{"name":"x","path":"../x"}`, http.StatusBadRequest, "bad_request"},
+		{"no name", opened.ID, `{"name":"  "}`, http.StatusBadRequest, "invalid_name"},
+		{"bad folder", opened.ID, `{"name":"x","folder":"../x"}`, http.StatusBadRequest, "invalid_folder"},
+		{"unknown archetype", opened.ID, `{"name":"x","archetype":"nope"}`, http.StatusBadRequest, "unknown_archetype"},
+		{"exists", opened.ID, `{"name":"Taken"}`, http.StatusConflict, "page_exists"},
+		{"no project id", "", `{"name":"x"}`, http.StatusConflict, "stale_project"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rec := a.createPage(tt.id, tt.body)
+			if rec.Code != tt.status {
+				t.Fatalf("status = %d, want %d (body: %s)", rec.Code, tt.status, rec.Body)
+			}
+			if got := decodeError(t, rec); got.Code != tt.wantCode {
+				t.Errorf("code = %q, want %q", got.Code, tt.wantCode)
+			}
+		})
+	}
+
+	if data, _ := os.ReadFile(filepath.Join(dir, "content", "taken.md")); string(data) != "keep" {
+		t.Errorf("existing page was overwritten: %q", data)
+	}
+}

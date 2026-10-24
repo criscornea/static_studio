@@ -36,7 +36,10 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 - [x] Read Hugo config for the real `contentDir` (and `staticDir`)
 - [x] Show metadata in the UI: title, date, tags, draft status
 - [x] Sort, filter, full-text search across content
-- [ ] Create a page from an archetype, rename, delete
+- [x] Create a page from an archetype
+- [ ] CSRF hardening: `Origin` check on mutating endpoints, `Host` check
+  against DNS rebinding
+- [ ] Rename and delete a page
 - [ ] Atomic writes (temp file + rename)
 
 🎯 **Milestone:** content management without a text editor.
@@ -48,11 +51,13 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 
 - [ ] CodeMirror 6 as the markdown editor
 - [ ] Frontmatter as a **form**, not as text
-- [ ] Live preview rendered by the backend
+- [ ] Preview: the real Hugo-rendered page from `hugo server`, loaded in an
+  iframe from its own port (separate origin from the app)
 - [ ] Drag & drop images into `static/`, path inserted into the markdown
 - [ ] Autosave with debounce, unsaved-changes state, editor undo
 
-⚠️ Render markdown only. Template-accurate preview is a v2 topic.
+⚠️ The editor stays raw markdown. Preview is template-accurate because Hugo
+renders it, not the app.
 
 🎯 **Milestone:** a post can be written end to end without a terminal.
 📓 **Blog:** "The editor comes to live"
@@ -74,9 +79,9 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 
 **Goal:** one way out. **One.**
 
-- [ ] Pick the target: GitHub Pages *or* Netlify *or* rsync/SFTP
+- [ ] Target: GitHub Pages, pushing `public/` to `gh-pages` via the system `git`
 - [ ] Configure it in the UI
-- [ ] Store credentials safely, never plaintext in the project folder
+- [ ] No stored credentials: rely on the user's SSH key or git credential helper
 - [ ] Show progress and errors
 - [ ] No terminal from "typing text" to "site is live"
 
@@ -89,7 +94,6 @@ No new features. Zero.
 
 - [ ] Raise coverage where failure hurts: writes, paths, processes
 - [ ] Error messages readable by non-developers, end to end
-- [ ] CSRF hardening: `Origin` header check on mutating endpoints
 - [ ] `-log-level` and `-log-format=json` flags
 - [ ] README: problem, screenshots, quickstart, architecture, scope decisions
 - [ ] **Screencast, 2–3 minutes**
@@ -118,6 +122,15 @@ Deliberate simplifications, recorded so they don't become invisible.
   no ranking beyond title-and-tag matches first, capped at 50 hits).
 - The content tree reads every page's frontmatter on each load. Fine for a
   personal site; cache it if a project with thousands of pages gets slow.
+- Archetypes are rendered by a built-in `text/template` with `.Name`, `.Type`,
+  `.Date`, `.File.ContentBaseName` and the functions `replace`, `title`,
+  `lower`, `upper` and `now`, not by Hugo. A template using anything else is
+  refused with a readable message. `title` capitalises every word instead of
+  following Hugo's title-case style. Archetype folders (page bundles) and a
+  custom `archetypeDir` are not supported. A new page's title comes from the
+  archetype (the file name, title-cased), not from what the user typed.
+- New pages are created with `O_EXCL` and removed again if the write fails,
+  but not yet via temp file + rename; that is the atomic-writes item.
 - The content tree only lists `.md`, `.markdown`, `.mdx` and `.html`.
 - `Manager.Close` is not called on server shutdown; it becomes relevant
   alongside subprocess cleanup.
