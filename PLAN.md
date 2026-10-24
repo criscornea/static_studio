@@ -279,3 +279,42 @@ Status: merged
 - [x] M23.4 Match search queries against indexed text
 - [x] M23.5 Own one index per open project and update it on writes
 - [x] M23.6 Update ROADMAP.md, CHANGELOG.md and the known-shortcuts note
+
+## Phase 24: Floating formatting toolbar
+Branch: feat/p24-format-toolbar
+Goal: A floating, Obsidian-style toolbar at the bottom center of the editor formats the selection with one click, a shortcut or the command palette.
+Done when: pure CodeMirror commands in `web/src/lib/` toggle H1, H2 and H3 on the selected lines, wrap or unwrap bold, italic, strikethrough and inline code, insert or edit a link (`[text](url)` with the url placeholder selected), toggle bullet and numbered lists and quotes on every selected line, and each is a single undoable transaction; active formats for the current selection are read from the markdown syntax tree; the toolbar floats bottom-center over the editor, highlights the active formats, uses the app theme tokens in light and dark, and is hidden when the editor is unfocused or no page is open (clicking a toolbar button does not count as losing focus); Ctrl/Cmd+B, I and K format inside the focused editor, and outside it `Mod+B` (toggle sidebar) and `Mod+K` (focus search) keep working as before; every formatting action is a registry command in the palette that applies to the last focused editor and returns focus to it; the shortcuts dialog shows the editor-scoped bindings; vitest covers each command (toggle on, toggle off, multi-line, empty selection), active-state detection, shortcut scoping and the toolbar visibility; Playwright check in both themes once at the end; `make check` green.
+Risk: low
+Status: todo
+- [ ] M24.1 Add markdown formatting commands for CodeMirror with tests
+- [ ] M24.2 Detect active formats for the selection from the syntax tree
+- [ ] M24.3 Bind editor-scoped Mod+B, Mod+I and Mod+K ahead of the global shortcuts
+- [ ] M24.4 Add the floating toolbar with active-state highlighting and focus-based visibility
+- [ ] M24.5 Register the formatting actions in the command registry and shortcuts dialog
+- [ ] M24.6 Update ROADMAP.md and CHANGELOG.md
+
+## Phase 25: Live preview in the editor
+Branch: feat/p25-live-preview
+Goal: The editor shows markdown rendered inline, Obsidian-style, with markup revealed only where the cursor is, and a persisted switch back to plain source mode.
+Done when: a CodeMirror extension built from the markdown syntax tree hides markup (`#`, `**`, `_`, `` ` ``, `[`/`](url)`, `>`) everywhere except on lines touched by the cursor or a selection, styles headings by level, bold, italic, strikethrough, inline code and links, replaces list markers with bullet or number widgets, styles quotes with a left border and renders `---`/`***` horizontal rules as a line; decorations cover only the visible ranges and update on cursor moves; code blocks and HTML are left as source; the document text is never changed by the extension (tests assert `doc.toString()` is identical before and after toggling and cursor moves, and that toggling does not mark the page dirty or trigger autosave); a live-preview/source mode setting persists in `localStorage`, defaults to live preview, and is toggled from the editor header, the status bar and a palette command; the floating toolbar works in both modes; colours follow the app theme in light and dark; vitest covers the decoration ranges per construct and the reveal-on-cursor rule; Playwright check once at the end; `make check` green.
+Risk: low
+Status: todo
+- [ ] M25.1 Add a persisted live-preview or source mode setting with tests
+- [ ] M25.2 Hide markup outside the cursor lines for headings, emphasis and inline code
+- [ ] M25.3 Render links and quotes inline outside the cursor lines
+- [ ] M25.4 Render list markers and horizontal rules as widgets
+- [ ] M25.5 Add the mode toggle to the editor header, status bar and command palette
+- [ ] M25.6 Update ROADMAP.md and CHANGELOG.md
+
+## Phase 26: Publish with rsync over SSH
+Branch: feat/p26-rsync-publish
+Goal: A project can publish its built site with the system `rsync` over SSH, as an alternative to GitHub Pages, without the app storing any credentials.
+Done when: publish settings gain a `target` (`github-pages` | `rsync`, missing means `github-pages` so existing settings files load unchanged) and rsync fields (destination `user@host:path` or an absolute local path, port, optional absolute identity file path, delete flag, dry-run flag); validation refuses a leading `-`, control characters, whitespace or shell metacharacters in any field, a user or host outside a strict hostname/IPv4/bracketed-IPv6 pattern, a remote path outside a safe charset, a port outside 1-65535 and an identity path that is relative or not a regular file; rsync runs with `exec.CommandContext` and an argv only (no shell), with flags supported by rsync 2.6.9 and openrsync, `public/` as the source, symlinks not followed, `--delete` only when the user opted in and `-n` for dry runs; SSH runs with `BatchMode=yes` so it never waits for a password, `StrictHostKeyChecking` is never set to `no` and the user's ssh config, agent and known_hosts are honoured; an unknown or changed host key, refused authentication, a missing `rsync`/`ssh` binary and an unreachable host each produce a readable message (the host-key message tells the user to connect once with `ssh` in a terminal); output streams line by line through the existing publish stream; cancel stops rsync and its ssh child with no orphaned processes; the publish dialog offers a target picker, shows the rsync fields, warns before enabling delete and labels dry runs; Go tests run against a fake `rsync` binary that records its argv (asserting no shell, exact flags, injection attempts refused at validation) and, when `rsync` is installed, against a local path target; vitest covers the dialog; `make check` green; ROADMAP, CHANGELOG, README publish section and known shortcuts updated.
+Risk: high (security: subprocess argv built from user input, remote host trust; deletion of remote data with --delete; public API change to publish settings)
+Status: todo
+- [ ] M26.1 Add the publish target and rsync settings with validation tests
+- [ ] M26.2 Add an rsync publisher that builds an argv without a shell, tested with a fake binary
+- [ ] M26.3 Map host-key, auth, missing-binary and network failures to readable errors
+- [ ] M26.4 Dispatch the publish job by target with a local path end-to-end test
+- [ ] M26.5 Add the target picker and rsync fields to the publish dialog
+- [ ] M26.6 Update ROADMAP.md, CHANGELOG.md, README and the known-shortcuts note

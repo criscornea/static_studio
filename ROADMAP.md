@@ -103,6 +103,29 @@ No new features. Zero.
 
 🎯 **Milestone:** v1.0.0 released, screencast online.
 
+## v1.2
+
+**Goal:** write comfortably in the editor and publish to any server.
+
+- [ ] Floating formatting toolbar (Obsidian style): bottom-center bar with
+  H1-H3, bold, italic, strikethrough, inline code, link, bullet and numbered
+  list, quote; built on CodeMirror commands; active-state highlighting;
+  Ctrl/Cmd+B, I, K in the editor; reachable from the command palette; themed
+  for light and dark; hidden when the editor is unfocused
+- [ ] Live preview in the editor (Obsidian-style hybrid): markup shown only on
+  the cursor line or selection, headings, emphasis, links, inline code, lists,
+  quotes and horizontal rules rendered inline via CodeMirror decorations;
+  persisted toggle between live preview and source mode; the document text is
+  never altered
+- [ ] rsync/SFTP publish target alongside GitHub Pages: target setting
+  (`github-pages` | `rsync`), destination `user@host:path`, port, optional
+  identity file, delete and dry-run flags; system `rsync`/`ssh` with argv only
+  (no shell); no stored credentials (ssh-agent and keys); progress through the
+  existing publish stream; readable errors; host keys verified, never
+  `StrictHostKeyChecking=no`
+
+🎯 **Milestone:** format, preview and publish a post to your own server without leaving the app.
+
 ## Explicitly out of scope for v1.0
 
 Plugin system · theme designer · Git integration · multi-user · cloud sync ·
