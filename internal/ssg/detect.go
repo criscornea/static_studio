@@ -47,16 +47,27 @@ func detectFS(fsys fs.FS) (*Project, error) {
 			return nil, fmt.Errorf("%w: %s", ErrUnsupported, d.Kind())
 		}
 
-		contentDir, assetDir, err := d.Dirs(fsys, cfg)
-		if err != nil {
-			return nil, err
+		var l *Layout
+		if lo, ok := d.(layouter); ok {
+			var err error
+			if l, err = lo.Layout(fsys, cfg); err != nil {
+				return nil, err
+			}
+		} else {
+			contentDir, assetDir, err := d.Dirs(fsys, cfg)
+			if err != nil {
+				return nil, err
+			}
+			l = &Layout{ContentDir: contentDir, AssetDir: assetDir, ContentDirs: []ContentDir{{Path: contentDir}}}
 		}
 
 		return &Project{
-			Kind:       d.Kind(),
-			ConfigFile: cfg,
-			ContentDir: contentDir,
-			AssetDir:   assetDir,
+			Kind:        d.Kind(),
+			ConfigFile:  cfg,
+			ContentDir:  l.ContentDir,
+			ContentDirs: l.ContentDirs,
+			AssetDir:    l.AssetDir,
+			Warnings:    l.Warnings,
 		}, nil
 	}
 	return nil, ErrNotDetected

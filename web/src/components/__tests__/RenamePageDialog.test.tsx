@@ -47,6 +47,7 @@ beforeEach(() => {
       kind: 'hugo',
       configFile: 'hugo.toml',
       contentDir: 'content',
+      contentDirs: [{ path: 'content' }],
       assetDir: 'static',
       id: 'p1',
     },

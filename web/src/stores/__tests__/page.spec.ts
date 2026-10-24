@@ -10,6 +10,7 @@ const aProject: Project = {
   kind: 'hugo',
   configFile: 'hugo.toml',
   contentDir: 'content',
+      contentDirs: [{ path: 'content' }],
   assetDir: 'static',
   id: 'id-1',
 }

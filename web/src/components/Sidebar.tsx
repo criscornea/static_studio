@@ -72,6 +72,7 @@ function IconButton({
 
 export function Sidebar() {
   const tree = useProjectStore((s) => s.tree)
+  const roots = useProjectStore((s) => s.roots)
   const selected = usePageStore((s) => s.path)
   const problems = useBuildStore((s) => s.problems)
   const errorPaths = useMemo(() => new Set(problems.map((p) => p.file)), [problems])
@@ -98,10 +99,25 @@ export function Sidebar() {
     }
   }, [focusRequested, clearSearchFocus])
 
-  const nodes = useMemo(() => tree?.children ?? [], [tree])
+  // Every content dir gets its own labelled group; a single dir needs no label.
+  const groups = useMemo(
+    () =>
+      roots.length > 0
+        ? roots.map((r) => ({ dir: r.dir, lang: r.lang, children: r.root.children ?? [] }))
+        : tree
+          ? [{ dir: tree.path, lang: undefined, children: tree.children ?? [] }]
+          : [],
+    [roots, tree],
+  )
+  const labelled = groups.length > 1
+  const nodes = useMemo(() => groups.flatMap((g) => g.children), [groups])
   const tags = useMemo(() => collectTags(nodes), [nodes])
   const { sort, status, tag } = view
   const visible = useMemo(() => applyView(nodes, { sort, status, tag }), [nodes, sort, status, tag])
+  const visibleGroups = useMemo(
+    () => groups.map((g) => ({ ...g, children: applyView(g.children, { sort, status, tag }) })),
+    [groups, sort, status, tag],
+  )
   const filtered = !isDefaultView({ sort, status, tag })
 
   return (
@@ -229,22 +245,38 @@ export function Sidebar() {
                 onSelect={(path) => void load(path)}
               />
             ) : visible.length > 0 ? (
-              <TreeRoot label="Pages">
-                {visible.map((child) => (
-                  <ContentTree
-                    key={child.path}
-                    node={child}
-                    selected={selected}
-                    onSelect={(path) => void load(path)}
-                    onRename={openRename}
-                    onDelete={openDelete}
-                    onNewPage={(node) =>
-                      openNewPage(folderOf(node.isDir ? `${node.path}/x` : node.path, contentDir))
-                    }
-                    errorPaths={errorPaths}
-                  />
-                ))}
-              </TreeRoot>
+              visibleGroups
+                .filter((g) => g.children.length > 0)
+                .map((g) => (
+                  <div key={g.dir} data-testid="content-root">
+                    {labelled && (
+                      <div className="flex items-center gap-1.5 px-2 pt-2 pb-0.5 text-[0.6875rem] font-medium tracking-wide text-muted-foreground uppercase">
+                        <span className="truncate">{g.dir}</span>
+                        {g.lang && (
+                          <span className="rounded bg-muted px-1 normal-case">{g.lang}</span>
+                        )}
+                      </div>
+                    )}
+                    <TreeRoot label={labelled ? `Pages in ${g.dir}` : 'Pages'}>
+                      {g.children.map((child) => (
+                        <ContentTree
+                          key={child.path}
+                          node={child}
+                          selected={selected}
+                          onSelect={(path) => void load(path)}
+                          onRename={openRename}
+                          onDelete={openDelete}
+                          onNewPage={(node) =>
+                            openNewPage(
+                              folderOf(node.isDir ? `${node.path}/x` : node.path, g.dir || contentDir),
+                            )
+                          }
+                          errorPaths={errorPaths}
+                        />
+                      ))}
+                    </TreeRoot>
+                  </div>
+                ))
             ) : tree === null ? (
               <SkeletonRows count={7} label="Loading pages" />
             ) : filtered ? (

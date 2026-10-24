@@ -101,9 +101,18 @@ func (s *Server) handleCurrentProject(w http.ResponseWriter, _ *http.Request) {
 	s.writeJSON(w, http.StatusOK, projectResponse{Project: current.Info, ID: current.ID})
 }
 
-// contentResponse is the content treee of the open project.
-type contentResponse struct {
+// contentRoot is the tree of one content dir.
+type contentRoot struct {
+	Dir  string        `json:"dir"`
+	Lang string        `json:"lang,omitempty"`
 	Root *content.Node `json:"root"`
+}
+
+// contentResponse is the content of the open project: one root per content
+// dir, primary first. Root repeats the primary tree for older clients.
+type contentResponse struct {
+	Root  *content.Node `json:"root"`
+	Roots []contentRoot `json:"roots"`
 }
 
 // projectID reads the projectc id from the request. The header is preferred;
@@ -147,15 +156,22 @@ func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tree, err := content.Tree(open.Root().FS(), open.Info.ContentDir)
-	if err != nil {
-		s.log.Warn("reading the content tree failed", "root", open.Info.Root, "dir", open.Info.ContentDir, "err", err)
-		s.writeError(w, http.StatusInternalServerError, "cannot_read_content",
-			"The content folder could not be read. Check that you have permission to read it.")
-		return
+	resp := contentResponse{Roots: make([]contentRoot, 0, len(open.Info.ContentDirs))}
+	for _, d := range open.Info.ContentDirs {
+		tree, err := content.Tree(open.Root().FS(), d.Path)
+		if err != nil {
+			s.log.Warn("reading the content tree failed", "root", open.Info.Root, "dir", d.Path, "err", err)
+			s.writeError(w, http.StatusInternalServerError, "cannot_read_content",
+				"The content folder could not be read. Check that you have permission to read it.")
+			return
+		}
+		resp.Roots = append(resp.Roots, contentRoot{Dir: d.Path, Lang: d.Lang, Root: tree})
+	}
+	if len(resp.Roots) > 0 {
+		resp.Root = resp.Roots[0].Root
 	}
 
-	s.writeJSON(w, http.StatusOK, contentResponse{Root: tree})
+	s.writeJSON(w, http.StatusOK, resp)
 }
 
 // archetypesResponse lists the templates a new page can start from.
@@ -250,7 +266,11 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	results, err := content.Search(open.Root().FS(), open.Info.ContentDir, query)
+	dirs := make([]string, 0, len(open.Info.ContentDirs))
+	for _, d := range open.Info.ContentDirs {
+		dirs = append(dirs, d.Path)
+	}
+	results, err := content.Search(open.Root().FS(), dirs, query)
 	switch {
 	case err == nil:
 		s.writeJSON(w, http.StatusOK, results)

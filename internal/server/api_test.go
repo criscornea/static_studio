@@ -887,3 +887,46 @@ func TestSavePageFields(t *testing.T) {
 		t.Fatalf("file: %q", s)
 	}
 }
+
+func TestContentAndSearchCoverEveryContentDir(t *testing.T) {
+	dir := newHugoDir(t)
+	cfg := "[languages.de]\ncontentDir = 'inhalt'\n[languages.fr]\ncontentDir = '../outside'\n"
+	files := map[string]string{
+		"hugo.toml":    cfg,
+		"content/a.md": "needle english",
+		"inhalt/b.md":  "needle deutsch",
+		"outside/c.md": "never",
+	}
+	for name, body := range files {
+		full := filepath.Join(dir, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(full), 0o750); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(full, []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	a := newAPI(t)
+	opened := decodeProject(t, a.open(dir))
+
+	rec := a.content(opened.ID)
+	var got contentResponse
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Roots) != 2 || got.Roots[0].Dir != "content" || got.Roots[1].Dir != "inhalt" || got.Roots[1].Lang != "de" {
+		t.Fatalf("roots = %+v, want content then inhalt (de)", got.Roots)
+	}
+	if got.Root == nil || got.Root.Path != got.Roots[0].Root.Path {
+		t.Error("root should repeat the primary tree")
+	}
+
+	rec = a.search(opened.ID, "needle")
+	var res content.Results
+	if err := json.NewDecoder(rec.Body).Decode(&res); err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Hits) != 2 {
+		t.Errorf("hits = %+v, want 2 (content and inhalt, not outside)", res.Hits)
+	}
+}

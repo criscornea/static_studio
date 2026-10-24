@@ -15,7 +15,7 @@ beforeEach(() => {
   useLayoutStore.setState({ sidebarCollapsed: false, buildLogOpen: false })
   useUiStore.setState({ paletteOpen: false, quickOpenOpen: false, newPage: null })
   useProjectStore.setState({
-    project: { id: 'p', root: '/x', kind: 'hugo', configFile: 'hugo.toml', contentDir: 'content' },
+    project: { id: 'p', root: '/x', kind: 'hugo', configFile: 'hugo.toml', contentDir: 'content', contentDirs: [{ path: 'content' }] },
   } as never)
 })
 

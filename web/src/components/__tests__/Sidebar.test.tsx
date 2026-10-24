@@ -163,3 +163,38 @@ describe('Sidebar empty and loading states', () => {
     expect(useUiStore.getState().newPage).not.toBeNull()
   })
 })
+
+describe('Sidebar with several content dirs', () => {
+  afterEach(() => useProjectStore.setState({ roots: [] }))
+
+  it('renders one labelled tree per content dir', () => {
+    const page = (path: string, title: string): ContentNode => ({
+      name: path.split('/').pop()!,
+      path,
+      isDir: false,
+      fields: { title, draft: false },
+    })
+    const dir = (path: string, child: ContentNode): ContentNode => ({
+      name: path,
+      path,
+      isDir: true,
+      children: [child],
+    })
+    const en = dir('content', page('content/a.md', 'English page'))
+    const de = dir('inhalt', page('inhalt/b.md', 'German page'))
+    useProjectStore.setState({
+      tree: en,
+      roots: [
+        { dir: 'content', root: en },
+        { dir: 'inhalt', lang: 'de', root: de },
+      ],
+    })
+    render(<Sidebar />)
+
+    expect(screen.getAllByTestId('content-root')).toHaveLength(2)
+    expect(screen.getByRole('tree', { name: 'Pages in inhalt' })).toBeInTheDocument()
+    expect(screen.getByText('de')).toBeInTheDocument()
+    expect(screen.getByText('English page')).toBeInTheDocument()
+    expect(screen.getByText('German page')).toBeInTheDocument()
+  })
+})

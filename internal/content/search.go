@@ -40,10 +40,10 @@ type Results struct {
 	Truncated bool `json:"truncated"`
 }
 
-// Search finds pages under dir whose title, tags or body contain query,
+// Search finds pages under dirs whose title, tags or body contain query,
 // ignoring case. Title matches come first, then path order. It reads every
 // page on each call, which is fine for a personal site.
-func Search(fsys fs.FS, dir, query string) (*Results, error) {
+func Search(fsys fs.FS, dirs []string, query string) (*Results, error) {
 	query = strings.TrimSpace(query)
 	if query == "" {
 		return nil, ErrEmptyQuery
@@ -51,7 +51,28 @@ func Search(fsys fs.FS, dir, query string) (*Results, error) {
 	re := regexp.MustCompile("(?i)" + regexp.QuoteMeta(query))
 
 	var titleHits, bodyHits []Hit
-	err := fs.WalkDir(fsys, dir, func(name string, entry fs.DirEntry, err error) error {
+	seen := map[string]bool{}
+	for _, dir := range dirs {
+		if err := searchDir(fsys, dir, re, seen, &titleHits, &bodyHits); err != nil {
+			return nil, err
+		}
+	}
+
+	// Each dir is walked in path order, so each group is sorted per dir.
+	// Never nil, so an empty result encodes as [] and not null.
+	hits := append(append([]Hit{}, titleHits...), bodyHits...)
+
+	res := &Results{Hits: hits}
+	if len(hits) > SearchLimit {
+		res.Hits = hits[:SearchLimit]
+		res.Truncated = true
+	}
+	return res, nil
+}
+
+// searchDir appends the matching pages under dir to titleHits and bodyHits.
+func searchDir(fsys fs.FS, dir string, re *regexp.Regexp, seen map[string]bool, titleHits, bodyHits *[]Hit) error {
+	return fs.WalkDir(fsys, dir, func(name string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			// An unreadable entry must not fail the whole search.
 			if entry != nil && entry.IsDir() {
@@ -68,31 +89,21 @@ func Search(fsys fs.FS, dir, query string) (*Results, error) {
 		if skip(entry.Name()) || !editableExts[strings.ToLower(path.Ext(name))] {
 			return nil
 		}
+		if seen[name] {
+			return nil
+		}
+		seen[name] = true
 
 		hit, inTitle, ok := matchPage(fsys, name, entry, re)
 		switch {
 		case !ok:
 		case inTitle:
-			titleHits = append(titleHits, hit)
+			*titleHits = append(*titleHits, hit)
 		default:
-			bodyHits = append(bodyHits, hit)
+			*bodyHits = append(*bodyHits, hit)
 		}
 		return nil
 	})
-	if err != nil {
-		return nil, err
-	}
-
-	// WalkDir visits in path order, so each group is already sorted.
-	// Never nil, so an empty result encodes as [] and not null.
-	hits := append(append([]Hit{}, titleHits...), bodyHits...)
-
-	res := &Results{Hits: hits}
-	if len(hits) > SearchLimit {
-		res.Hits = hits[:SearchLimit]
-		res.Truncated = true
-	}
-	return res, nil
 }
 
 // matchPage reports whether the page at name matches re. inTitle is true when

@@ -12,18 +12,19 @@ const aProject: Project = {
   kind: 'hugo',
   configFile: 'hugo.toml',
   contentDir: 'content',
+      contentDirs: [{ path: 'content' }],
   assetDir: 'static',
   id: 'id-1',
 }
 
-const aTree: ContentTree = {
-  root: {
-    name: 'content',
-    path: 'content',
-    isDir: true,
-    children: [{ name: 'about.md', path: 'content/about.md', isDir: false, ext: '.md', size: 12 }],
-  },
+const aRoot = {
+  name: 'content',
+  path: 'content',
+  isDir: true,
+  children: [{ name: 'about.md', path: 'content/about.md', isDir: false, ext: '.md', size: 12 }],
 }
+
+const aTree: ContentTree = { root: aRoot, roots: [{ dir: 'content', root: aRoot }] }
 
 /** One recorded fetch call, so tests can assert on headers. */
 interface Call {
@@ -79,6 +80,7 @@ describe('open', () => {
     expect(selectIsOpen(store())).toBe(true)
     expect(store().project?.id).toBe('id-1')
     expect(store().tree?.children).toHaveLength(1)
+    expect(store().roots.map((r) => r.dir)).toEqual(["content"])
     expect(store().error).toBeNull()
     expect(store().loading).toBe(false)
 

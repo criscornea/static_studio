@@ -1,13 +1,16 @@
 import { create } from 'zustand'
 import { api, setProjectID } from '@/api/client'
-import { asApiError, type ApiError, type ContentNode, type Project } from '@/api/types'
+import { asApiError, type ApiError, type ContentNode, type ContentRoot, type Project } from '@/api/types'
 import { useBuildStore } from '@/stores/build'
 import { useDevServerStore } from '@/stores/devserver'
 import { usePublishStore } from '@/stores/publish'
 
 interface ProjectState {
   project: Project | null
+  // The primary content tree.
   tree: ContentNode | null
+  // One tree per content dir, primary first.
+  roots: ContentRoot[]
   loading: boolean
   error: ApiError | null
 
@@ -27,6 +30,7 @@ export function setBeforeLeave(fn: (() => Promise<boolean>) | null) {
 export const useProjectStore = create<ProjectState>()((set, get) => ({
   project: null,
   tree: null,
+  roots: [],
   loading: false,
   error: null,
 
@@ -91,15 +95,15 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
     if (get().project === null) {
       return
     }
-    const { root } = await api.contentTree()
-    set({ tree: root })
+    const { root, roots } = await api.contentTree()
+    set({ tree: root, roots: roots ?? [] })
   },
 
   reset() {
     useBuildStore.getState().reset()
     useDevServerStore.getState().reset()
     usePublishStore.getState().reset()
-    set({ project: null, tree: null, error: null })
+    set({ project: null, tree: null, roots: [], error: null })
     setProjectID(null)
   },
 }))

@@ -233,13 +233,13 @@ Branch: feat/p20-content-dirs
 Goal: Per-language `contentDir` values and project-local module mounts are discovered, and the tree and search show pages from all of them.
 Done when: `ssg.Project` gains `ContentDirs []ContentDir{Path, Lang}` (primary first, deduplicated; `ContentDir` kept as the primary for compatibility) and `types.ts` mirrors it; `languages.<lang>.contentDir` entries are added; `module.mounts` with target `content` or `content/...` are added, and per Hugo, any content mount replaces the implicit `contentDir` mount; the first `static` mount source sets `AssetDir`; mount sources that are absolute, escape the root or belong to imported modules are skipped and logged, never followed; `GET /api/content` returns one root per content dir and the sidebar renders them with a language label; search walks every content dir; Go tests cover language dirs, mounts, the implicit-mount rule and refused sources; vitest covers the multi-root tree; `make check` green.
 Risk: high (security: config-controlled paths feed path confinement; public API shape change)
-Status: todo
-- [ ] M20.1 Collect per-language `contentDir` values into a deduplicated `ContentDirs` list
-- [ ] M20.2 Add content and static module mounts, skipping sources outside the project
-- [ ] M20.3 Expose `contentDirs` in the project JSON and `types.ts`
-- [ ] M20.4 Return one tree root per content dir from `GET /api/content`
-- [ ] M20.5 Render multiple labelled roots in `ContentTree`
-- [ ] M20.6 Search across every content dir
+Status: merged
+- [x] M20.1 Collect per-language `contentDir` values into a deduplicated `ContentDirs` list
+- [x] M20.2 Add content and static module mounts, skipping sources outside the project
+- [x] M20.3 Expose `contentDirs` in the project JSON and `types.ts`
+- [x] M20.4 Return one tree root per content dir from `GET /api/content`
+- [x] M20.5 Render multiple labelled roots in `ContentTree`
+- [x] M20.6 Search across every content dir
 
 ## Phase 21: Edit pages in every content directory
 Branch: feat/p21-multi-dir-edit

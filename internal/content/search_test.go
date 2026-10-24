@@ -34,7 +34,7 @@ func paths(r *Results) []string {
 }
 
 func TestSearchFindsTitleAndTagsFirstThenBodiesInPathOrder(t *testing.T) {
-	res, err := Search(searchFS(), "content", "golang")
+	res, err := Search(searchFS(), []string{"content"}, "golang")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,7 +53,7 @@ func TestSearchFindsTitleAndTagsFirstThenBodiesInPathOrder(t *testing.T) {
 }
 
 func TestSearchIgnoresCaseAndTrimsTheQuery(t *testing.T) {
-	res, err := Search(searchFS(), "content", "  LEARNING gol")
+	res, err := Search(searchFS(), []string{"content"}, "  LEARNING gol")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,7 +66,7 @@ func TestSearchTreatsTheQueryAsLiteralText(t *testing.T) {
 	fsys := fstest.MapFS{"content/a.md": {Data: []byte("price is $5 (approx.)\nabc\n")}}
 
 	for _, q := range []string{"(approx.)", "$5", ".*"} {
-		res, err := Search(fsys, "content", q)
+		res, err := Search(fsys, []string{"content"}, q)
 		if err != nil {
 			t.Fatalf("%q: %v", q, err)
 		}
@@ -81,7 +81,7 @@ func TestSearchTreatsTheQueryAsLiteralText(t *testing.T) {
 }
 
 func TestSearchHitDetails(t *testing.T) {
-	res, err := Search(searchFS(), "content", "golang")
+	res, err := Search(searchFS(), []string{"content"}, "golang")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -102,7 +102,7 @@ func TestSearchHitDetails(t *testing.T) {
 }
 
 func TestSearchDoesNotMatchFrontmatterThatIsNotTitleOrTags(t *testing.T) {
-	res, err := Search(searchFS(), "content", "golang")
+	res, err := Search(searchFS(), []string{"content"}, "golang")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,7 +114,7 @@ func TestSearchDoesNotMatchFrontmatterThatIsNotTitleOrTags(t *testing.T) {
 }
 
 func TestSearchSnippetKeepsRunesWhole(t *testing.T) {
-	res, err := Search(searchFS(), "content", "golang")
+	res, err := Search(searchFS(), []string{"content"}, "golang")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -131,7 +131,7 @@ func TestSearchSnippetKeepsRunesWhole(t *testing.T) {
 
 	// A long body forces cuts on both sides of the match.
 	long := strings.Repeat("ä", 100) + "needle" + strings.Repeat("ö", 100)
-	res, err = Search(fstest.MapFS{"content/l.md": {Data: []byte(long)}}, "content", "needle")
+	res, err = Search(fstest.MapFS{"content/l.md": {Data: []byte(long)}}, []string{"content"}, "needle")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -150,7 +150,7 @@ func TestSearchTruncates(t *testing.T) {
 		fsys["content/p"+string(rune('a'+i/26))+string(rune('a'+i%26))+".md"] = &fstest.MapFile{Data: []byte("needle")}
 	}
 
-	res, err := Search(fsys, "content", "needle")
+	res, err := Search(fsys, []string{"content"}, "needle")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -161,14 +161,14 @@ func TestSearchTruncates(t *testing.T) {
 
 func TestSearchEmptyQuery(t *testing.T) {
 	for _, q := range []string{"", "   "} {
-		if _, err := Search(searchFS(), "content", q); !errors.Is(err, ErrEmptyQuery) {
+		if _, err := Search(searchFS(), []string{"content"}, q); !errors.Is(err, ErrEmptyQuery) {
 			t.Errorf("%q: err = %v, want ErrEmptyQuery", q, err)
 		}
 	}
 }
 
 func TestSearchMissingContentDirFindsNothing(t *testing.T) {
-	res, err := Search(fstest.MapFS{}, "content", "x")
+	res, err := Search(fstest.MapFS{}, []string{"content"}, "x")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -49,10 +49,36 @@ type SSG interface {
 	Dirs(fsys fs.FS, configFile string) (contentDir, assetDir string, err error)
 }
 
+// ContentDir is one directory holding pages, relative to the project root.
+// Lang is the language it belongs to, or empty when it is not language-specific.
+type ContentDir struct {
+	Path string `json:"path"`
+	Lang string `json:"lang,omitempty"`
+}
+
+// Layout is everything a generator's config says about where files live.
+type Layout struct {
+	ContentDir  string
+	AssetDir    string
+	ContentDirs []ContentDir
+	// Warnings describes config entries that were skipped.
+	Warnings []string
+}
+
+// layouter is implemented by generators that can resolve several content dirs.
+type layouter interface {
+	Layout(fsys fs.FS, configFile string) (*Layout, error)
+}
+
 type Project struct {
 	Root       string `json:"root"`
 	Kind       Kind   `json:"kind"`
 	ConfigFile string `json:"configFile"`
-	ContentDir string `json:"contentDir"`
-	AssetDir   string `json:"assetDir"`
+	// ContentDir is the primary content dir, kept for compatibility. It is
+	// always the first entry of ContentDirs.
+	ContentDir  string       `json:"contentDir"`
+	ContentDirs []ContentDir `json:"contentDirs"`
+	AssetDir    string       `json:"assetDir"`
+	// Warnings lists config entries that were skipped; the caller logs them.
+	Warnings []string `json:"-"`
 }

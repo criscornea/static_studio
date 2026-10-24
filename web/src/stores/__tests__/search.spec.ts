@@ -169,6 +169,7 @@ describe('clear', () => {
         kind: 'hugo',
         configFile: 'hugo.toml',
         contentDir: 'content',
+      contentDirs: [{ path: 'content' }],
         assetDir: 'static',
         id: 'other',
       },

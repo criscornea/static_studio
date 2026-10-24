@@ -7,6 +7,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Every Hugo content dir is resolved (per-language `contentDir`, project-local
+  content and static module mounts; unsafe sources are skipped). The sidebar
+  shows one labelled tree per dir and search covers all of them.
 - Desktop-style app shell: fixed viewport, title bar, activity bar,
   resizable sidebar, status bar (project, save, preview server, build).
 - Light and dark themes following the OS, with a persisted override;

@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path"
+	"sort"
 	"strings"
 
 	"github.com/goccy/go-yaml"
@@ -33,18 +34,31 @@ func (hugo) Supported() bool { return true }
 
 // Dirs reads contentDir and staticDir from the merged Hugo config: the root
 // config file, then config/_default/*, then config/<environment>/*, then
-// HUGO_CONTENTDIR and HUGO_STATICDIR. Per-language overrides and module
-// mounts are not followed.
+// HUGO_CONTENTDIR and HUGO_STATICDIR. The content dir returned is the primary
+// one; see Layout for every content dir.
 func (h hugo) Dirs(fsys fs.FS, configFile string) (string, string, error) {
-	raw, err := readConfig(fsys, configFile)
+	l, err := h.Layout(fsys, configFile)
 	if err != nil {
 		return "", "", err
+	}
+	return l.ContentDir, l.AssetDir, nil
+}
+
+// Layout resolves the primary content and asset dirs plus every content dir:
+// the implicit contentDir (or, when module.mounts has content mounts, those
+// mounts instead), then languages.<lang>.contentDir. The first static mount
+// sets the asset dir. Sources that are not plain project-relative
+// directories are skipped and logged, never followed.
+func (h hugo) Layout(fsys fs.FS, configFile string) (*Layout, error) {
+	raw, err := readConfig(fsys, configFile)
+	if err != nil {
+		return nil, err
 	}
 	raw = mergeConfig(nil, raw)
 
 	for _, dir := range []string{"config/_default", "config/" + h.environment()} {
 		if err := mergeConfigDir(fsys, dir, raw); err != nil {
-			return "", "", err
+			return nil, err
 		}
 	}
 
@@ -60,7 +74,171 @@ func (h hugo) Dirs(fsys fs.FS, configFile string) (string, string, error) {
 	// staticDir may be a list of directories. The first one is the primary.
 	assetDir := configDir(firstOf(raw["staticdir"]), hugoDefaultAssetDir)
 
-	return contentDir, assetDir, nil
+	contentMounts, staticMount, warnings := mountDirs(raw)
+	if staticMount != "" {
+		assetDir = staticMount
+	}
+
+	langs, _ := lowerMap(raw["languages"])
+	names := make([]string, 0, len(langs))
+	for name := range langs {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	var langDirs []ContentDir
+	missingOwnDir := false
+	for _, name := range names {
+		lm, ok := lowerMap(langs[name])
+		if !ok {
+			missingOwnDir = true
+			continue
+		}
+		lm = mergeConfig(nil, lm)
+		v, set := lm["contentdir"]
+		if !set {
+			missingOwnDir = true
+			continue
+		}
+		if dir, ok := mountSource(v); ok {
+			langDirs = append(langDirs, ContentDir{Path: dir, Lang: strings.ToLower(name)})
+		} else {
+			missingOwnDir = true
+			warnings = append(warnings, fmt.Sprintf("skipping language %s contentDir outside the project: %v", name, v))
+		}
+	}
+
+	// The default language's dir is primary when it has one.
+	defLang := strings.ToLower(strings.TrimSpace(stringOf(raw["defaultcontentlanguage"])))
+	if defLang == "" {
+		defLang = "en"
+	}
+	sort.SliceStable(langDirs, func(i, j int) bool {
+		return langDirs[i].Lang == defLang && langDirs[j].Lang != defLang
+	})
+
+	var dirs []ContentDir
+	switch {
+	case len(contentMounts) > 0:
+		// Per Hugo, any content mount replaces the implicit contentDir mount.
+		dirs = append(dirs, contentMounts...)
+	case len(langs) == 0 || missingOwnDir:
+		// The implicit dir serves every language without a dir of its own.
+		dirs = append(dirs, ContentDir{Path: contentDir})
+	}
+	if len(langDirs) > 0 && langDirs[0].Lang == defLang {
+		dirs = append(langDirs[:1:1], dirs...)
+		dirs = append(dirs, langDirs[1:]...)
+	} else {
+		dirs = append(dirs, langDirs...)
+	}
+	if len(dirs) == 0 {
+		dirs = []ContentDir{{Path: contentDir}}
+	}
+	dirs = dropNested(dedupeDirs(dirs))
+
+	return &Layout{
+		ContentDir:  dirs[0].Path,
+		AssetDir:    assetDir,
+		ContentDirs: dirs,
+		Warnings:    warnings,
+	}, nil
+}
+
+func stringOf(v any) string {
+	s, _ := v.(string)
+	return s
+}
+
+// dropNested removes dirs lying inside another dir of the list, so no page is
+// listed twice.
+func dropNested(dirs []ContentDir) []ContentDir {
+	out := make([]ContentDir, 0, len(dirs))
+	for i, d := range dirs {
+		nested := false
+		for j, o := range dirs {
+			if i != j && strings.HasPrefix(d.Path, o.Path+"/") {
+				nested = true
+				break
+			}
+		}
+		if !nested {
+			out = append(out, d)
+		}
+	}
+	return out
+}
+
+// mountDirs reads module.mounts. It returns the content mounts in order, the
+// source of the first static mount whose target is exactly "static" ("" when
+// none) and warnings for skipped entries. Mounts whose source is not a plain
+// project-relative directory are skipped. Mounts of imported modules
+// (module.imports) are never read.
+func mountDirs(raw map[string]any) (content []ContentDir, static string, warnings []string) {
+	mod, _ := lowerMap(raw["module"])
+	if imports, ok := mod["imports"].([]any); ok && len(imports) > 0 {
+		warnings = append(warnings, fmt.Sprintf("ignoring mounts of %d imported modules", len(imports)))
+	}
+	mounts, _ := mod["mounts"].([]any)
+	for _, m := range mounts {
+		mm, ok := lowerMap(m)
+		if !ok {
+			continue
+		}
+		mm = mergeConfig(nil, mm)
+		target, _ := mm["target"].(string)
+		target = path.Clean(strings.ReplaceAll(strings.TrimSpace(target), `\`, "/"))
+		isContent := target == "content" || strings.HasPrefix(target, "content/")
+		isStatic := target == "static" || strings.HasPrefix(target, "static/")
+		if !isContent && !isStatic {
+			continue
+		}
+		dir, ok := mountSource(mm["source"])
+		if !ok {
+			warnings = append(warnings, fmt.Sprintf("skipping mount source outside the project: %v (target %s)", mm["source"], target))
+			continue
+		}
+		if isStatic {
+			if static == "" && target == "static" {
+				static = dir
+			}
+			continue
+		}
+		lang, _ := mm["lang"].(string)
+		content = append(content, ContentDir{Path: dir, Lang: strings.ToLower(lang)})
+	}
+	return content, static, warnings
+}
+
+// mountSource validates a configured source: a string naming a directory
+// strictly inside the project. Unlike configDir it has no fallback.
+func mountSource(v any) (string, bool) {
+	s, ok := v.(string)
+	if !ok {
+		return "", false
+	}
+	clean := path.Clean(strings.ReplaceAll(strings.TrimSpace(s), `\`, "/"))
+	if clean == "." || !fs.ValidPath(clean) {
+		return "", false
+	}
+	return clean, true
+}
+
+// dedupeDirs drops later entries with a path already seen. A dropped entry's
+// Lang is copied onto the kept one when that has none.
+func dedupeDirs(dirs []ContentDir) []ContentDir {
+	seen := make(map[string]int, len(dirs))
+	out := make([]ContentDir, 0, len(dirs))
+	for _, d := range dirs {
+		if i, ok := seen[d.Path]; ok {
+			if out[i].Lang == "" {
+				out[i].Lang = d.Lang
+			}
+			continue
+		}
+		seen[d.Path] = len(out)
+		out = append(out, d)
+	}
+	return out
 }
 
 // getenv reads the injected environment, or the process environment when none

@@ -53,6 +53,10 @@ func (m *Manager) Open(dir string) (*Open, error) {
 		return nil, err
 	}
 
+	for _, w := range info.Warnings {
+		m.log.Warn(w)
+	}
+
 	root, err := os.OpenRoot(info.Root)
 	if err != nil {
 		return nil, fmt.Errorf("openening project root: %w", err)

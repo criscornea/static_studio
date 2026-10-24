@@ -5,8 +5,16 @@ export interface Project {
   kind: SSGKind
   configFile: string
   contentDir: string
+  // Every content dir, primary first. Mirrors ssg.ContentDirs.
+  contentDirs: ContentDirInfo[]
   assetDir: string
   id: string
+}
+
+export interface ContentDirInfo {
+  path: string
+  // Language the dir belongs to, when it is language-specific.
+  lang?: string
 }
 
 export interface RecentProject {
@@ -29,8 +37,17 @@ export interface ContentNode {
   children?: ContentNode[]
 }
 
-export interface ContentTree {
+/** The tree of one content dir. */
+export interface ContentRoot {
+  dir: string
+  lang?: string
   root: ContentNode
+}
+
+export interface ContentTree {
+  // The primary tree, repeated from roots[0].
+  root: ContentNode
+  roots: ContentRoot[]
 }
 
 /** Stable error codes returned by the backend. */

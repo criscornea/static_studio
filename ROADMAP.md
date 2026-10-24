@@ -115,8 +115,10 @@ Deliberate simplifications, recorded so they don't become invisible.
 
 - `ContentDir` and `AssetDir` come from the top level of the merged Hugo
   config (root file, `config/_default/*`, `config/<environment>/*`,
-  `HUGO_CONTENTDIR`, `HUGO_STATICDIR`). Per-language `contentDir`, module
-  mounts and nested config subdirectories are ignored. An unreadable, oversized or invalid config now stops the project from
+  `HUGO_CONTENTDIR`, `HUGO_STATICDIR`). Per-language `contentDir` and
+  project-local `module.mounts` add content dirs (shown in the tree and
+  searched) but only the primary dir can be edited until multi-dir editing
+  lands; imported-module mounts are ignored. An unreadable, oversized or invalid config now stops the project from
   opening with a readable error.
 - The `/api` host guard accepts a loopback Host (`127.0.0.1`, `::1`,
   `localhost`) on any port, not only the server's own. Rebinding still fails
