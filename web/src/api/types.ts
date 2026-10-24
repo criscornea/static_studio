@@ -34,6 +34,8 @@ export type ApiErrorCode =
   | 'no_project'
   | 'stale_project'
   | 'cannot_read_content'
+  | 'devserver_running'
+  | 'devserver_failed'
   | 'internal'
   | 'unknonw'
   | 'not_editable'
@@ -144,4 +146,17 @@ export interface BuildEvent {
   line?: string
   ok?: boolean
   error?: string
+}
+
+/** State of the Hugo preview server. */
+export interface DevServerStatus {
+  running: boolean
+  // True once the server accepts connections.
+  ready: boolean
+  // Origin of the server, for example http://127.0.0.1:41234.
+  url?: string
+  // Full URL of the requested page. Only set when a path was asked for.
+  pageUrl?: string
+  // Last output lines of a server that exited on its own.
+  output?: string[]
 }

@@ -98,13 +98,13 @@ Branch: feat/p9-dev-server
 Goal: Users start and stop `hugo server` and see the real Hugo-rendered page (theme and templates) in the app.
 Done when: start/stop/status endpoints manage one `hugo server` bound to 127.0.0.1 on a free port; status returns its URL; the preview button opens an iframe loading directly from that port (separate origin, no proxy on the app origin, so site JS cannot reach `/api`) at the open page's URL; on project close and server shutdown the process is stopped and `Manager.Close` is called; tests cover lifecycle, 127.0.0.1 binding and no orphaned process.
 Risk: high (concurrency, subprocess lifecycle, origin isolation)
-Status: todo
-- [ ] M9.1 Add dev-server process management with 127.0.0.1 binding, free-port selection and tests
-- [ ] M9.2 Add start, stop and status handlers with tests
-- [ ] M9.3 Map a content path to its page URL on the hugo server, with tests
-- [ ] M9.4 Stop subprocesses and close the project on shutdown via signal handling in `cmd/studio`
-- [ ] M9.5 Add dev-server controls to the UI
-- [ ] M9.6 Add the preview button with an iframe on the hugo server origin
+Status: merged
+- [x] M9.1 Add dev-server process management with 127.0.0.1 binding, free-port selection and tests
+- [x] M9.2 Add start, stop and status handlers with tests
+- [x] M9.3 Map a content path to its page URL on the hugo server, with tests
+- [x] M9.4 Stop subprocesses and close the project on shutdown via signal handling in `cmd/studio`
+- [x] M9.5 Add dev-server controls to the UI
+- [x] M9.6 Add the preview button with an iframe on the hugo server origin
 
 ## Phase 10: Build errors at the right file
 Branch: feat/p10-build-errors

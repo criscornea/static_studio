@@ -33,6 +33,8 @@ func run() error {
 	slog.SetDefault(logger)
 
 	app := server.New(logger, web.Assets())
+	// Idempotent; also covers the listen-error path, which skips the signal branch.
+	defer app.Close()
 	baseCtx, cancelBase := context.WithCancel(context.Background())
 	defer cancelBase()
 
@@ -61,7 +63,7 @@ func run() error {
 		return err
 	case <-ctx.Done():
 		slog.Info("shutting down")
-		// End the build and open streams first so Shutdown does not wait on them.
+		// End the build, dev server and open streams first so Shutdown does not wait on them.
 		app.Close()
 		cancelBase()
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

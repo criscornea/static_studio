@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '@/api/client'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { PreviewButton, PreviewFrame } from '@/components/DevServer'
 import { FrontmatterForm } from '@/components/FrontmatterForm'
 import { MarkdownEditor } from '@/components/MarkdownEditor'
 import { Badge } from '@/components/ui/badge'
@@ -30,6 +31,7 @@ function Meta({ label, children }: { label: string; children: React.ReactNode })
 }
 
 export function PageView() {
+  const [previewing, setPreviewing] = useState(false)
   const [uploadError, setUploadError] = useState<{ path: string | null; message: string } | null>(null)
   const path = usePageStore((s) => s.path)
   // Errors belong to the page they happened on.
@@ -150,7 +152,9 @@ export function PageView() {
             {status}
           </span>
           <span className="text-xs text-muted-foreground">Ctrl/Cmd+S</span>
+          <PreviewButton open={previewing} onToggle={() => setPreviewing((v) => !v)} />
         </div>
+        {previewing && <PreviewFrame key={page.path} path={page.path} />}
         <MarkdownEditor
           key={page.path}
           value={draft ?? page.body}

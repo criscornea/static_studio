@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 
 import { BuildButton, BuildPanel } from '@/components/BuildPanel'
+import { DevServerButton } from '@/components/DevServer'
 import { PageView } from '@/components/PageView'
 import { ProjectPicker } from '@/components/ProjectPicker'
 import { Sidebar } from '@/components/Sidebar'
@@ -28,6 +29,7 @@ export default function App() {
     <div className="flex h-screen flex-col">
       <header className="flex items-center gap-4 border-b px-4 py-2">
         <span className="flex-1 truncate font-mono text-xs text-muted-foreground">{root}</span>
+        <DevServerButton />
         <BuildButton />
         <Button variant="ghost" size="sm" onClick={() => void close()}>
           Close

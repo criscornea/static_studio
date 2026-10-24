@@ -15,12 +15,13 @@ Use the Makefile (`make help`):
 - `make test` / `make race` — Go tests (`go test ./cmd/... ./internal/... ./web`)
 - Single Go test: `go test ./internal/content -run TestName`
 - `make lint` / `make fmt` — `golangci-lint run` / `golangci-lint fmt`
-- `make run` — run the server (`go run ./cmd/studio`, flag `-addr`)
+- `make server` — run the server (`go run ./cmd/studio`, flag `-addr`)
+- `make run` — run the server and the Vite dev server together; open http://localhost:5173, Ctrl+C stops both
 - `make web-install` (`npm ci`), `make web-dev` (Vite on :5173, proxies `/api` to :7777), `make web-build`, `make web-check` (type-check + lint + vitest)
 - Single frontend test: `cd web && npx vitest --run src/stores/__tests__/page.spec.ts`
 - `make build` embeds the real frontend; `make build-dev` builds without it.
 
-Go targets depend on `web-stub`, which writes a placeholder `web/dist/index.html` so `//go:embed all:dist` in `web/embed.go` resolves without a Node build. Dev workflow: run `make run` and `make web-dev` side by side.
+Go targets depend on `web-stub`, which writes a placeholder `web/dist/index.html` so `//go:embed all:dist` in `web/embed.go` resolves without a Node build. Dev workflow: `make run` (or `make server` and `make web-dev` side by side).
 
 Note: the frontend `lint` script runs with `--fix`, so it modifies files.
 
@@ -45,7 +46,7 @@ Tooling copied from `vibe_starter` lives in `.claude/` (agents, skills, hooks, s
 - Build check: `.claude/skills/build-check/check.sh` runs `scripts/check.sh` (`make check`, the same gates as CI) and prints only failures or `BUILD OK`.
 - `ROADMAP.md` is the long-term list (built, next, out of scope, known shortcuts). `PLAN.md` breaks it into phases and milestones. When a phase is done, tick its items in `ROADMAP.md` and move shipped items to `CHANGELOG.md`.
 - `PLAN.md` drives `/run-plan`: the `planner` agent (Opus) writes it, `implementer` (Sonnet) builds one phase per `feat/p<N>-<slug>` branch with one commit per milestone, `code-reviewer` (Opus) reviews only when the user agrees, then a local squash merge into `main`. Derive phases from `ROADMAP.md`; `/kickoff` is for new projects.
-- `/run-plan` is manual by default: it stops at `Status: ready` after each phase so the user can test the branch; the next `/run-plan` merges it. `/run-plan auto` sets `autopilot: on` and runs all phases without stopping.
+- `/run-plan` is manual by default: it stops at `Status: ready` after each phase so the user can test the branch; the next `/run-plan` merges it. `/run-plan auto` sets `autopilot: on` and runs all phases without stopping. Merges stay local: `main` is pushed only after the user confirms (build-check green first), because every push to `main` runs CI.
 - Need the user during an autopilot run? Write `BLOCKED: <reason>` in `PLAN.md` and stop.
 - Hooks: `guard.sh` blocks force pushes, `reset --hard`, `clean -f`, deleting main and `rm -r` on broad paths; `format.sh` formats each edited file (gofmt/goimports, local prettier); `stop-continue.sh` keeps the loop going while `PLAN.md` says `autopilot: on`.
 

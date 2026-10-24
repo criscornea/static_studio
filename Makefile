@@ -5,7 +5,7 @@ WEB_DIST := web/dist
 PKGS = ./cmd/... ./internal/... ./web
 
 .DEFAULT_GOAL := help
-.PHONY: help build run test race lint fmt tidy check clean web-install web-dev web-build web-check web-stub
+.PHONY: help build server run sample test race lint fmt tidy check clean web-install web-dev web-build web-check web-stub
 
 help: ## show available targets
 	@grep -E '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | \
@@ -17,8 +17,18 @@ build: web-build ## build the binary with the frontend embedded into ./bin
 build-dev: web-stub ## build without the frontend (fast)
 	go build -o $(DIST)/$(BINARY) $(CMD)
 
-run: web-stub ## run the server
+server: web-stub ## run the server
 	go run $(CMD)
+
+run: SHELL := /bin/bash
+run: web-stub ## run the server and the vite dev server together (Ctrl+C stops both)
+	@trap 'trap - EXIT INT TERM; kill 0' EXIT INT TERM; \
+	go run $(CMD) & \
+	(cd web && npm run dev) & \
+	wait -n
+
+sample: ## create ./sample-site, a Hugo site for manual testing (FORCE=1 recreates it)
+	scripts/sample-site.sh sample-site $(if $(FORCE),--force)
 
 test: web-stub ## run tests
 	go test $(PKGS)

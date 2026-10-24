@@ -3,6 +3,7 @@ import {
   type ApiErrorCode,
   type Archetype,
   type ContentTree,
+  type DevServerStatus,
   type NewPageRequest,
   type RenamePageRequest,
   type Page,
@@ -113,5 +114,9 @@ export const api = {
   cancelBuild: () => request<void>('/api/build/cancel', { method: 'POST' }),
   // EventSource cannot set headers, so the project id travels in the query.
   buildStreamURL: () => `/api/build/stream?projectId=${encodeURIComponent(projectID ?? '')}`,
+  devServer: (path?: string) =>
+    request<DevServerStatus>(`/api/devserver${path ? `?path=${encodeURIComponent(path)}` : ''}`),
+  startDevServer: () => request<DevServerStatus>('/api/devserver/start', { method: 'POST' }),
+  stopDevServer: () => request<void>('/api/devserver/stop', { method: 'POST' }),
   search: (query: string) => request<SearchResults>(`/api/search?q=${encodeURIComponent(query)}`),
 }

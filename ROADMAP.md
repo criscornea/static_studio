@@ -51,7 +51,7 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` not started
 
 - [x] CodeMirror 6 as the markdown editor
 - [x] Frontmatter as a **form**, not as text
-- [ ] Preview: the real Hugo-rendered page from `hugo server`, loaded in an
+- [x] Preview: the real Hugo-rendered page from `hugo server`, loaded in an
   iframe from its own port (separate origin from the app)
 - [x] Drag & drop images into `static/`, path inserted into the markdown
 - [x] Autosave with debounce, unsaved-changes state, editor undo
@@ -68,9 +68,9 @@ renders it, not the app.
 
 - [x] Run `hugo` as a subprocess with context cancellation
 - [ ] Stream build output live to the UI (SSE or WebSocket)
-- [ ] Start/stop the dev server, show status, proxy the preview
+- [x] Start/stop the dev server, show status (preview loads from its own port, no proxy)
 - [ ] Parse build errors and surface them at the right file
-- [ ] Clean shutdown: no orphaned processes, project root closed
+- [x] Clean shutdown: no orphaned processes, project root closed
 
 🎯 **Milestone:** edit → build → see the result, all in the app.
 📓 **Blog:** "Subprozesse, Streaming und Context — Go at work"
@@ -120,8 +120,6 @@ Deliberate simplifications, recorded so they don't become invisible.
   `localhost`) on any port, not only the server's own. Rebinding still fails
   because a foreign name is rejected, and the Vite dev proxy forwards
   `Host: localhost:5173`, which a fixed-port check would break.
-- A SIGTERM sent to the studio alone can orphan a running hugo build; M9.4
-  adds signal-driven subprocess shutdown.
 - Saving, renaming and deleting are serialised by an in-process mutex only.
   An external editor can still change a file between the hash check and the
   write (TOCTOU); the window is small and not closed.
@@ -142,7 +140,12 @@ Deliberate simplifications, recorded so they don't become invisible.
 - `RenamePage` on a filesystem without hard links falls back to Lstat then
   rename, so a file created at the target in between would be overwritten
   (TOCTOU). With hard links the move cannot overwrite.
-- `Manager.Close` is not called on server shutdown; it becomes relevant
-  alongside subprocess cleanup.
+- The preview URL for a page follows Hugo's default permalinks and path
+  cleaning (lowercase, spaces to hyphens) only. Front matter `url` and
+  `slug`, language subdirectories or suffixes, custom `permalinks`, and
+  `disablePathToLower` from the config are not read.
+- The dev server port is picked by binding and releasing a free port, then
+  passed to Hugo; another process can grab it in between (TOCTOU). Hugo then
+  exits and its output is shown as an error.
 - `internal/server` writes responses via two `Server` methods. If that layer
   grows, extract an `internal/httpx` package.

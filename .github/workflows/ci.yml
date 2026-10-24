@@ -3,7 +3,13 @@ name: CI
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "**.md"
+      - ".claude/**"
   pull_request:
+    paths-ignore:
+      - "**.md"
+      - ".claude/**"
 
 permissions:
   contents: read
@@ -28,6 +34,9 @@ jobs:
             go mod tidy
             gofmt -l -w .
             git diff --exit-code
+
+      - name: Frontend stub, same as make web-stub locally
+        run: make web-stub
 
       - name: Vet
         run: go vet ./...

@@ -9,12 +9,12 @@ import (
 	"strings"
 	"testing"
 	"testing/fstest"
-
-	"github.com/criscornea/static_studio/web"
 )
 
+// newTestServer uses in-memory assets, so tests do not depend on what
+// happens to be in web/dist (CI has only .gitkeep there).
 func newTestServer() *Server {
-	return New(slog.New(slog.DiscardHandler), web.Assets())
+	return New(slog.New(slog.DiscardHandler), testAssets())
 }
 
 func TestHealth(t *testing.T) {

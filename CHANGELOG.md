@@ -12,6 +12,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Preview: start/stop a `hugo server` bound to 127.0.0.1 on a free port
+  (`GET /api/devserver`, `POST /api/devserver/start`, `POST /api/devserver/stop`).
+  The Preview button shows the open page in an iframe loaded directly from the
+  server's own port, so site scripts cannot reach `/api`. The server is stopped
+  on project close, project switch and shutdown, which also closes the project root.
 - Build button runs `hugo` in the project root (one build at a time, cancellable)
   and streams its output live to a log panel over SSE
   (`POST /api/build`, `POST /api/build/cancel`, `GET /api/build/stream`).

@@ -3,3 +3,6 @@
 # Claude Code local state
 .claude/settings.local.json
 .claude/.stop-state
+
+# Sample Hugo site for manual testing (scripts/sample-site.sh)
+/sample-site/
