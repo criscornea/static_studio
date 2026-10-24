@@ -1,5 +1,5 @@
 # Plan: Static Studio
-autopilot: on
+autopilot: off
 
 ## Phase 1: Origin and Host check on mutating endpoints
 Branch: feat/p1-origin-check

@@ -28,6 +28,7 @@ Rules:
 - Phases ship something that works end to end. 2-6 milestones per phase.
 - A milestone is one commit: small, testable, no "and".
 - Risk is high for: auth, payments, data migrations, security, deletion of data, public APIs, concurrency.
+- Status values: todo, in-progress, review, ready (awaiting user test), merged.
 - Never edit phases with `Status: merged`.
 - Fill the `## Commands` section of `CLAUDE.md` (dev, test, check) for the chosen stack.
   If auto-detection in `.claude/skills/build-check/check.sh` is not enough, write `scripts/check.sh`.
