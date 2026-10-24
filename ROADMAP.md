@@ -117,7 +117,7 @@ No new features. Zero.
   quotes and horizontal rules rendered inline via CodeMirror decorations;
   persisted toggle between live preview and source mode; the document text is
   never altered
-- [ ] rsync/SFTP publish target alongside GitHub Pages: target setting
+- [x] rsync/SFTP publish target alongside GitHub Pages: target setting
   (`github-pages` | `rsync`), destination `user@host:path`, port, optional
   identity file, delete and dry-run flags; system `rsync`/`ssh` with argv only
   (no shell); no stored credentials (ssh-agent and keys); progress through the
@@ -136,6 +136,11 @@ auth · undo across sessions
 
 Deliberate simplifications, recorded so they don't become invisible.
 
+- The rsync publish target needs the system `rsync` (and `ssh` for remote
+  destinations) on the PATH. Fields are limited to a safe character set, so
+  paths with spaces or special characters, identity files with spaces and
+  `~` in remote paths are refused. SFTP-only servers are not supported, and
+  the host key must already be in `known_hosts` (connect once with `ssh`).
 - Preview URLs are derived from the primary content dir only; pages in
   other content dirs (per-language) get no preview link until per-language
   URL mapping lands.

@@ -176,8 +176,14 @@ export function asApiError(err: unknown): ApiError {
 
 /** Where the site is published. */
 export interface PublishSettings {
+  target: 'github-pages' | 'rsync'
   remote: string
   branch: string
+  rsyncDest: string
+  rsyncPort: number
+  rsyncIdentity: string
+  rsyncDelete: boolean
+  rsyncDryRun: boolean
 }
 
 /** One server-sent event from the build stream. */

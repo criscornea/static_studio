@@ -9,7 +9,7 @@ output, build, and publish to GitHub Pages. No terminal needed.
 Writing a post in a static site means juggling an editor, a terminal running
 `hugo server`, and a git push. Static Studio puts those steps in one window.
 It is one Go binary that serves a JSON API and an embedded React app on
-`127.0.0.1:7777`. Nothing leaves your machine except the publish push.
+`127.0.0.1:7777`. Nothing leaves your machine except what you publish.
 
 ## Quickstart
 
@@ -43,8 +43,11 @@ Development: `make run` starts the server and the Vite dev server together.
 - Drag and drop images into the static folder.
 - Preview from a `hugo server` on its own port; build with streamed output and
   errors shown at the right file.
-- Publish `public/` to a `gh-pages` branch with the system `git`. No
-  credentials are stored; your SSH key or credential helper signs in.
+- Publish `public/` to a `gh-pages` branch with the system `git`, or to your
+  own server with the system `rsync` over SSH (optional delete and dry run).
+  No credentials are stored; your SSH key, agent or credential helper signs
+  in. For rsync, connect once with `ssh` in a terminal so the host key is in
+  `known_hosts`.
 
 ## Architecture
 
@@ -63,7 +66,7 @@ shadcn/ui. `web/embed.go` embeds the built app into the binary.
 
 ## Scope
 
-Hugo only. One publish target (GitHub Pages). The editor stays raw markdown.
+Hugo only. Two publish targets (GitHub Pages, rsync over SSH). The editor stays raw markdown.
 Out of scope for v1: plugins, theme design, general git integration,
 multi-user, cloud sync, Astro editing, auth. See `ROADMAP.md` for known
 shortcuts and `CHANGELOG.md` for releases.

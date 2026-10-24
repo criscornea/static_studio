@@ -7,6 +7,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- rsync over SSH publish target alongside GitHub Pages. The publish dialog has
+  a target picker with destination (`user@host:path` or a full local path),
+  port, optional identity file, a delete option (with a warning) and a dry
+  run. The system `rsync` runs with an argv only, no shell, from `public/`
+  without following symlinks. SSH uses `BatchMode`, your agent, config and
+  `known_hosts`; host key checking is never turned off and no credentials are
+  stored. Unknown host keys, refused logins, missing programs and unreachable
+  hosts give readable messages. Existing settings load as GitHub Pages.
 - Live preview in the editor: headings, bold, italic, strikethrough, inline
   code, links, quotes, list markers and horizontal rules render inline, with
   the markup revealed only on lines touched by the cursor or selection. Code
