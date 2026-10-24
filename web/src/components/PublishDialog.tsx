@@ -1,8 +1,11 @@
 import { useEffect, useId, useState } from 'react'
 
+import { Upload } from 'lucide-react'
+
 import { api } from '@/api/client'
 import { asApiError } from '@/api/types'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { IconButton } from '@/components/IconButton'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -21,9 +24,9 @@ export function PublishButton() {
 
   return (
     <>
-      <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
-        Publish
-      </Button>
+      <IconButton label="Publish" onClick={() => setOpen(true)}>
+        <Upload />
+      </IconButton>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <PublishForm />

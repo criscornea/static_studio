@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { useLayoutStore } from '@/stores/layout'
 import type { PageFields } from '@/api/types'
 import { FrontmatterForm } from '../FrontmatterForm'
 
@@ -26,5 +27,29 @@ describe('FrontmatterForm', () => {
 
     await userEvent.clear(screen.getByLabelText(/Date/))
     expect(onChange).toHaveBeenLastCalledWith({ ...fields, date: undefined })
+  })
+})
+
+describe('FrontmatterForm panel', () => {
+  afterEach(() => {
+    useLayoutStore.setState({ propertiesOpen: true })
+  })
+
+  it('collapses and expands, keeping the fields mounted', async () => {
+    render(<FrontmatterForm fields={fields} onChange={() => {}} />)
+    const toggle = screen.getByRole('button', { name: /Properties/ })
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    await userEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    expect(useLayoutStore.getState().propertiesOpen).toBe(false)
+    expect(screen.getByLabelText('Title', { selector: 'input' })).not.toBeVisible()
+    await userEvent.click(toggle)
+    expect(screen.getByLabelText('Title')).toBeVisible()
+  })
+
+  it('shows a summary while collapsed', () => {
+    useLayoutStore.setState({ propertiesOpen: false })
+    render(<FrontmatterForm fields={{ ...fields, draft: true }} format="yaml" onChange={() => {}} />)
+    expect(screen.getByRole('button', { name: /Hello · draft · YAML/ })).toBeInTheDocument()
   })
 })

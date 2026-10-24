@@ -17,6 +17,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   collapse all, compact search, single-line tree rows with icons, indent
   guides, draft and error markers, keyboard navigation and a right-click
   menu (open, new page here, rename, delete, copy path).
+- Editor chrome: header with path breadcrumb, save state and icon actions
+  (preview, preview server, build, publish) with tooltips; full-height
+  CodeMirror editor following the app theme; collapsible properties panel;
+  resizable side-by-side preview; resizable build log panel toggled from
+  the status bar or Ctrl/Cmd+J. Panel sizes and open states persist.
 
 ### Fixed
 

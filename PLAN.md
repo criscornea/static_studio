@@ -194,13 +194,13 @@ Branch: feat/p17-editor-chrome
 Goal: The main area is a full-height editor with a breadcrumb toolbar, a collapsible properties panel and a resizable side-by-side preview.
 Done when: the main area has an editor header with a breadcrumb of the page path, the save state and icon actions (preview, build, publish, preview server) with tooltips and shortcut hints, and the old header buttons are gone; CodeMirror fills the remaining height, scrolls internally and uses a theme that follows the app theme (gutter, cursor, selection, markdown highlight colors, monospace font); frontmatter shows as a compact, collapsible properties panel above the editor whose open state persists; the preview opens in a resizable split pane to the right of the editor with a persisted size; the build log is a bottom panel inside the main area, resizable and toggled from the status bar and Ctrl/Cmd+J; existing autosave, conflict and error behaviour is unchanged and its tests still pass; vitest covers the header actions and panel toggles; `make check` green.
 Risk: low
-Status: todo
-- [ ] M17.1 Add an editor header with a path breadcrumb and save state
-- [ ] M17.2 Move build, publish and preview-server actions into header icon buttons
-- [ ] M17.3 Make the CodeMirror editor fill its pane with a theme following the app theme
-- [ ] M17.4 Turn `FrontmatterForm` into a collapsible properties panel
-- [ ] M17.5 Show the preview in a resizable split pane beside the editor
-- [ ] M17.6 Dock the build log as a resizable bottom panel toggled by Ctrl/Cmd+J
+Status: merged
+- [x] M17.1 Add an editor header with a path breadcrumb and save state
+- [x] M17.2 Move build, publish and preview-server actions into header icon buttons
+- [x] M17.3 Make the CodeMirror editor fill its pane with a theme following the app theme
+- [x] M17.4 Turn `FrontmatterForm` into a collapsible properties panel
+- [x] M17.5 Show the preview in a resizable split pane beside the editor
+- [x] M17.6 Dock the build log as a resizable bottom panel toggled by Ctrl/Cmd+J
 
 ## Phase 18: Command palette, shortcuts and polish
 Branch: feat/p18-commands

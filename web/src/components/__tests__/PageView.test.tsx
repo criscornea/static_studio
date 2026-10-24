@@ -1,9 +1,11 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { api } from '@/api/client'
 import type { Page } from '@/api/types'
+import { useDevServerStore } from '@/stores/devserver'
+import { useLayoutStore } from '@/stores/layout'
 import { usePageStore } from '@/stores/page'
 import { PageView } from '../PageView'
 
@@ -34,5 +36,23 @@ describe('PageView', () => {
     expect(container.querySelectorAll('form')).toHaveLength(1)
     const dup = errors.mock.calls.filter((c) => String(c[0]).includes('same key'))
     expect(dup).toHaveLength(0)
+  })
+})
+
+describe('PageView preview pane', () => {
+  afterEach(() => {
+    useLayoutStore.setState({ previewOpen: false })
+    useDevServerStore.getState().reset()
+  })
+
+  it('shows the preview beside the editor only while it is open', async () => {
+    useDevServerStore.setState({ running: true, ready: true })
+    await usePageStore.getState().load('content/a.md')
+    render(<PageView />)
+    expect(screen.queryByText(/Loading preview/)).not.toBeInTheDocument()
+    act(() => useLayoutStore.getState().setPreviewOpen(true))
+    expect(await screen.findByText(/Loading preview|no preview address/)).toBeInTheDocument()
+    act(() => useLayoutStore.getState().setPreviewOpen(false))
+    expect(screen.queryByText(/Loading preview|no preview address/)).not.toBeInTheDocument()
   })
 })

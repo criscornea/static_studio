@@ -1,17 +1,16 @@
 import { useEffect } from 'react'
 import { Files } from 'lucide-react'
 
-import { BuildButton, BuildPanel } from '@/components/BuildPanel'
-import { DevServerButton } from '@/components/DevServer'
-import { PublishButton } from '@/components/PublishDialog'
+import { BuildPanel } from '@/components/BuildPanel'
+import { EditorHeader } from '@/components/EditorHeader'
 import { PageView } from '@/components/PageView'
 import { ProjectPicker } from '@/components/ProjectPicker'
 import { Sidebar } from '@/components/Sidebar'
 import { Button } from '@/components/ui/button'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { StatusBar } from '@/components/StatusBar'
 import { ThemeButton } from '@/components/ThemeButton'
+import { useBuildLogShortcut } from '@/hooks/useBuildLogShortcut'
 import { useSidebarShortcut } from '@/hooks/useSidebarShortcut'
 import { useLayoutStore } from '@/stores/layout'
 import { selectIsOpen, useProjectStore } from '@/stores/project'
@@ -26,7 +25,11 @@ export default function App() {
   const sidebarSize = useLayoutStore((s) => s.sidebarSize)
   const toggleSidebar = useLayoutStore((s) => s.toggleSidebar)
   const setSidebarSize = useLayoutStore((s) => s.setSidebarSize)
+  const buildLogOpen = useLayoutStore((s) => s.buildLogOpen)
+  const buildLogSize = useLayoutStore((s) => s.buildLogSize)
+  const setBuildLogSize = useLayoutStore((s) => s.setBuildLogSize)
   useSidebarShortcut()
+  useBuildLogShortcut()
 
   // The backend holds the open project, so a page reload reconnects to it.
   useEffect(() => {
@@ -41,9 +44,6 @@ export default function App() {
     <div className="grid h-full grid-cols-[2.5rem_minmax(0,1fr)] grid-rows-[2.25rem_minmax(0,1fr)_1.5rem] overflow-hidden">
       <header className="col-span-2 flex items-center gap-3 border-b bg-sidebar px-3">
         <span className="flex-1 truncate font-mono text-xs text-muted-foreground">{root}</span>
-        <DevServerButton />
-        <BuildButton />
-        <PublishButton />
         <ThemeButton />
         <Button variant="ghost" size="sm" onClick={() => void close()}>
           Close
@@ -86,14 +86,38 @@ export default function App() {
             </>
           )}
           <ResizablePanel id="main">
-            <div className="flex h-full min-h-0 flex-col">
-              <ScrollArea className="min-h-0 flex-1">
-                <main className="p-6">
-                  <PageView />
-                </main>
-              </ScrollArea>
-              <BuildPanel />
-            </div>
+            <ResizablePanelGroup
+              orientation="vertical"
+              className="h-full"
+              onLayoutChanged={(layout) => {
+                const size = layout.buildlog
+                if (size !== undefined) {
+                  setBuildLogSize(size)
+                }
+              }}
+            >
+              <ResizablePanel id="editorarea" minSize="20%">
+                <div className="flex h-full min-h-0 flex-col">
+                  <EditorHeader />
+                  <main className="min-h-0 flex-1">
+                    <PageView />
+                  </main>
+                </div>
+              </ResizablePanel>
+              {buildLogOpen && (
+                <>
+                  <ResizableHandle />
+                  <ResizablePanel
+                    id="buildlog"
+                    defaultSize={`${buildLogSize}%`}
+                    minSize="10%"
+                    maxSize="80%"
+                  >
+                    <BuildPanel />
+                  </ResizablePanel>
+                </>
+              )}
+            </ResizablePanelGroup>
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>

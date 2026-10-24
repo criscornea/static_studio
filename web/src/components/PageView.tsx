@@ -1,38 +1,19 @@
 import { useEffect, useState } from 'react'
 import { api } from '@/api/client'
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { PreviewButton, PreviewFrame } from '@/components/DevServer'
+import { PreviewFrame } from '@/components/DevServer'
 import { FrontmatterForm } from '@/components/FrontmatterForm'
 import { MarkdownEditor } from '@/components/MarkdownEditor'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { formatDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { useLayoutStore } from '@/stores/layout'
 import { useBuildStore } from '@/stores/build'
 import { usePageStore } from '@/stores/page'
 
-function formatLabel(format: string | undefined): string {
-  switch (format) {
-    case 'yaml':
-      return 'YAML'
-    case 'toml':
-      return 'TOML'
-    default:
-      return 'no frontmatter'
-  }
-}
-
-function Meta({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <dt className="text-xs uppercase tracking-wide text-muted-foreground">{label}</dt>
-      <dd className="mt-0.5 text-sm">{children}</dd>
-    </div>
-  )
-}
-
 export function PageView() {
-  const [previewing, setPreviewing] = useState(false)
+  const previewing = useLayoutStore((s) => s.previewOpen)
+  const previewSize = useLayoutStore((s) => s.previewSize)
+  const setPreviewSize = useLayoutStore((s) => s.setPreviewSize)
   const [uploadError, setUploadError] = useState<{ path: string | null; message: string } | null>(
     null,
   )
@@ -51,8 +32,6 @@ export function PageView() {
   const save = usePageStore((s) => s.save)
   const dirty = usePageStore((s) => s.dirty)
   const saving = page !== null && savingPath === page.path
-  const conflict = saveError?.code === 'page_conflict'
-  const status = saving ? 'Saving…' : conflict ? 'Conflict' : dirty ? 'Unsaved changes' : 'Saved'
   const jump = useBuildStore((s) => s.jump)
   // A build error on this page: a body line for the editor, else a frontmatter line.
   const bodyJump = jump && page && jump.file === page.path ? jump.line - page.bodyLine + 1 : null
@@ -86,87 +65,60 @@ export function PageView() {
   }, [save])
 
   if (path === null) {
-    return <p className="text-sm text-muted-foreground">Select a page.</p>
+    return <p className="p-6 text-sm text-muted-foreground">Select a page.</p>
   }
 
   if (error) {
     return (
-      <Alert variant="destructive">
+      <Alert variant="destructive" className="m-6 w-auto">
         <AlertDescription>{error.message}</AlertDescription>
       </Alert>
     )
   }
 
   if (page === null) {
-    return <p className="text-sm text-muted-foreground">Loading…</p>
+    return <p className="p-6 text-sm text-muted-foreground">Loading…</p>
   }
 
-  const unchanged = !dirty
-  const date = formatDate(page.fields.date)
 
   return (
-    <article className={cn(loading && 'opacity-50')}>
-      <header>
-        <h1 className="mb-4 text-2xl font-semibold">{page.fields.title || 'Untitled'}</h1>
-
-        <dl className="mb-3 flex flex-wrap gap-x-8 gap-y-3">
-          {date && <Meta label="Date">{date}</Meta>}
-          <Meta label="Status">
-            <Badge variant={page.fields.draft ? 'secondary' : 'default'}>
-              {page.fields.draft ? 'Draft' : 'Published'}
-            </Badge>
-          </Meta>
-          {page.fields.tags?.length ? (
-            <Meta label="Tags">
-              <span className="flex gap-1">
-                {page.fields.tags.map((tag) => (
-                  <Badge key={tag} variant="outline">
-                    {tag}
-                  </Badge>
-                ))}
-              </span>
-            </Meta>
-          ) : null}
-          <Meta label="Format">{formatLabel(page.format)}</Meta>
-        </dl>
-
-        <p className="font-mono text-xs text-muted-foreground">{page.path}</p>
-      </header>
-
-      <div className="mt-6 border-t pt-6">
+    <article className={cn('flex h-full min-h-0 flex-col', loading && 'opacity-50')}>
+      <div className="max-h-[60%] shrink-0 overflow-auto">
         {uploadMessage && (
-          <Alert variant="destructive" className="mb-3">
+          <Alert variant="destructive" className="m-3 w-auto">
             <AlertDescription>{uploadMessage}</AlertDescription>
           </Alert>
         )}
         {saveError && (
-          <Alert variant="destructive" className="mb-3">
+          <Alert variant="destructive" className="m-3 w-auto">
             <AlertDescription>{saveError.message}</AlertDescription>
           </Alert>
         )}
         <FrontmatterForm
           key={`form-${page.path}`}
           fields={fieldsDraft ?? page.fields}
+          format={page.format}
           onChange={setFieldsDraft}
         />
-        <div className="mb-2 flex items-center gap-3">
-          <Button size="sm" onClick={() => void save()} disabled={saving || unchanged}>
-            {saving ? 'Saving…' : 'Save'}
-          </Button>
-          <span className="text-xs text-muted-foreground" role="status">
-            {status}
-          </span>
-          <span className="text-xs text-muted-foreground">Ctrl/Cmd+S</span>
-          <PreviewButton open={previewing} onToggle={() => setPreviewing((v) => !v)} />
-        </div>
-        {previewing && <PreviewFrame key={`preview-${page.path}`} path={page.path} />}
         {frontmatterLine !== null && (
-          <Alert variant="destructive" className="mb-3">
+          <Alert variant="destructive" className="m-3 w-auto">
             <AlertDescription>
               The build reported an error in the frontmatter at line {frontmatterLine}.
             </AlertDescription>
           </Alert>
         )}
+      </div>
+      <ResizablePanelGroup
+        orientation="horizontal"
+        className="min-h-0 flex-1"
+        onLayoutChanged={(layout) => {
+          const size = layout.preview
+          if (size !== undefined) {
+            setPreviewSize(size)
+          }
+        }}
+      >
+        <ResizablePanel id="editor" minSize="25%">
         <MarkdownEditor
           key={`editor-${page.path}`}
           jumpLine={editorLine}
@@ -182,7 +134,16 @@ export function PageView() {
             setUploadError({ path, message: err instanceof Error ? err.message : String(err) })
           }
         />
-      </div>
+        </ResizablePanel>
+        {previewing && (
+          <>
+            <ResizableHandle />
+            <ResizablePanel id="preview" defaultSize={`${previewSize}%`} minSize="20%" maxSize="75%">
+              <PreviewFrame key={`preview-${page.path}`} path={page.path} />
+            </ResizablePanel>
+          </>
+        )}
+      </ResizablePanelGroup>
     </article>
   )
 }

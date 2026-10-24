@@ -1,10 +1,12 @@
 import { useEffect, useRef } from 'react'
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
 import { markdown } from '@codemirror/lang-markdown'
-import { EditorState } from '@codemirror/state'
+import { Compartment, EditorState } from '@codemirror/state'
 import { EditorView, keymap } from '@codemirror/view'
 
+import { editorTheme } from '@/lib/editorTheme'
 import { imageMarkdown } from '@/lib/markdown'
+import { useThemeStore } from '@/stores/theme'
 
 interface Props {
   value: string
@@ -37,6 +39,9 @@ export function MarkdownEditor({
   const sep = useRef(value.includes('\r\n') ? '\r\n' : '\n')
   // Insertion points of in-flight drops, mapped through every document change.
   const trackers = useRef(new Set<{ pos: number }>())
+  const theme = useRef(new Compartment())
+  const dark = useThemeStore((s) => s.resolved === 'dark')
+  const darkNow = useRef(dark)
   const handlers = useRef({ onChange, onSave, onUploadImage, onUploadError })
   useEffect(() => {
     handlers.current = { onChange, onSave, onUploadImage, onUploadError }
@@ -61,6 +66,7 @@ export function MarkdownEditor({
             ...historyKeymap,
           ]),
           EditorState.lineSeparator.of(sep.current),
+          theme.current.of(editorTheme(darkNow.current)),
           history(),
           markdown(),
           EditorView.lineWrapping,
@@ -79,8 +85,7 @@ export function MarkdownEditor({
               )
               if (!upload || files.length === 0) return false
               e.preventDefault()
-              const pos =
-                v.posAtCoords({ x: e.clientX, y: e.clientY }) ?? v.state.selection.main.head
+              const pos = dropPosition(v, e)
               void dropImages(
                 v,
                 trackers.current,
@@ -121,6 +126,11 @@ export function MarkdownEditor({
     }
   }, [jumpLine, jumpToken])
 
+  useEffect(() => {
+    darkNow.current = dark
+    view.current?.dispatch({ effects: theme.current.reconfigure(editorTheme(dark)) })
+  }, [dark])
+
   // Adopt external changes to value (e.g. after reload) without echoing them.
   useEffect(() => {
     const v = view.current
@@ -129,7 +139,16 @@ export function MarkdownEditor({
     }
   }, [value])
 
-  return <div ref={host} className="rounded-md border font-mono text-sm" />
+  return <div ref={host} className="h-full min-h-0 overflow-hidden" />
+}
+
+function dropPosition(v: EditorView, e: DragEvent): number {
+  try {
+    return v.posAtCoords({ x: e.clientX, y: e.clientY }) ?? v.state.selection.main.head
+  } catch {
+    // Layout is unavailable (e.g. a detached view): fall back to the cursor.
+    return v.state.selection.main.head
+  }
 }
 
 function hasImage(dt: DataTransfer | null): boolean {

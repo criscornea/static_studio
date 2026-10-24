@@ -2,15 +2,19 @@ import { useEffect, useState } from 'react'
 
 import { api } from '@/api/client'
 import { asApiError } from '@/api/types'
-import { Button } from '@/components/ui/button'
+import { Eye } from 'lucide-react'
+
+import { IconButton } from '@/components/IconButton'
+import { cn } from '@/lib/utils'
 import { useDevServerStore } from '@/stores/devserver'
 
-/** The header control that starts and stops the Hugo preview server. */
-export function DevServerButton() {
+/** The status bar item that shows the preview server state and starts or stops it. */
+export function DevServerStatus() {
   const running = useDevServerStore((s) => s.running)
   const ready = useDevServerStore((s) => s.ready)
   const busy = useDevServerStore((s) => s.busy)
   const error = useDevServerStore((s) => s.error)
+  const url = useDevServerStore((s) => s.url)
   const output = useDevServerStore((s) => s.output)
   const refresh = useDevServerStore((s) => s.refresh)
   const start = useDevServerStore((s) => s.start)
@@ -21,30 +25,29 @@ export function DevServerButton() {
     void refresh()
   }, [refresh])
 
+  const port = url ? new URL(url).port : ''
+  let text = 'Server: stopped'
+  if (error) {
+    text = 'Server: error'
+  } else if (running) {
+    text = ready ? `Server: running${port ? ` :${port}` : ''}` : 'Server: starting'
+  }
+  const tip = running ? 'Stop preview server' : 'Start preview server'
+
   return (
-    <div className="flex items-center gap-2">
-      {error && (
-        <span role="alert" className="text-xs text-destructive">
-          {error}
-          {output.length > 0 && (
-            <pre className="max-h-32 overflow-auto whitespace-pre-wrap">{output.join('\n')}</pre>
-          )}
-        </span>
+    <button
+      type="button"
+      title={error ? `${error}\n${output.join('\n')}`.trim() : tip}
+      aria-label={tip}
+      disabled={busy}
+      onClick={() => void (running ? stop() : start())}
+      className={cn(
+        'rounded px-1.5 hover:bg-accent hover:text-accent-foreground disabled:opacity-50',
+        error && 'text-destructive',
       )}
-      {running && (
-        <span role="status" className="text-xs text-muted-foreground">
-          {ready ? 'Preview server running' : 'Preview server starting...'}
-        </span>
-      )}
-      <Button
-        variant="outline"
-        size="sm"
-        disabled={busy}
-        onClick={() => void (running ? stop() : start())}
-      >
-        {running ? 'Stop preview server' : 'Start preview server'}
-      </Button>
-    </div>
+    >
+      {text}
+    </button>
   )
 }
 
@@ -53,15 +56,15 @@ export function PreviewButton({ open, onToggle }: { open: boolean; onToggle: () 
   const ready = useDevServerStore((s) => s.ready)
 
   return (
-    <Button
-      variant="outline"
-      size="sm"
+    <IconButton
+      label={open ? 'Hide preview' : 'Preview'}
+      tip={ready ? undefined : 'Start the preview server first'}
+      variant={open ? 'secondary' : 'ghost'}
       disabled={!ready}
-      title={ready ? undefined : 'Start the preview server first'}
       onClick={onToggle}
     >
-      {open ? 'Hide preview' : 'Preview'}
-    </Button>
+      <Eye />
+    </IconButton>
   )
 }
 
@@ -99,13 +102,13 @@ export function PreviewFrame({ path }: { path: string }) {
   }, [path, ready])
 
   if (!ready) {
-    return <p className="mb-3 text-sm text-muted-foreground">The preview server is not running.</p>
+    return <p className="p-3 text-sm text-muted-foreground">The preview server is not running.</p>
   }
   if (result?.error) {
-    return <p className="mb-3 text-sm text-destructive">{result.error}</p>
+    return <p className="p-3 text-sm text-destructive">{result.error}</p>
   }
   if (!result?.url) {
-    return <p className="mb-3 text-sm text-muted-foreground">Loading preview...</p>
+    return <p className="p-3 text-sm text-muted-foreground">Loading preview...</p>
   }
 
   return (
@@ -113,7 +116,7 @@ export function PreviewFrame({ path }: { path: string }) {
       title="Page preview"
       src={result.url}
       sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-      className="mb-3 h-[32rem] w-full rounded-md border bg-white"
+      className="block h-full w-full border-0 bg-white"
     />
   )
 }

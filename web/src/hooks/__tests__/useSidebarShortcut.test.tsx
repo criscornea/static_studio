@@ -27,7 +27,7 @@ describe('sidebar toggle', () => {
   it('persists the collapsed state and size', () => {
     useLayoutStore.getState().toggleSidebar()
     useLayoutStore.getState().setSidebarSize(30)
-    expect(JSON.parse(localStorage.getItem('studio.layout') ?? '{}')).toEqual({
+    expect(JSON.parse(localStorage.getItem('studio.layout') ?? '{}')).toMatchObject({
       sidebarSize: 30,
       sidebarCollapsed: true,
     })

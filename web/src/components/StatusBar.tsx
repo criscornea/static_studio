@@ -1,5 +1,7 @@
+import { DevServerStatus } from '@/components/DevServer'
+import { cn } from '@/lib/utils'
+import { useLayoutStore } from '@/stores/layout'
 import { useBuildStore, type BuildStatus } from '@/stores/build'
-import { useDevServerStore } from '@/stores/devserver'
 import { usePageStore } from '@/stores/page'
 import { useProjectStore } from '@/stores/project'
 
@@ -15,17 +17,16 @@ function baseName(root: string): string {
   return parts[parts.length - 1] ?? root
 }
 
-/** The bottom bar: project, save, preview-server and build state. */
+/** The bottom bar: project, save, server and build state. */
 export function StatusBar() {
   const root = useProjectStore((s) => s.project?.root)
   const page = usePageStore((s) => s.page)
   const dirty = usePageStore((s) => s.dirty)
   const savingPath = usePageStore((s) => s.savingPath)
   const saveError = usePageStore((s) => s.saveError)
-  const running = useDevServerStore((s) => s.running)
-  const ready = useDevServerStore((s) => s.ready)
-  const serverError = useDevServerStore((s) => s.error)
   const build = useBuildStore((s) => s.status)
+  const logOpen = useLayoutStore((s) => s.buildLogOpen)
+  const toggleLog = useLayoutStore((s) => s.toggleBuildLog)
 
   const saving = page !== null && savingPath === page.path
   let save = ''
@@ -41,13 +42,6 @@ export function StatusBar() {
     }
   }
 
-  let server = 'Preview: stopped'
-  if (serverError) {
-    server = 'Preview: error'
-  } else if (running) {
-    server = ready ? 'Preview: running' : 'Preview: starting'
-  }
-
   return (
     <footer
       aria-label="Status bar"
@@ -57,10 +51,20 @@ export function StatusBar() {
         {root ? baseName(root) : ''}
       </span>
       <span className="flex-1 truncate">{save}</span>
-      <span>{server}</span>
-      <span className={build === 'failed' ? 'text-destructive' : undefined}>
+      <DevServerStatus />
+      <button
+        type="button"
+        aria-pressed={logOpen}
+        title="Toggle build log (Ctrl+J)"
+        onClick={toggleLog}
+        className={cn(
+          'rounded px-1.5 hover:bg-accent hover:text-accent-foreground',
+          logOpen && 'bg-accent text-accent-foreground',
+          build === 'failed' && 'text-destructive',
+        )}
+      >
         {buildText[build]}
-      </span>
+      </button>
     </footer>
   )
 }

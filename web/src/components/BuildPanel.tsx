@@ -1,6 +1,10 @@
 import { useEffect, useRef } from 'react'
 
+import { Hammer } from 'lucide-react'
+
+import { IconButton } from '@/components/IconButton'
 import { Button } from '@/components/ui/button'
+import { useLayoutStore } from '@/stores/layout'
 import { useBuildStore } from '@/stores/build'
 import { usePageStore } from '@/stores/page'
 
@@ -15,11 +19,19 @@ const statusText = {
 export function BuildButton() {
   const status = useBuildStore((s) => s.status)
   const start = useBuildStore((s) => s.start)
+  const setBuildLogOpen = useLayoutStore((s) => s.setBuildLogOpen)
 
   return (
-    <Button size="sm" disabled={status === 'running'} onClick={() => void start()}>
-      Build
-    </Button>
+    <IconButton
+      label="Build"
+      disabled={status === 'running'}
+      onClick={() => {
+        setBuildLogOpen(true)
+        void start()
+      }}
+    >
+      <Hammer />
+    </IconButton>
   )
 }
 
@@ -42,18 +54,14 @@ export function BuildPanel() {
     }
   }, [lines])
 
-  if (status === 'idle') {
-    return null
-  }
-
   return (
-    <section aria-label="Build output" className="border-t">
-      <div className="flex items-center gap-2 px-4 py-1.5">
+    <section aria-label="Build output" className="flex h-full min-h-0 flex-col">
+      <div className="flex shrink-0 items-center gap-2 px-4 py-1.5">
         <span role="status" className="flex-1 text-sm">
-          {statusText[status]}
+          {status === 'idle' ? 'No build output yet.' : statusText[status]}
           {error && <span className="ml-2 text-destructive">{error}</span>}
         </span>
-        {status === 'running' ? (
+        {status === 'idle' ? null : status === 'running' ? (
           <Button variant="ghost" size="sm" onClick={() => void cancel()}>
             Cancel
           </Button>
@@ -64,7 +72,7 @@ export function BuildPanel() {
         )}
       </div>
       {problems.length > 0 && (
-        <ul aria-label="Build errors" className="max-h-32 overflow-auto px-4 pb-2 text-sm">
+        <ul aria-label="Build errors" className="max-h-32 shrink-0 overflow-auto px-4 pb-2 text-sm">
           {problems.map((p, i) => (
             <li key={i}>
               {p.file.startsWith('content/') ? (
@@ -87,7 +95,7 @@ export function BuildPanel() {
       )}
       <pre
         ref={log}
-        className="h-48 overflow-auto bg-muted px-4 py-2 font-mono text-xs whitespace-pre-wrap"
+        className="min-h-0 flex-1 overflow-auto bg-muted px-4 py-2 font-mono text-xs whitespace-pre-wrap"
       >
         {lines.join('\n')}
       </pre>
