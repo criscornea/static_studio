@@ -48,6 +48,12 @@ func (s *Server) handleBuildStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	s.streamEvents(w, r, &s.build.Events, s.build.Running)
+}
+
+// streamEvents writes a broadcaster's history and live events as server-sent
+// events. running tells whether a run is still in progress.
+func (s *Server) streamEvents(w http.ResponseWriter, r *http.Request, events *build.Broadcaster, running func() bool) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		s.writeError(w, http.StatusInternalServerError, "internal",
@@ -60,7 +66,7 @@ func (s *Server) handleBuildStream(w http.ResponseWriter, r *http.Request) {
 		s.log.Debug("clearing write deadline failed", "err", err)
 	}
 
-	history, live, cancel := s.build.Events.Subscribe()
+	history, live, cancel := events.Subscribe()
 	defer cancel()
 
 	w.Header().Set("Content-Type", "text/event-stream")
@@ -86,7 +92,7 @@ func (s *Server) handleBuildStream(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	// Nothing is running and nothing was recorded: there is no stream to wait for.
-	if !s.build.Running() && len(history) == 0 {
+	if !running() && len(history) == 0 {
 		return
 	}
 

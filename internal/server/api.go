@@ -56,6 +56,8 @@ func (s *Server) handleOpenProject(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case err == nil:
 		s.build.Stop()
+		s.publish.Stop()
+		s.publish.Events.Reset()
 		s.dev.Stop()
 		s.log.Info("project opened", "root", opened.Info.Root, "kind", opened.Info.Kind, "id", opened.ID)
 		if err := s.recent.Add(opened.Info.Root, string(opened.Info.Kind)); err != nil {

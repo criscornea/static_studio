@@ -12,6 +12,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Publish to GitHub Pages: the Publish button saves a remote and branch (kept in the
+  user config dir, per project; default `gh-pages`), runs a Hugo build, then commits
+  `public/` in a temporary repository and force-pushes it with the system `git`. No
+  credentials are stored; the user's SSH key or credential helper signs in. Progress
+  streams over `GET /api/publish/stream`; settings use `GET`/`PUT /api/publish/settings`,
+  and `POST /api/publish` and `/api/publish/cancel` control the run.
 - Recent projects: the open screen lists the last 10 opened projects (kept in the
   user config dir) with one-click open, remove, and greyed-out missing folders.
 - Build errors: Hugo error lines are parsed into file, line and message and sent

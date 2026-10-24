@@ -12,6 +12,7 @@ import (
 	"github.com/criscornea/static_studio/internal/build"
 	"github.com/criscornea/static_studio/internal/devserver"
 	"github.com/criscornea/static_studio/internal/project"
+	"github.com/criscornea/static_studio/internal/publish"
 	"github.com/criscornea/static_studio/internal/recent"
 )
 
@@ -23,6 +24,8 @@ type Server struct {
 	build   *build.Runner
 	dev     *devserver.Server
 	recent  *recent.Store
+	publish *publish.Job
+	pubset  *publish.Store
 }
 
 // New returns a Server. A nil logger falls back to slog.Default,
@@ -31,17 +34,22 @@ func New(log *slog.Logger, assets fs.FS) *Server {
 	if log == nil {
 		log = slog.Default()
 	}
-	return &Server{log: log, assets: assets, project: project.NewManager(log), build: &build.Runner{Bin: "hugo"}, dev: &devserver.Server{Bin: "hugo"}, recent: recent.New(log, "")}
+	return &Server{log: log, assets: assets, project: project.NewManager(log), build: &build.Runner{Bin: "hugo"}, dev: &devserver.Server{Bin: "hugo"}, recent: recent.New(log, ""), publish: &publish.Job{}, pubset: publish.NewStore(log, "")}
 }
 
 // UseRecent sets the store for recent projects. New leaves it disabled so
 // tests never touch the real config directory.
 func (s *Server) UseRecent(r *recent.Store) { s.recent = r }
 
+// UsePublishSettings sets the store for publish settings. New leaves it
+// disabled so tests never touch the real config directory.
+func (s *Server) UsePublishSettings(p *publish.Store) { s.pubset = p }
+
 // Close stops any running build and the dev server, then closes the open
 // project. Call it before shutting the HTTP server down.
 func (s *Server) Close() {
 	s.build.Stop()
+	s.publish.Stop()
 	s.dev.Stop()
 	if err := s.project.Close(); err != nil {
 		s.log.Warn("closing project failed", "err", err)
@@ -70,6 +78,11 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /api/build", s.handleBuild)
 	mux.HandleFunc("POST /api/build/cancel", s.handleBuildCancel)
 	mux.HandleFunc("GET /api/build/stream", s.handleBuildStream)
+	mux.HandleFunc("GET /api/publish/settings", s.handlePublishSettings)
+	mux.HandleFunc("PUT /api/publish/settings", s.handlePublishSettingsSave)
+	mux.HandleFunc("POST /api/publish", s.handlePublish)
+	mux.HandleFunc("POST /api/publish/cancel", s.handlePublishCancel)
+	mux.HandleFunc("GET /api/publish/stream", s.handlePublishStream)
 	mux.HandleFunc("GET /api/devserver", s.handleDevServerStatus)
 	mux.HandleFunc("POST /api/devserver/start", s.handleDevServerStart)
 	mux.HandleFunc("POST /api/devserver/stop", s.handleDevServerStop)
@@ -133,6 +146,8 @@ func (s *Server) writeJSON(w http.ResponseWriter, status int, v any) {
 
 func (s *Server) handleCloseProject(w http.ResponseWriter, _ *http.Request) {
 	s.build.Stop()
+	s.publish.Stop()
+	s.publish.Events.Reset()
 	s.dev.Stop()
 	if err := s.project.Close(); err != nil {
 		s.log.Warn("closing project failed", "err", err)

@@ -80,11 +80,11 @@ renders it, not the app.
 
 **Goal:** one way out. **One.**
 
-- [ ] Target: GitHub Pages, pushing `public/` to `gh-pages` via the system `git`
-- [ ] Configure it in the UI
-- [ ] No stored credentials: rely on the user's SSH key or git credential helper
-- [ ] Show progress and errors
-- [ ] No terminal from "typing text" to "site is live"
+- [x] Target: GitHub Pages, pushing `public/` to `gh-pages` via the system `git`
+- [x] Configure it in the UI
+- [x] No stored credentials: rely on the user's SSH key or git credential helper
+- [x] Show progress and errors
+- [x] No terminal from "typing text" to "site is live"
 
 🎯 **Milestone:** a real website published entirely from the tool.
 📓 **Blog:** "On to version 1"

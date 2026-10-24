@@ -45,6 +45,8 @@ export type ApiErrorCode =
   | 'cannot_read_content'
   | 'devserver_running'
   | 'devserver_failed'
+  | 'publish_running'
+  | 'invalid_publish_settings'
   | 'internal'
   | 'unknonw'
   | 'not_editable'
@@ -149,6 +151,12 @@ export function asApiError(err: unknown): ApiError {
     return err
   }
   return new ApiError('unknonw', 'Something went wrong. Please try again.', 0)
+}
+
+/** Where the site is published. */
+export interface PublishSettings {
+  remote: string
+  branch: string
 }
 
 /** One server-sent event from the build stream. */

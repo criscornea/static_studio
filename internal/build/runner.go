@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"slices"
 	"sync"
@@ -31,6 +32,8 @@ type Runner struct {
 	// Bin is the command to run, for example "hugo".
 	Bin  string
 	Args []string
+	// Env lists extra KEY=value variables added to the inherited environment.
+	Env []string
 
 	// Events receives the output of builds begun with Start.
 	Events Broadcaster
@@ -127,6 +130,9 @@ func (r *Runner) Stop() {
 func (r *Runner) run(ctx context.Context, dir string, emit func(line string)) error {
 	cmd := exec.CommandContext(ctx, r.Bin, r.Args...) //nolint:gosec // Bin is set by the program, never by a request
 	cmd.Dir = dir
+	if len(r.Env) > 0 {
+		cmd.Env = append(os.Environ(), r.Env...)
+	}
 	cmd.WaitDelay = waitDelay
 	setProcessGroup(cmd)
 

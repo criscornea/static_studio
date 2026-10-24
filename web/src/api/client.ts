@@ -8,6 +8,7 @@ import {
   type RenamePageRequest,
   type Page,
   type PageFields,
+  type PublishSettings,
   type RecentProject,
   type Project,
   type SearchResults,
@@ -121,6 +122,12 @@ export const api = {
   cancelBuild: () => request<void>('/api/build/cancel', { method: 'POST' }),
   // EventSource cannot set headers, so the project id travels in the query.
   buildStreamURL: () => `/api/build/stream?projectId=${encodeURIComponent(projectID ?? '')}`,
+  publishSettings: () => request<PublishSettings>('/api/publish/settings'),
+  savePublishSettings: (settings: PublishSettings) =>
+    request<PublishSettings>('/api/publish/settings', { method: 'PUT', body: settings }),
+  startPublish: () => request<{ started: boolean }>('/api/publish', { method: 'POST' }),
+  cancelPublish: () => request<void>('/api/publish/cancel', { method: 'POST' }),
+  publishStreamURL: () => `/api/publish/stream?projectId=${encodeURIComponent(projectID ?? '')}`,
   devServer: (path?: string) =>
     request<DevServerStatus>(`/api/devserver${path ? `?path=${encodeURIComponent(path)}` : ''}`),
   startDevServer: () => request<DevServerStatus>('/api/devserver/start', { method: 'POST' }),

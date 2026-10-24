@@ -133,11 +133,11 @@ Branch: feat/p12-publish
 Goal: Users publish the site to GitHub Pages without a terminal.
 Done when: publish runs a hugo build, then pushes `public/` to the `gh-pages` branch of a configured remote using the system `git` binary; no credentials are stored by the app (the user's SSH key or git credential helper is used); the remote and branch are configurable in the UI; progress streams to the UI and errors are readable; tests push to a local bare repo as the fake remote.
 Risk: high (external side effects, subprocess control, pushing to a user remote)
-Status: todo
-- [ ] M12.1 Add publish settings (remote, branch) load and save with tests
-- [ ] M12.2 Add a git publisher that commits `public/` to `gh-pages` via system `git`, tested against a local bare repo
-- [ ] M12.3 Add publish (build then push) and progress-stream handlers with tests
-- [ ] M12.4 Add the publish settings and progress UI
+Status: merged
+- [x] M12.1 Add publish settings (remote, branch) load and save with tests
+- [x] M12.2 Add a git publisher that commits `public/` to `gh-pages` via system `git`, tested against a local bare repo
+- [x] M12.3 Add publish (build then push) and progress-stream handlers with tests
+- [x] M12.4 Add the publish settings and progress UI
 
 ## Phase 13: Harden and ship
 Branch: feat/p13-harden
