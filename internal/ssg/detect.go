@@ -47,7 +47,10 @@ func detectFS(fsys fs.FS) (*Project, error) {
 			return nil, fmt.Errorf("%w: %s", ErrUnsupported, d.Kind())
 		}
 
-		contentDir, assetDir := d.Dirs(fsys, cfg)
+		contentDir, assetDir, err := d.Dirs(fsys, cfg)
+		if err != nil {
+			return nil, err
+		}
 
 		return &Project{
 			Kind:       d.Kind(),

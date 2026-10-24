@@ -39,6 +39,7 @@ export type ApiErrorCode =
   | 'missing_path'
   | 'not_a_project'
   | 'unsupported_generator'
+  | 'invalid_config'
   | 'cannot_open'
   | 'no_project'
   | 'stale_project'

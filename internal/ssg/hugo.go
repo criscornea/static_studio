@@ -1,7 +1,10 @@
 package ssg
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io/fs"
 	"path"
 	"strings"
@@ -25,14 +28,17 @@ func (hugo) Supported() bool { return true }
 
 // Dirs reads contentDir and staticDir from the top level of the Hugo config.
 // Per-language overrides and module mounts are not followed.
-func (hugo) Dirs(fsys fs.FS, configFile string) (string, string) {
-	raw := readConfig(fsys, configFile)
+func (hugo) Dirs(fsys fs.FS, configFile string) (string, string, error) {
+	raw, err := readConfig(fsys, configFile)
+	if err != nil {
+		return "", "", err
+	}
 
 	contentDir := configDir(raw["contentdir"], hugoDefaultContentDir)
 	// staticDir may be a list of directories. The first one is the primary.
 	assetDir := configDir(firstOf(raw["staticdir"]), hugoDefaultAssetDir)
 
-	return contentDir, assetDir
+	return contentDir, assetDir, nil
 }
 
 // hugoConfigs are checked in order. Hugo itself accepts all of these;
@@ -54,39 +60,69 @@ func (hugo) Detect(fsys fs.FS) (string, bool) {
 }
 
 // readConfig decodes a config file into a map with lower-cased top-level
-// keys, because Hugo treats config keys case-insensitively. A file that is
-// missing, too large or not valid yields an empty map: the project still
-// opens, with default directories.
-func readConfig(fsys fs.FS, name string) map[string]any {
+// keys, because Hugo treats config keys case-insensitively. A missing file
+// yields an empty map and no error: the config is optional. A file that
+// exists but cannot be read, is too large or does not parse yields a
+// *ConfigError.
+func readConfig(fsys fs.FS, name string) (map[string]any, error) {
 	info, err := fs.Stat(fsys, name)
-	if err != nil || info.Size() > maxConfigSize {
-		return nil
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, &ConfigError{File: name, Reason: "the file cannot be read (" + reasonOf(err) + ")"}
+	}
+	if info.Size() > maxConfigSize {
+		return nil, &ConfigError{File: name, Reason: fmt.Sprintf("the file is larger than %d MiB", maxConfigSize>>20)}
 	}
 	data, err := fs.ReadFile(fsys, name)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	}
 	if err != nil {
-		return nil
+		return nil, &ConfigError{File: name, Reason: "the file cannot be read (" + reasonOf(err) + ")"}
 	}
 
 	var raw map[string]any
 	switch strings.ToLower(path.Ext(name)) {
 	case ".toml":
 		err = toml.Unmarshal(data, &raw)
+		var de *toml.DecodeError
+		if errors.As(err, &de) {
+			row, _ := de.Position()
+			return nil, &ConfigError{File: name, Reason: fmt.Sprintf("line %d: %s", row, de.Error())}
+		}
 	case ".yaml", ".yml":
 		err = yaml.Unmarshal(data, &raw)
 	case ".json":
 		err = json.Unmarshal(data, &raw)
+		var se *json.SyntaxError
+		if errors.As(err, &se) {
+			line := 1 + bytes.Count(data[:min(int(se.Offset), len(data))], []byte("\n"))
+			return nil, &ConfigError{File: name, Reason: fmt.Sprintf("line %d: %s", line, se.Error())}
+		}
 	default:
-		return nil
+		return nil, nil
 	}
 	if err != nil {
-		return nil
+		return nil, &ConfigError{File: name, Reason: reasonOf(err)}
 	}
 
 	out := make(map[string]any, len(raw))
 	for k, v := range raw {
 		out[strings.ToLower(k)] = v
 	}
-	return out
+	return out, nil
+}
+
+// reasonOf returns the error text without a leading path, which the caller
+// reports separately.
+func reasonOf(err error) string {
+	var pe *fs.PathError
+	if errors.As(err, &pe) {
+		return pe.Err.Error()
+	}
+	return err.Error()
 }
 
 // firstOf returns v itself, or its first element when v is a list.

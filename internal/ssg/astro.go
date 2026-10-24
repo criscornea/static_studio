@@ -9,7 +9,7 @@ type astro struct{}
 func (astro) Kind() Kind      { return KindAstro }
 func (astro) Supported() bool { return false }
 
-func (astro) Dirs(fs.FS, string) (string, string) { return "src/content", "public" }
+func (astro) Dirs(fs.FS, string) (string, string, error) { return "src/content", "public", nil }
 
 var astroConfigs = []string{
 	"astro.config.mjs", "astro.config.ts", "astro.config.mts",

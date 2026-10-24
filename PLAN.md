@@ -156,12 +156,12 @@ Branch: feat/p14-config-errors
 Goal: An unreadable, oversized or invalid Hugo config stops the project from opening with a readable message instead of silently falling back to default directories.
 Done when: `SSG.Dirs` returns an error; a missing optional config is still not an error, but a config that exists and cannot be read, exceeds `maxConfigSize` or fails to parse yields `ssg.ErrInvalidConfig` wrapping the file name and parser message (line number when the parser gives one); `POST /api/project/open` maps it to a 4xx JSON error with a dedicated code; the open screen shows the file and reason in plain language; Go tests cover TOML, YAML and JSON syntax errors, oversize and unreadable files; vitest covers the message mapping; `make check` green.
 Risk: low
-Status: todo
-- [ ] M14.1 Return an error from `readConfig` and `SSG.Dirs`, distinguishing missing from invalid, with tests
-- [ ] M14.2 Add `ssg.ErrInvalidConfig` with file and parser detail, propagated through `Detect`
-- [ ] M14.3 Map `ErrInvalidConfig` to a JSON error code in the open handler with a server test
-- [ ] M14.4 Show the config error on the open screen via the readable-message map
-- [ ] M14.5 Update ROADMAP.md, CHANGELOG.md and the known-shortcuts note
+Status: merged
+- [x] M14.1 Return an error from `readConfig` and `SSG.Dirs`, distinguishing missing from invalid, with tests
+- [x] M14.2 Add `ssg.ErrInvalidConfig` with file and parser detail, propagated through `Detect`
+- [x] M14.3 Map `ErrInvalidConfig` to a JSON error code in the open handler with a server test
+- [x] M14.4 Show the config error on the open screen via the readable-message map
+- [x] M14.5 Update ROADMAP.md, CHANGELOG.md and the known-shortcuts note
 
 ## Phase 15: App shell and theme
 Branch: feat/p15-app-shell

@@ -115,8 +115,9 @@ Deliberate simplifications, recorded so they don't become invisible.
 
 - `ContentDir` and `AssetDir` come from the top level of the detected Hugo
   config file only. Per-language `contentDir`, module mounts, merged
-  `config/_default/*` files and `HUGO_*` environment overrides are ignored,
-  and an unreadable or invalid config silently falls back to the defaults.
+  `config/_default/*` files and `HUGO_*` environment overrides are ignored.
+  An unreadable, oversized or invalid config now stops the project from
+  opening with a readable error.
 - The `/api` host guard accepts a loopback Host (`127.0.0.1`, `::1`,
   `localhost`) on any port, not only the server's own. Rebinding still fails
   because a foreign name is rejected, and the Vite dev proxy forwards

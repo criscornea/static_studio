@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"time"
@@ -74,6 +75,15 @@ func (s *Server) handleOpenProject(w http.ResponseWriter, r *http.Request) {
 		s.log.Info("unsupported generator", "path", req.Path, "err", err)
 		s.writeError(w, http.StatusNotImplemented, "unsupported_generator",
 			"This looks like an Astro project. static_studio currently works with Hugo  only.")
+
+	case errors.Is(err, ssg.ErrInvalidConfig):
+		s.log.Info("invalid site configuration", "path", req.Path, "err", err)
+		msg := "The site's configuration file could not be used."
+		var ce *ssg.ConfigError
+		if errors.As(err, &ce) {
+			msg = fmt.Sprintf("The site's configuration file %s could not be used: %s. Fix the file and open the folder again.", ce.File, ce.Reason)
+		}
+		s.writeError(w, http.StatusUnprocessableEntity, "invalid_config", msg)
 
 	default:
 		s.log.Warn("opening project failed", "path", req.Path, "err", err)

@@ -144,12 +144,18 @@ func TestOpenProjectErrors(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	badConfigDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(badConfigDir, "hugo.toml"), []byte("a = [\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
 	tests := []struct {
 		name       string
 		body       string
 		wantStatus int
 		wantCode   string
 	}{
+		{"invalid config", `{"path":"` + badConfigDir + `"}`, http.StatusUnprocessableEntity, "invalid_config"},
 		{"empty body", "", http.StatusBadRequest, "bad_request"},
 		{"malformed json", "{", http.StatusBadRequest, "bad_request"},
 		{"unknown field", `{"path":"/tmp","colour":"red"}`, http.StatusBadRequest, "bad_request"},
@@ -170,6 +176,19 @@ func TestOpenProjectErrors(t *testing.T) {
 				t.Errorf("code = %q, want %q", got.Code, tt.wantCode)
 			}
 		})
+	}
+}
+
+func TestOpenProjectInvalidConfigNamesFile(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "hugo.toml"), []byte("a = [\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	got := decodeError(t, newAPI(t).open(dir))
+
+	if !strings.Contains(got.Message, "hugo.toml") || strings.Contains(got.Message, dir) {
+		t.Errorf("message = %q, want file name without the folder path", got.Message)
 	}
 }
 

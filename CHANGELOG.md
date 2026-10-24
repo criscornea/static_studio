@@ -7,6 +7,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- An unreadable, oversized or invalid Hugo config now stops the project
+  from opening and names the file and reason (`invalid_config`) instead of
+  silently using default directories.
 - Generated UI components no longer depend on the third-party `cn` package;
   they use the local helper in `web/src/lib/utils.ts`.
 
