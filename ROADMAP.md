@@ -68,7 +68,7 @@ renders it, not the app.
 **Goal:** the hardest part.
 
 - [x] Run `hugo` as a subprocess with context cancellation
-- [ ] Stream build output live to the UI (SSE or WebSocket)
+- [x] Stream build output live to the UI (SSE or WebSocket)
 - [x] Start/stop the dev server, show status (preview loads from its own port, no proxy)
 - [x] Parse build errors and surface them at the right file
 - [x] Clean shutdown: no orphaned processes, project root closed
