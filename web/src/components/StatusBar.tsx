@@ -58,7 +58,9 @@ export function StatusBar() {
       </span>
       <span className="flex-1 truncate">{save}</span>
       <span>{server}</span>
-      <span className={build === 'failed' ? 'text-destructive' : undefined}>{buildText[build]}</span>
+      <span className={build === 'failed' ? 'text-destructive' : undefined}>
+        {buildText[build]}
+      </span>
     </footer>
   )
 }

@@ -28,14 +28,16 @@ import { useProjectStore } from '@/stores/project'
 interface NewPageDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  // Folder to preselect, relative to the content directory. Defaults to the open page's folder.
+  folder?: string
 }
 
-export function NewPageDialog({ open, onOpenChange }: NewPageDialogProps) {
+export function NewPageDialog({ open, onOpenChange, folder }: NewPageDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         {/* Mounted only while open, so every opening starts with a fresh form. */}
-        <NewPageForm onDone={() => onOpenChange(false)} />
+        <NewPageForm initialFolder={folder} onDone={() => onOpenChange(false)} />
       </DialogContent>
     </Dialog>
   )
@@ -44,7 +46,7 @@ export function NewPageDialog({ open, onOpenChange }: NewPageDialogProps) {
 // Radix Select cannot use an empty string as a value.
 const automatic = '__auto__'
 
-function NewPageForm({ onDone }: { onDone: () => void }) {
+function NewPageForm({ onDone, initialFolder }: { onDone: () => void; initialFolder?: string }) {
   const tree = useProjectStore((s) => s.tree)
   const contentDir = useProjectStore((s) => s.project?.contentDir ?? 'content')
   const loadTree = useProjectStore((s) => s.loadTree)
@@ -52,7 +54,7 @@ function NewPageForm({ onDone }: { onDone: () => void }) {
   const load = usePageStore((s) => s.load)
 
   const [name, setName] = useState('')
-  const [folder, setFolder] = useState(() => folderOf(selected, contentDir))
+  const [folder, setFolder] = useState(() => initialFolder ?? folderOf(selected, contentDir))
   const [archetype, setArchetype] = useState(automatic)
   const [archetypes, setArchetypes] = useState<Archetype[]>([])
   const [error, setError] = useState<ApiError | null>(null)

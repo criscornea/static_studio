@@ -83,7 +83,9 @@ export function PreviewFrame({ path }: { path: string }) {
       .devServer(path)
       .then((st) => {
         if (!cancelled) {
-          setResult(st.pageUrl ? { url: st.pageUrl } : { error: 'This page has no preview address.' })
+          setResult(
+            st.pageUrl ? { url: st.pageUrl } : { error: 'This page has no preview address.' },
+          )
         }
       })
       .catch((err: unknown) => {

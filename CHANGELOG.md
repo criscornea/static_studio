@@ -13,6 +13,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   compact design tokens.
 - Sidebar width and collapsed state persist; Ctrl/Cmd+B toggles it.
 - Project picker restyled as a centered welcome screen.
+- Explorer sidebar: icon toolbar with tooltips, sort and filter menu,
+  collapse all, compact search, single-line tree rows with icons, indent
+  guides, draft and error markers, keyboard navigation and a right-click
+  menu (open, new page here, rename, delete, copy path).
 
 ### Fixed
 

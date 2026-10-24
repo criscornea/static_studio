@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Plus, Search, X } from 'lucide-react'
+import { ChevronsDownUp, ListFilter, Plus, Search, X } from 'lucide-react'
 
-import { ContentTree } from '@/components/ContentTree'
+import { ContentTree, TreeRoot } from '@/components/ContentTree'
 import { DeletePageDialog } from '@/components/DeletePageDialog'
 import { NewPageDialog } from '@/components/NewPageDialog'
 import { RenamePageDialog } from '@/components/RenamePageDialog'
@@ -9,14 +9,25 @@ import { SearchResults } from '@/components/SearchResults'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { applyView, collectTags, isDefaultView, type SortKey, type StatusFilter } from '@/lib/tree'
+import {
+  applyView,
+  collectTags,
+  folderOf,
+  isDefaultView,
+  type SortKey,
+  type StatusFilter,
+} from '@/lib/tree'
 import { useBuildStore } from '@/stores/build'
 import { usePageStore } from '@/stores/page'
 import { useProjectStore } from '@/stores/project'
@@ -36,8 +47,29 @@ const statusLabels: Record<StatusFilter, string> = {
   published: 'Published',
 }
 
-// Radix Select cannot use an empty string as a value.
+// Radix radio items cannot use an empty string as a value.
 const allTags = '__all__'
+
+function IconButton({
+  label,
+  onClick,
+  children,
+}: {
+  label: string
+  onClick: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button variant="ghost" size="icon-sm" aria-label={label} onClick={onClick}>
+          {children}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  )
+}
 
 export function Sidebar() {
   const tree = useProjectStore((s) => s.tree)
@@ -50,7 +82,10 @@ export function Sidebar() {
   const view = useViewStore()
 
   const searchBox = useRef<HTMLInputElement>(null)
+  const contentDir = useProjectStore((s) => s.project?.contentDir ?? 'content')
   const [creating, setCreating] = useState(false)
+  // Undefined lets the dialog pick the open page's folder.
+  const [newFolder, setNewFolder] = useState<string | undefined>()
   const [renaming, setRenaming] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
   const searching = search.query.trim() !== ''
@@ -68,6 +103,11 @@ export function Sidebar() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
 
+  function openNewPage(folder: string | undefined) {
+    setNewFolder(folder === '' ? undefined : folder)
+    setCreating(true)
+  }
+
   const nodes = useMemo(() => tree?.children ?? [], [tree])
   const tags = useMemo(() => collectTags(nodes), [nodes])
   const { sort, status, tag } = view
@@ -75,10 +115,92 @@ export function Sidebar() {
   const filtered = !isDefaultView({ sort, status, tag })
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-sidebar text-sidebar-foreground">
-      <div className="space-y-2 border-b p-2">
-        <div className="flex gap-2">
-          <div className="relative flex-1">
+    <TooltipProvider>
+      <div className="flex h-full min-h-0 flex-col bg-sidebar text-sidebar-foreground">
+        <div className="space-y-1.5 border-b p-2">
+          <div className="flex items-center gap-0.5">
+            <h2 className="flex-1 truncate px-1 text-[0.6875rem] font-semibold tracking-wide text-muted-foreground uppercase">
+              Pages
+            </h2>
+            <IconButton label="New page" onClick={() => openNewPage('')}>
+              <Plus />
+            </IconButton>
+            <DropdownMenu>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Sort and filter"
+                      className="relative"
+                    >
+                      <ListFilter />
+                      {filtered && (
+                        <span className="absolute top-1 right-1 size-1.5 rounded-full bg-primary" />
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                </TooltipTrigger>
+                <TooltipContent>Sort and filter</TooltipContent>
+              </Tooltip>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                <DropdownMenuRadioGroup
+                  value={sort}
+                  onValueChange={(v) => view.setSort(v as SortKey)}
+                >
+                  {Object.entries(sortLabels).map(([value, label]) => (
+                    <DropdownMenuRadioItem key={value} value={value}>
+                      {label}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>Show</DropdownMenuLabel>
+                <DropdownMenuRadioGroup
+                  value={status}
+                  onValueChange={(v) => view.setStatus(v as StatusFilter)}
+                >
+                  {Object.entries(statusLabels).map(([value, label]) => (
+                    <DropdownMenuRadioItem key={value} value={value}>
+                      {label}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+                {tags.length > 0 && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel>Tag</DropdownMenuLabel>
+                    <DropdownMenuRadioGroup
+                      value={tag ?? allTags}
+                      onValueChange={(v) => view.setTag(v === allTags ? null : v)}
+                    >
+                      <DropdownMenuRadioItem value={allTags}>All tags</DropdownMenuRadioItem>
+                      {tags.map((t) => (
+                        <DropdownMenuRadioItem key={t} value={t}>
+                          {t}
+                        </DropdownMenuRadioItem>
+                      ))}
+                    </DropdownMenuRadioGroup>
+                  </>
+                )}
+                {filtered && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={view.reset}>
+                      Reset sort and filters
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <IconButton label="Collapse all folders" onClick={view.collapseAll}>
+              <ChevronsDownUp />
+            </IconButton>
+          </div>
+
+          <div className="relative">
             <Search className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
               ref={searchBox}
@@ -86,11 +208,11 @@ export function Sidebar() {
               value={search.query}
               onChange={(e) => search.setQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Escape' && search.clear()}
-              placeholder="Search pages  (Ctrl+K)"
+              placeholder="Search  (Ctrl+K)"
               aria-label="Search pages"
               spellCheck={false}
               autoComplete="off"
-              className="h-8 px-7 [&::-webkit-search-cancel-button]:hidden"
+              className="h-7 px-7 text-[0.8125rem] [&::-webkit-search-cancel-button]:hidden"
             />
             {searching && (
               <button
@@ -103,108 +225,53 @@ export function Sidebar() {
               </button>
             )}
           </div>
-          <Button
-            variant="outline"
-            size="icon-sm"
-            aria-label="New page"
-            title="New page"
-            onClick={() => setCreating(true)}
-          >
-            <Plus />
-          </Button>
         </div>
 
-        {!searching && (
-          <div className="grid grid-cols-2 gap-2">
-            <Select value={sort} onValueChange={(v) => view.setSort(v as SortKey)}>
-              <SelectTrigger size="sm" className="w-full" aria-label="Sort by">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(sortLabels).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>
-                    {label}
-                  </SelectItem>
+        <ScrollArea className="min-h-0 flex-1">
+          <nav className="py-1">
+            {searching ? (
+              <SearchResults
+                query={search.query}
+                results={search.results}
+                loading={search.loading}
+                error={search.error}
+                selected={selected}
+                onSelect={(path) => void load(path)}
+              />
+            ) : visible.length > 0 ? (
+              <TreeRoot label="Pages">
+                {visible.map((child) => (
+                  <ContentTree
+                    key={child.path}
+                    node={child}
+                    selected={selected}
+                    onSelect={(path) => void load(path)}
+                    onRename={setRenaming}
+                    onDelete={setDeleting}
+                    onNewPage={(node) =>
+                      openNewPage(folderOf(node.isDir ? `${node.path}/x` : node.path, contentDir))
+                    }
+                    errorPaths={errorPaths}
+                  />
                 ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={status} onValueChange={(v) => view.setStatus(v as StatusFilter)}>
-              <SelectTrigger size="sm" className="w-full" aria-label="Show">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(statusLabels).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {tags.length > 0 && (
-              <Select
-                value={tag ?? allTags}
-                onValueChange={(v) => view.setTag(v === allTags ? null : v)}
-              >
-                <SelectTrigger size="sm" className="col-span-2 w-full" aria-label="Tag">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={allTags}>All tags</SelectItem>
-                  {tags.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {t}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              </TreeRoot>
+            ) : (
+              <div className="space-y-2 px-3 py-2 text-sm text-muted-foreground">
+                <p>{filtered ? 'No pages match this filter.' : 'No content files yet.'}</p>
+                {filtered && (
+                  <Button variant="outline" size="sm" onClick={view.reset}>
+                    Show all pages
+                  </Button>
+                )}
+              </div>
             )}
-          </div>
-        )}
+          </nav>
+        </ScrollArea>
+
+        <NewPageDialog open={creating} onOpenChange={setCreating} folder={newFolder} />
+        <RenamePageDialog path={renaming} onClose={() => setRenaming(null)} />
+        <DeletePageDialog path={deleting} onClose={() => setDeleting(null)} />
       </div>
-
-      <ScrollArea className="min-h-0 flex-1">
-        <nav className="p-2">
-          {searching ? (
-            <SearchResults
-              query={search.query}
-              results={search.results}
-              loading={search.loading}
-              error={search.error}
-              selected={selected}
-              onSelect={(path) => void load(path)}
-            />
-          ) : visible.length > 0 ? (
-            <ul>
-              {visible.map((child) => (
-                <ContentTree
-                  key={child.path}
-                  node={child}
-                  selected={selected}
-                  onSelect={(path) => void load(path)}
-                  onRename={setRenaming}
-                  onDelete={setDeleting}
-                  errorPaths={errorPaths}
-                />
-              ))}
-            </ul>
-          ) : (
-            <div className="space-y-2 text-sm text-muted-foreground">
-              <p>{filtered ? 'No pages match this filter.' : 'No content files yet.'}</p>
-              {filtered && (
-                <Button variant="outline" size="sm" onClick={view.reset}>
-                  Show all pages
-                </Button>
-              )}
-            </div>
-          )}
-        </nav>
-      </ScrollArea>
-
-      <NewPageDialog open={creating} onOpenChange={setCreating} />
-      <RenamePageDialog path={renaming} onClose={() => setRenaming(null)} />
-      <DeletePageDialog path={deleting} onClose={() => setDeleting(null)} />
-    </div>
+    </TooltipProvider>
   )
 }

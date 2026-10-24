@@ -33,7 +33,9 @@ function Meta({ label, children }: { label: string; children: React.ReactNode })
 
 export function PageView() {
   const [previewing, setPreviewing] = useState(false)
-  const [uploadError, setUploadError] = useState<{ path: string | null; message: string } | null>(null)
+  const [uploadError, setUploadError] = useState<{ path: string | null; message: string } | null>(
+    null,
+  )
   const path = usePageStore((s) => s.path)
   // Errors belong to the page they happened on.
   const uploadMessage = uploadError?.path === path ? uploadError.message : null
@@ -55,7 +57,8 @@ export function PageView() {
   // A build error on this page: a body line for the editor, else a frontmatter line.
   const bodyJump = jump && page && jump.file === page.path ? jump.line - page.bodyLine + 1 : null
   const editorLine = bodyJump !== null && bodyJump >= 1 ? bodyJump : null
-  const frontmatterLine = jump && page && jump.file === page.path && editorLine === null ? jump.line : null
+  const frontmatterLine =
+    jump && page && jump.file === page.path && editorLine === null ? jump.line : null
 
   // Warn before closing the tab while edits are unsaved or saving.
   useEffect(() => {
@@ -147,11 +150,7 @@ export function PageView() {
           onChange={setFieldsDraft}
         />
         <div className="mb-2 flex items-center gap-3">
-          <Button
-            size="sm"
-            onClick={() => void save()}
-            disabled={saving || unchanged}
-          >
+          <Button size="sm" onClick={() => void save()} disabled={saving || unchanged}>
             {saving ? 'Saving…' : 'Save'}
           </Button>
           <span className="text-xs text-muted-foreground" role="status">
@@ -163,7 +162,9 @@ export function PageView() {
         {previewing && <PreviewFrame key={`preview-${page.path}`} path={page.path} />}
         {frontmatterLine !== null && (
           <Alert variant="destructive" className="mb-3">
-            <AlertDescription>The build reported an error in the frontmatter at line {frontmatterLine}.</AlertDescription>
+            <AlertDescription>
+              The build reported an error in the frontmatter at line {frontmatterLine}.
+            </AlertDescription>
           </Alert>
         )}
         <MarkdownEditor

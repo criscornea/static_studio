@@ -24,9 +24,7 @@ interface DeletePageDialogProps {
 export function DeletePageDialog({ path, onClose }: DeletePageDialogProps) {
   return (
     <Dialog open={path !== null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent>
-        {path !== null && <DeleteForm path={path} onDone={onClose} />}
-      </DialogContent>
+      <DialogContent>{path !== null && <DeleteForm path={path} onDone={onClose} />}</DialogContent>
     </Dialog>
   )
 }

@@ -181,13 +181,13 @@ Branch: feat/p16-explorer
 Goal: The sidebar looks and behaves like an editor file explorer with icons, keyboard navigation and context menus.
 Done when: the sidebar has a compact section header with icon buttons (new page, sort and filter menu, collapse all) carrying tooltips; tree rows are single-line, 22-24px high, with folder and file icons from `lucide-react`, indent guides, chevrons, a draft marker and an error marker, and a clear active-row highlight; arrow keys, Home, End and Enter move through and open tree rows (roving focus, `role="tree"` and `treeitem`); right-clicking a row opens a context menu (open, new page here, rename, delete, copy path) that reuses the existing dialogs, and the browser's own menu is suppressed only inside the tree; search sits in the header as a compact field and results use the same row style; vitest covers keyboard navigation and context-menu actions; `make check` green.
 Risk: low
-Status: todo
-- [ ] M16.1 Add the shadcn `tooltip`, `dropdown-menu` and `context-menu` components
-- [ ] M16.2 Replace the sidebar controls with an icon toolbar header
-- [ ] M16.3 Restyle `ContentTree` rows with icons, indent guides and state markers
-- [ ] M16.4 Add keyboard navigation to `ContentTree` with tests
-- [ ] M16.5 Add a tree row context menu reusing the page dialogs, with tests
-- [ ] M16.6 Restyle `SearchResults` to match the tree rows
+Status: merged
+- [x] M16.1 Add the shadcn `tooltip`, `dropdown-menu` and `context-menu` components
+- [x] M16.2 Replace the sidebar controls with an icon toolbar header
+- [x] M16.3 Restyle `ContentTree` rows with icons, indent guides and state markers
+- [x] M16.4 Add keyboard navigation to `ContentTree` with tests
+- [x] M16.5 Add a tree row context menu reusing the page dialogs, with tests
+- [x] M16.6 Restyle `SearchResults` to match the tree rows
 
 ## Phase 17: Editor chrome and split preview
 Branch: feat/p17-editor-chrome

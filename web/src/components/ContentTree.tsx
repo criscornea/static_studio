@@ -1,107 +1,290 @@
-import { useState } from 'react'
-import { ChevronRight, Pencil, Trash2 } from 'lucide-react'
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type FocusEvent,
+  type KeyboardEvent,
+} from 'react'
+import {
+  ChevronRight,
+  CircleAlert,
+  FilePlus,
+  FileText,
+  Folder,
+  FolderOpen,
+  Pencil,
+  Trash2,
+  Copy,
+  ExternalLink,
+} from 'lucide-react'
 
 import type { ContentNode } from '@/api/types'
-import { Badge } from '@/components/ui/badge'
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu'
 import { cn } from '@/lib/utils'
-import { formatDate } from '@/lib/format'
+import { useViewStore } from '@/stores/view'
+
+interface TreeFocus {
+  // Path of the row that is in the tab order. Null means the first row.
+  focusPath: string | null
+  setFocusPath: (path: string) => void
+}
+
+// Roving focus state shared by every row of one tree.
+const TreeFocusContext = createContext<TreeFocus | null>(null)
+
+/** The `role="tree"` container. It owns the roving focus state of its rows. */
+export function TreeRoot({ children, label }: { children: React.ReactNode; label: string }) {
+  const [focusPath, setFocusPath] = useState<string | null>(null)
+  const ref = useRef<HTMLUListElement>(null)
+
+  // Forget a focus target that left the tree (filtered out, deleted).
+  useEffect(() => {
+    if (
+      focusPath !== null &&
+      !ref.current?.querySelector(`[data-path="${CSS.escape(focusPath)}"]`)
+    ) {
+      setFocusPath(null)
+    }
+  }, [focusPath, children])
+
+  // Until a row has focus the tree itself is the tab stop and hands focus to the first row.
+  function onFocus(e: FocusEvent<HTMLUListElement>) {
+    if (e.target === e.currentTarget) {
+      e.currentTarget.querySelector<HTMLElement>('[role="treeitem"]')?.focus()
+    }
+  }
+
+  return (
+    <TreeFocusContext.Provider value={{ focusPath, setFocusPath }}>
+      <ul
+        ref={ref}
+        role="tree"
+        aria-label={label}
+        tabIndex={focusPath === null ? 0 : -1}
+        onFocus={onFocus}
+        className="outline-none"
+      >
+        {children}
+      </ul>
+    </TreeFocusContext.Provider>
+  )
+}
 
 interface ContentTreeProps {
   node: ContentNode
   selected: string | null
   onSelect: (path: string) => void
-  // When given, file rows show a rename or delete button.
+  // Context menu actions. A menu entry shows only when its handler is given.
   onRename?: (path: string) => void
   onDelete?: (path: string) => void
+  // Called with the node whose folder should receive the new page.
+  onNewPage?: (node: ContentNode) => void
   // Paths of pages the last build reported errors for.
   errorPaths?: ReadonlySet<string>
   // Nesting level, used for indentation. The root renders its children at 0.
   depth?: number
 }
 
-export function ContentTree({ node, selected, onSelect, onRename, onDelete, errorPaths, depth = 0 }: ContentTreeProps) {
+const INDENT = 12
+
+function visibleRows(row: HTMLElement): HTMLElement[] {
+  const tree = row.closest('[role="tree"]') ?? row.parentElement
+  if (!tree) {
+    return []
+  }
+  return Array.from(tree.querySelectorAll<HTMLElement>('[role="treeitem"]')).filter(
+    (el) => !el.closest('[hidden]'),
+  )
+}
+
+export function ContentTree({
+  node,
+  selected,
+  onSelect,
+  onRename,
+  onDelete,
+  onNewPage,
+  errorPaths,
+  depth = 0,
+}: ContentTreeProps) {
   // Each folder instance tracks its own state. Folders start expanded.
   const [expanded, setExpanded] = useState(true)
-  const indent = { paddingLeft: `${depth * 0.75 + 0.5}rem` }
+  const focus = useContext(TreeFocusContext)
+  const collapseEpoch = useViewStore((s) => s.collapseEpoch)
+  const seenEpoch = useRef(collapseEpoch)
+  const rowRef = useRef<HTMLDivElement>(null)
 
-  if (!node.isDir) {
-    const title = node.fields?.title
-    const date = formatDate(node.fields?.date, { dateStyle: 'medium' })
+  useEffect(() => {
+    if (seenEpoch.current !== collapseEpoch) {
+      seenEpoch.current = collapseEpoch
+      setExpanded(false)
+    }
+  }, [collapseEpoch])
 
-    return (
-      <li className="group relative">
-        <button
-          type="button"
-          style={indent}
-          onClick={() => onSelect(node.path)}
-          className={cn(
-            'block w-full rounded-md py-1 pr-2 text-left text-sm hover:bg-accent',
-            selected === node.path && 'bg-accent text-accent-foreground',
-          )}
-        >
-          <span className="flex items-center gap-2">
-            <span className="min-w-0 flex-1 truncate">{title || node.name}</span>
-            {errorPaths?.has(node.path) && (
-              <Badge variant="destructive" className="shrink-0" title="The last build reported an error here">
-                Error
-              </Badge>
-            )}
-            {node.fields?.draft && (
-              <Badge variant="secondary" className="shrink-0">
-                Draft
-              </Badge>
-            )}
-          </span>
-          {(title || date) && (
-            <span className="block truncate text-xs text-muted-foreground">
-              {[title ? node.name : null, date].filter(Boolean).join(' · ')}
-            </span>
-          )}
-        </button>
-        {(onRename || onDelete) && (
-          <span className="absolute top-1 right-1 hidden gap-0.5 rounded-md bg-background/90 group-focus-within:flex group-hover:flex">
-            {onRename && (
-              <button
-                type="button"
-                aria-label={`Rename ${node.name}`}
-                title="Rename or move"
-                onClick={() => onRename(node.path)}
-                className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-              >
-                <Pencil className="size-3.5" />
-              </button>
-            )}
-            {onDelete && (
-              <button
-                type="button"
-                aria-label={`Delete ${node.name}`}
-                title="Delete"
-                onClick={() => onDelete(node.path)}
-                className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-destructive"
-              >
-                <Trash2 className="size-3.5" />
-              </button>
-            )}
-          </span>
-        )}
-      </li>
-    )
+  const title = node.fields?.title
+  const label = node.isDir ? node.name : title || node.name
+  const tabIndex = focus === null || focus.focusPath === node.path ? 0 : -1
+
+  function move(to: HTMLElement | undefined) {
+    to?.focus()
   }
 
+  function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
+    const row = e.currentTarget
+    const rows = visibleRows(row)
+    const index = rows.indexOf(row)
+    switch (e.key) {
+      case 'ArrowDown':
+        move(rows[index + 1])
+        break
+      case 'ArrowUp':
+        move(rows[index - 1])
+        break
+      case 'Home':
+        move(rows[0])
+        break
+      case 'End':
+        move(rows[rows.length - 1])
+        break
+      case 'ArrowRight':
+        if (node.isDir) {
+          if (!expanded) {
+            setExpanded(true)
+          } else {
+            move(rows[index + 1])
+          }
+        }
+        break
+      case 'ArrowLeft':
+        if (node.isDir && expanded) {
+          setExpanded(false)
+        } else {
+          const group = row.closest('[role="group"]')
+          move(
+            group?.parentElement?.querySelector<HTMLElement>(':scope > [role="treeitem"]') ??
+              undefined,
+          )
+        }
+        break
+      case 'Enter':
+      case ' ':
+        if (node.isDir) {
+          setExpanded(!expanded)
+        } else {
+          onSelect(node.path)
+        }
+        break
+      default:
+        return
+    }
+    e.preventDefault()
+  }
+
+  function activate() {
+    if (node.isDir) {
+      setExpanded(!expanded)
+    } else {
+      onSelect(node.path)
+    }
+  }
+
+  const Icon = node.isDir ? (expanded ? FolderOpen : Folder) : FileText
+  const isSelected = !node.isDir && selected === node.path
+
   return (
-    <li>
-      <button
-        type="button"
-        aria-expanded={expanded}
-        style={indent}
-        onClick={() => setExpanded(!expanded)}
-        className="flex w-full items-center gap-1 py-1 text-left text-[0.8125rem] font-semibold text-muted-foreground"
-      >
-        <ChevronRight className={cn('size-3 transition-transform', expanded && 'rotate-90')} />
-        {node.name}
-      </button>
-      {expanded && (
-        <ul>
+    <li role="none">
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          <div
+            ref={rowRef}
+            role="treeitem"
+            aria-level={depth + 1}
+            aria-expanded={node.isDir ? expanded : undefined}
+            aria-selected={node.isDir ? undefined : isSelected}
+            tabIndex={tabIndex}
+            title={node.path}
+            data-path={node.path}
+            onClick={activate}
+            onFocus={() => focus?.setFocusPath(node.path)}
+            onKeyDown={onKeyDown}
+            style={{ paddingLeft: `${depth * INDENT + 6}px` }}
+            className={cn(
+              'relative flex h-[1.4375rem] cursor-default items-center gap-1 pr-2 text-[0.8125rem] outline-none select-none hover:bg-accent focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-inset',
+              node.isDir && 'text-muted-foreground',
+              isSelected && 'bg-accent font-medium text-accent-foreground',
+            )}
+          >
+            {Array.from({ length: depth }, (_, i) => (
+              <span
+                key={i}
+                aria-hidden
+                className="absolute inset-y-0 w-px bg-border"
+                style={{ left: `${i * INDENT + 12}px` }}
+              />
+            ))}
+            {node.isDir ? (
+              <ChevronRight
+                className={cn('size-3 shrink-0 transition-transform', expanded && 'rotate-90')}
+              />
+            ) : (
+              <span className="w-3 shrink-0" />
+            )}
+            <Icon className="size-3.5 shrink-0" />
+            <span className="min-w-0 flex-1 truncate">{label}</span>
+            {!node.isDir && errorPaths?.has(node.path) && (
+              <span
+                className="shrink-0 text-destructive"
+                title="The last build reported an error here"
+              >
+                <CircleAlert className="size-3.5" />
+                <span className="sr-only">Error</span>
+              </span>
+            )}
+            {!node.isDir && node.fields?.draft && (
+              <span className="shrink-0 text-muted-foreground" title="Draft">
+                <span aria-hidden className="block size-1.5 rounded-full bg-amber-500" />
+                <span className="sr-only">Draft</span>
+              </span>
+            )}
+          </div>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          {!node.isDir && (
+            <ContextMenuItem onSelect={() => onSelect(node.path)}>
+              <ExternalLink /> Open
+            </ContextMenuItem>
+          )}
+          {onNewPage && (
+            <ContextMenuItem onSelect={() => onNewPage(node)}>
+              <FilePlus /> New page here
+            </ContextMenuItem>
+          )}
+          {!node.isDir && onRename && (
+            <ContextMenuItem onSelect={() => onRename(node.path)}>
+              <Pencil /> Rename
+            </ContextMenuItem>
+          )}
+          {!node.isDir && onDelete && (
+            <ContextMenuItem variant="destructive" onSelect={() => onDelete(node.path)}>
+              <Trash2 /> Delete
+            </ContextMenuItem>
+          )}
+          <ContextMenuSeparator />
+          <ContextMenuItem onSelect={() => void navigator.clipboard?.writeText(node.path)}>
+            <Copy /> Copy path
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
+      {node.isDir && (
+        <ul role="group" hidden={!expanded}>
           {node.children?.map((child) => (
             <ContentTree
               key={child.path}
@@ -110,6 +293,7 @@ export function ContentTree({ node, selected, onSelect, onRename, onDelete, erro
               onSelect={onSelect}
               onRename={onRename}
               onDelete={onDelete}
+              onNewPage={onNewPage}
               errorPaths={errorPaths}
               depth={depth + 1}
             />

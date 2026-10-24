@@ -57,7 +57,10 @@ function RenameForm({ path, onDone }: { path: string; onDone: () => void }) {
         await usePageStore.getState().save()
         const st = usePageStore.getState()
         if (st.dirty || st.saveError) {
-          setError(st.saveError ?? new ApiError('cannot_save_page', 'Save the page before renaming it.', 0))
+          setError(
+            st.saveError ??
+              new ApiError('cannot_save_page', 'Save the page before renaming it.', 0),
+          )
           setSubmitting(false)
           return
         }

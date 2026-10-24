@@ -19,9 +19,16 @@ interface Props {
   jumpToken?: unknown
 }
 
-
 /** CodeMirror 6 raw markdown editor. Remount (via key) to load a different document. */
-export function MarkdownEditor({ value, onChange, onSave, onUploadImage, onUploadError, jumpLine, jumpToken }: Props) {
+export function MarkdownEditor({
+  value,
+  onChange,
+  onSave,
+  onUploadImage,
+  onUploadError,
+  jumpLine,
+  jumpToken,
+}: Props) {
   const host = useRef<HTMLDivElement>(null)
   const view = useRef<EditorView | null>(null)
   // Latest callbacks, so the editor is created once.
@@ -72,8 +79,16 @@ export function MarkdownEditor({ value, onChange, onSave, onUploadImage, onUploa
               )
               if (!upload || files.length === 0) return false
               e.preventDefault()
-              const pos = v.posAtCoords({ x: e.clientX, y: e.clientY }) ?? v.state.selection.main.head
-              void dropImages(v, trackers.current, pos, files, upload, handlers.current.onUploadError)
+              const pos =
+                v.posAtCoords({ x: e.clientX, y: e.clientY }) ?? v.state.selection.main.head
+              void dropImages(
+                v,
+                trackers.current,
+                pos,
+                files,
+                upload,
+                handlers.current.onUploadError,
+              )
               return true
             },
           }),
@@ -92,14 +107,16 @@ export function MarkdownEditor({ value, onChange, onSave, onUploadImage, onUploa
       view.current = null
     }
     // Created once per mount; value is only the initial document.
-     
   }, [])
 
   useEffect(() => {
     const v = view.current
     if (v && jumpLine) {
       const line = v.state.doc.line(Math.min(Math.max(jumpLine, 1), v.state.doc.lines))
-      v.dispatch({ selection: { anchor: line.from }, effects: EditorView.scrollIntoView(line.from, { y: 'center' }) })
+      v.dispatch({
+        selection: { anchor: line.from },
+        effects: EditorView.scrollIntoView(line.from, { y: 'center' }),
+      })
       v.focus()
     }
   }, [jumpLine, jumpToken])
@@ -135,7 +152,9 @@ async function dropImages(
       try {
         const path = await upload(file)
         if (!v.dom.isConnected) {
-          onError?.(new Error(`Image saved as ${path} but the editor was closed before it was linked.`))
+          onError?.(
+            new Error(`Image saved as ${path} but the editor was closed before it was linked.`),
+          )
           continue
         }
         const at = Math.min(tracker.pos, v.state.doc.length)
