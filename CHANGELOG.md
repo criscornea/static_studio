@@ -12,6 +12,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Build button runs `hugo` in the project root (one build at a time, cancellable)
+  and streams its output live to a log panel over SSE
+  (`POST /api/build`, `POST /api/build/cancel`, `GET /api/build/stream`).
 - Drop an image onto the editor to upload it to `<assetDir>/images/` and insert
   `![](/images/name.png)`. `POST /api/asset` accepts PNG, JPEG, GIF and WebP up to
   10 MB, checks the bytes, never overwrites (a clash adds `-1`, `-2`, ...; a name

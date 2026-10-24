@@ -109,5 +109,9 @@ export const api = {
     form.append('file', file)
     return request<{ path: string }>('/api/asset', { method: 'POST', body: form })
   },
+  startBuild: () => request<{ started: boolean }>('/api/build', { method: 'POST' }),
+  cancelBuild: () => request<void>('/api/build/cancel', { method: 'POST' }),
+  // EventSource cannot set headers, so the project id travels in the query.
+  buildStreamURL: () => `/api/build/stream?projectId=${encodeURIComponent(projectID ?? '')}`,
   search: (query: string) => request<SearchResults>(`/api/search?q=${encodeURIComponent(query)}`),
 }

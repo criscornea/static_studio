@@ -7,6 +7,7 @@ import (
 	"errors"
 	"flag"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -31,9 +32,14 @@ func run() error {
 	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	slog.SetDefault(logger)
 
+	app := server.New(logger, web.Assets())
+	baseCtx, cancelBase := context.WithCancel(context.Background())
+	defer cancelBase()
+
 	srv := &http.Server{
 		Addr:         *addr,
-		Handler:      server.New(logger, web.Assets()).Routes(),
+		Handler:      app.Routes(),
+		BaseContext:  func(net.Listener) context.Context { return baseCtx },
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  60 * time.Second,
@@ -55,6 +61,9 @@ func run() error {
 		return err
 	case <-ctx.Done():
 		slog.Info("shutting down")
+		// End the build and open streams first so Shutdown does not wait on them.
+		app.Close()
+		cancelBase()
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		return srv.Shutdown(shutdownCtx)

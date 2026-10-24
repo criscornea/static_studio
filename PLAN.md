@@ -87,11 +87,11 @@ Branch: feat/p8-build
 Goal: Users run `hugo` from the app and watch its output live.
 Done when: an `internal/build` runner starts `hugo` in the project root with context cancellation and allows one build at a time; `POST /api/build` starts it and `GET /api/build/stream` streams output via SSE; the UI has a build button and a log panel; tests use a fake command.
 Risk: high (concurrency and subprocess control)
-Status: todo
-- [ ] M8.1 Add `internal/build` runner with cancellation and a single-build lock, tested with a fake binary
-- [ ] M8.2 Add an output broadcaster that fans lines out to subscribers, with tests
-- [ ] M8.3 Add build start and SSE stream handlers with tests
-- [ ] M8.4 Add a build store and log panel in the UI
+Status: merged
+- [x] M8.1 Add `internal/build` runner with cancellation and a single-build lock, tested with a fake binary
+- [x] M8.2 Add an output broadcaster that fans lines out to subscribers, with tests
+- [x] M8.3 Add build start and SSE stream handlers with tests
+- [x] M8.4 Add a build store and log panel in the UI
 
 ## Phase 9: Dev server and Hugo preview
 Branch: feat/p9-dev-server

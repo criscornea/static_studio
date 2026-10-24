@@ -55,6 +55,7 @@ func (s *Server) handleOpenProject(w http.ResponseWriter, r *http.Request) {
 	opened, err := s.project.Open(req.Path)
 	switch {
 	case err == nil:
+		s.build.Stop()
 		s.log.Info("project opened", "root", opened.Info.Root, "kind", opened.Info.Kind, "id", opened.ID)
 		s.writeJSON(w, http.StatusOK, projectResponse{Project: opened.Info, ID: opened.ID})
 

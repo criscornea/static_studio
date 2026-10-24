@@ -66,7 +66,7 @@ renders it, not the app.
 
 **Goal:** the hardest part.
 
-- [ ] Run `hugo` as a subprocess with context cancellation
+- [x] Run `hugo` as a subprocess with context cancellation
 - [ ] Stream build output live to the UI (SSE or WebSocket)
 - [ ] Start/stop the dev server, show status, proxy the preview
 - [ ] Parse build errors and surface them at the right file
@@ -120,6 +120,8 @@ Deliberate simplifications, recorded so they don't become invisible.
   `localhost`) on any port, not only the server's own. Rebinding still fails
   because a foreign name is rejected, and the Vite dev proxy forwards
   `Host: localhost:5173`, which a fixed-port check would break.
+- A SIGTERM sent to the studio alone can orphan a running hugo build; M9.4
+  adds signal-driven subprocess shutdown.
 - Saving, renaming and deleting are serialised by an in-process mutex only.
   An external editor can still change a file between the hash check and the
   write (TOCTOU); the window is small and not closed.

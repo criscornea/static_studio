@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { api, setProjectID } from '@/api/client'
 import { asApiError, type ApiError, type ContentNode, type Project } from '@/api/types'
+import { useBuildStore } from '@/stores/build'
 
 interface ProjectState {
   project: Project | null
@@ -35,6 +36,7 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
     set({ loading: true, error: null })
     try {
       const opened = await api.openProject(path)
+      useBuildStore.getState().reset()
       set({ project: opened })
       setProjectID(opened.id)
       await get().loadTree()
@@ -89,6 +91,7 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
   },
 
   reset() {
+    useBuildStore.getState().reset()
     set({ project: null, tree: null, error: null })
     setProjectID(null)
   },

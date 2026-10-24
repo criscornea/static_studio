@@ -9,6 +9,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/criscornea/static_studio/internal/build"
 	"github.com/criscornea/static_studio/internal/project"
 )
 
@@ -17,6 +18,7 @@ type Server struct {
 	log     *slog.Logger
 	assets  fs.FS // nil when the frontend is not embedded
 	project *project.Manager
+	build   *build.Runner
 }
 
 // New returns a Server. A nil logger falls back to slog.Default,
@@ -25,7 +27,12 @@ func New(log *slog.Logger, assets fs.FS) *Server {
 	if log == nil {
 		log = slog.Default()
 	}
-	return &Server{log: log, assets: assets, project: project.NewManager(log)}
+	return &Server{log: log, assets: assets, project: project.NewManager(log), build: &build.Runner{Bin: "hugo"}}
+}
+
+// Close stops any running build. Call it before shutting the HTTP server down.
+func (s *Server) Close() {
+	s.build.Stop()
 }
 
 // Routes returns the fully wired HTTP handler.
@@ -45,6 +52,9 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /api/page/rename", s.handleRenamePage)
 	mux.HandleFunc("DELETE /api/page", s.handleDeletePage)
 	mux.HandleFunc("POST /api/asset", s.handleAsset)
+	mux.HandleFunc("POST /api/build", s.handleBuild)
+	mux.HandleFunc("POST /api/build/cancel", s.handleBuildCancel)
+	mux.HandleFunc("GET /api/build/stream", s.handleBuildStream)
 
 	if s.assets != nil {
 		mux.Handle("/", s.spaHandler(s.assets))
@@ -104,6 +114,7 @@ func (s *Server) writeJSON(w http.ResponseWriter, status int, v any) {
 }
 
 func (s *Server) handleCloseProject(w http.ResponseWriter, _ *http.Request) {
+	s.build.Stop()
 	if err := s.project.Close(); err != nil {
 		s.log.Warn("closing project failed", "err", err)
 	}

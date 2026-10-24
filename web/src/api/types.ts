@@ -59,6 +59,7 @@ export type ApiErrorCode =
   | 'asset_name'
   | 'asset_exists'
   | 'cannot_save_asset'
+  | 'build_running'
 
 /** An error response from the backend, or a transport failure. */
 export class ApiError extends Error {
@@ -135,4 +136,12 @@ export function asApiError(err: unknown): ApiError {
     return err
   }
   return new ApiError('unknonw', 'Something went wrong. Please try again.', 0)
+}
+
+/** One server-sent event from the build stream. */
+export interface BuildEvent {
+  kind: 'line' | 'done'
+  line?: string
+  ok?: boolean
+  error?: string
 }
