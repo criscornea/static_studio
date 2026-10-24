@@ -114,7 +114,7 @@ func TestDeletePage(t *testing.T) {
 		"/etc/passwd":           ErrNotEditable,
 		"content":               ErrNotEditable,
 	} {
-		if err := DeletePage(root, Dirs{"content"}, name); !errors.Is(err, want) {
+		if err := DeletePage(root, Dirs{"content"}, name, hashBytes([]byte("A"))); !errors.Is(err, want) {
 			t.Errorf("%s: got %v, want %v", name, err, want)
 		}
 	}
@@ -123,7 +123,7 @@ func TestDeletePage(t *testing.T) {
 			t.Errorf("%s removed", keep)
 		}
 	}
-	if err := DeletePage(root, Dirs{"content"}, "content/a.md"); err != nil {
+	if err := DeletePage(root, Dirs{"content"}, "content/a.md", hashBytes([]byte("A"))); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(filepath.Join(dir, "content/a.md")); !os.IsNotExist(err) {
@@ -139,7 +139,7 @@ func TestPageSymlinkedFolder(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := DeletePage(root, Dirs{"content"}, "content/lnk/x.html"); !errors.Is(err, ErrNotEditable) {
+	if err := DeletePage(root, Dirs{"content"}, "content/lnk/x.html", "h"); !errors.Is(err, ErrNotEditable) {
 		t.Fatalf("delete: %v", err)
 	}
 	if _, err := RenamePage(root, Dirs{"content"}, "content/lnk/x.html", "content/y.html"); !errors.Is(err, ErrNotEditable) {
@@ -163,7 +163,7 @@ func TestPageHiddenSegments(t *testing.T) {
 	writeTest(t, dir, "content/c.md", "C")
 
 	for _, name := range []string{"content/.h/a.md", "content/node_modules/b.md"} {
-		if err := DeletePage(root, Dirs{"content"}, name); !errors.Is(err, ErrNotEditable) {
+		if err := DeletePage(root, Dirs{"content"}, name, hashBytes([]byte("A"))); !errors.Is(err, ErrNotEditable) {
 			t.Errorf("delete %s: %v", name, err)
 		}
 		if _, err := RenamePage(root, Dirs{"content"}, name, "content/z.md"); !errors.Is(err, ErrNotEditable) {
@@ -316,7 +316,7 @@ func TestMultiDirOperations(t *testing.T) {
 	if to, err := RenamePage(root, dirs, "content/a.md", "content.de/a.md"); err != nil || to != "content.de/a.md" {
 		t.Fatalf("move: %q, %v", to, err)
 	}
-	if err := DeletePage(root, dirs, "content.de/a.md"); err != nil {
+	if err := DeletePage(root, dirs, "content.de/a.md", hashBytes([]byte("---\ntitle: A\n---\nA"))); err != nil {
 		t.Fatal(err)
 	}
 
@@ -328,7 +328,7 @@ func TestMultiDirOperations(t *testing.T) {
 		if _, err := SavePage(root, dirs, name, "x", "", nil); !errors.Is(err, ErrNotEditable) {
 			t.Errorf("save %s: %v", name, err)
 		}
-		if err := DeletePage(root, dirs, name); !errors.Is(err, ErrNotEditable) {
+		if err := DeletePage(root, dirs, name, "h"); !errors.Is(err, ErrNotEditable) {
 			t.Errorf("delete %s: %v", name, err)
 		}
 		if _, err := RenamePage(root, dirs, name, "content/z.md"); !errors.Is(err, ErrNotEditable) {
@@ -355,5 +355,179 @@ func TestMultiDirOperations(t *testing.T) {
 	pg, err = CreatePage(root, dirs, NewPage{Name: "dflt"}, fixedNow)
 	if err != nil || pg.Path != "content/dflt.md" {
 		t.Fatalf("create default: %v %v", pg, err)
+	}
+}
+
+func setHook(t *testing.T, stage string, fn func()) {
+	t.Helper()
+	raceHook = func(s string) {
+		if s == stage {
+			fn()
+		}
+	}
+	t.Cleanup(func() { raceHook = nil })
+}
+
+func TestSaveExternalWriteBeforeGrab(t *testing.T) {
+	root, dir := openTestRoot(t)
+	writeTest(t, dir, "content/a.md", "old")
+	setHook(t, "save:before-grab", func() { writeTest(t, dir, "content/a.md", "external") })
+
+	_, err := SavePage(root, Dirs{"content"}, "content/a.md", "mine", hashBytes([]byte("old")), nil)
+	if !errors.Is(err, ErrConflict) {
+		t.Fatalf("got %v", err)
+	}
+	if got, _ := os.ReadFile(filepath.Join(dir, "content/a.md")); string(got) != "external" {
+		t.Fatalf("got %q", got)
+	}
+	assertNoLeftovers(t, dir, "content/a.md")
+}
+
+func TestSaveRecreatedAfterGrab(t *testing.T) {
+	root, dir := openTestRoot(t)
+	writeTest(t, dir, "content/a.md", "old")
+	setHook(t, "save:after-grab", func() { writeTest(t, dir, "content/a.md", "external") })
+
+	_, err := SavePage(root, Dirs{"content"}, "content/a.md", "mine", hashBytes([]byte("old")), nil)
+	if !errors.Is(err, ErrConflict) {
+		t.Fatalf("got %v", err)
+	}
+	if got, _ := os.ReadFile(filepath.Join(dir, "content/a.md")); string(got) != "external" {
+		t.Fatalf("got %q", got)
+	}
+	assertNoLeftovers(t, dir, "content/a.md")
+}
+
+func TestSaveLeavesNoTempFiles(t *testing.T) {
+	root, dir := openTestRoot(t)
+	writeTest(t, dir, "content/a.md", "old")
+	if _, err := SavePage(root, Dirs{"content"}, "content/a.md", "new", hashBytes([]byte("old")), nil); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := os.ReadFile(filepath.Join(dir, "content/a.md")); string(got) != "new" {
+		t.Fatalf("got %q", got)
+	}
+	assertNoLeftovers(t, dir, "content/a.md")
+}
+
+func TestDeleteConflicts(t *testing.T) {
+	for _, stage := range []string{"before-grab", "stale"} {
+		root, dir := openTestRoot(t)
+		writeTest(t, dir, "content/a.md", "old")
+		hash := hashBytes([]byte("old"))
+		switch stage {
+		case "before-grab":
+			setHook(t, "delete:before-grab", func() { writeTest(t, dir, "content/a.md", "external") })
+		case "stale":
+			writeTest(t, dir, "content/a.md", "external")
+		}
+		if err := DeletePage(root, Dirs{"content"}, "content/a.md", hash); !errors.Is(err, ErrConflict) {
+			t.Fatalf("%s: got %v", stage, err)
+		}
+		if got, _ := os.ReadFile(filepath.Join(dir, "content/a.md")); string(got) != "external" {
+			t.Fatalf("%s: got %q", stage, got)
+		}
+		assertNoLeftovers(t, dir, "content/a.md")
+	}
+}
+
+func TestDeleteLeavesNoTempFiles(t *testing.T) {
+	root, dir := openTestRoot(t)
+	writeTest(t, dir, "content/a.md", "old")
+	writeTest(t, dir, "content/keep.md", "k")
+	if err := DeletePage(root, Dirs{"content"}, "content/a.md", hashBytes([]byte("old"))); err != nil {
+		t.Fatal(err)
+	}
+	assertNoLeftovers(t, dir, "content/keep.md")
+}
+
+func TestRenameSwappedBeforeLink(t *testing.T) {
+	root, dir := openTestRoot(t)
+	writeTest(t, dir, "content/a.md", "old")
+	setHook(t, "rename:before-link", func() {
+		writeTest(t, dir, "content/tmp.md", "swapped")
+		if err := os.Rename(filepath.Join(dir, "content/tmp.md"), filepath.Join(dir, "content/a.md")); err != nil {
+			t.Error(err)
+		}
+	})
+
+	if _, err := RenamePage(root, Dirs{"content"}, "content/a.md", "content/b.md"); !errors.Is(err, ErrConflict) {
+		t.Fatalf("got %v", err)
+	}
+	if got, _ := os.ReadFile(filepath.Join(dir, "content/a.md")); string(got) != "swapped" {
+		t.Fatalf("got %q", got)
+	}
+	assertNoLeftovers(t, dir, "content/a.md")
+}
+
+func TestRenameSwappedAfterCheck(t *testing.T) {
+	// A swap after the identity check must never lose the new file.
+	root, dir := openTestRoot(t)
+	writeTest(t, dir, "content/a.md", "old")
+	setHook(t, "rename:after-grab", func() {
+		writeTest(t, dir, "content/a.md", "external")
+	})
+
+	_, err := RenamePage(root, Dirs{"content"}, "content/a.md", "content/b.md")
+	if err != nil {
+		t.Fatalf("got %v", err)
+	}
+	if got, _ := os.ReadFile(filepath.Join(dir, "content/a.md")); string(got) != "external" {
+		t.Fatalf("a.md = %q", got)
+	}
+	if got, _ := os.ReadFile(filepath.Join(dir, "content/b.md")); string(got) != "old" {
+		t.Fatalf("b.md = %q", got)
+	}
+}
+
+func TestRenameTargetTakenAfterGrab(t *testing.T) {
+	root, dir := openTestRoot(t)
+	writeTest(t, dir, "content/a.md", "old")
+	setHook(t, "rename:after-grab", func() { writeTest(t, dir, "content/b.md", "taken") })
+
+	if _, err := RenamePage(root, Dirs{"content"}, "content/a.md", "content/b.md"); !errors.Is(err, ErrPageExists) {
+		t.Fatalf("got %v", err)
+	}
+	if got, _ := os.ReadFile(filepath.Join(dir, "content/a.md")); string(got) != "old" {
+		t.Fatalf("a.md = %q", got)
+	}
+	if got, _ := os.ReadFile(filepath.Join(dir, "content/b.md")); string(got) != "taken" {
+		t.Fatalf("b.md = %q", got)
+	}
+	if ents, _ := os.ReadDir(filepath.Join(dir, "content")); len(ents) != 2 {
+		t.Fatalf("leftover files: %v", ents)
+	}
+}
+
+func TestRenameSymlinkSwappedIn(t *testing.T) {
+	root, dir := openTestRoot(t)
+	writeTest(t, dir, "content/a.md", "old")
+	writeTest(t, dir, "content/real.md", "real")
+	// Swap after regularFile but before Lstat of checked: use the first hook.
+	setHook(t, "rename:after-regular", func() {
+		_ = os.Remove(filepath.Join(dir, "content/a.md"))
+		_ = os.Symlink("real.md", filepath.Join(dir, "content/a.md"))
+	})
+
+	if _, err := RenamePage(root, Dirs{"content"}, "content/a.md", "content/b.md"); !errors.Is(err, ErrNotEditable) {
+		t.Fatalf("got %v", err)
+	}
+	if _, err := os.Lstat(filepath.Join(dir, "content/b.md")); err == nil {
+		t.Fatal("b.md created")
+	}
+	if fi, _ := os.Lstat(filepath.Join(dir, "content/a.md")); fi == nil || fi.Mode()&os.ModeSymlink == 0 {
+		t.Fatal("symlink moved")
+	}
+}
+
+func TestDeleteLargePage(t *testing.T) {
+	root, dir := openTestRoot(t)
+	big := strings.Repeat("x", maxPageSize+10)
+	writeTest(t, dir, "content/big.md", big)
+	if err := DeletePage(root, Dirs{"content"}, "content/big.md", hashBytes([]byte(big))); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Lstat(filepath.Join(dir, "content/big.md")); err == nil {
+		t.Fatal("not deleted")
 	}
 }

@@ -41,7 +41,11 @@ function DeleteForm({ path, onDone }: { path: string; onDone: () => void }) {
     setSubmitting(true)
     setError(null)
     try {
-      await api.deletePage(path)
+      // Delete the version the user can see: the open page's hash if it is
+      // loaded, otherwise read the page first.
+      const page = usePageStore.getState().page
+      const hash = page?.path === path ? page.hash : (await api.page(path)).hash
+      await api.deletePage(path, hash)
     } catch (err) {
       setError(asApiError(err))
       setSubmitting(false)

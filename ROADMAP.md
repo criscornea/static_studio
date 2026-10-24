@@ -128,9 +128,12 @@ Deliberate simplifications, recorded so they don't become invisible.
   `localhost`) on any port, not only the server's own. Rebinding still fails
   because a foreign name is rejected, and the Vite dev proxy forwards
   `Host: localhost:5173`, which a fixed-port check would break.
-- Saving, renaming and deleting are serialised by an in-process mutex only.
-  An external editor can still change a file between the hash check and the
-  write (TOCTOU); the window is small and not closed.
+- Saving, renaming and deleting are serialised by an in-process mutex, and
+  save and delete verify the hash on a file moved aside (grab-then-verify), so
+  an external edit is never overwritten or deleted unseen. The remaining
+  gap: a sub-millisecond window in rename between the identity check and
+  removing the old name, and no protection on filesystems where renaming a
+  file that another process holds open fails.
 - Search reads every page on each query, and the content tree reads every
   page's frontmatter on each load, with no index or cache. Search is a
   case-insensitive substring match over title, tags and body (no stemming,
@@ -145,9 +148,10 @@ Deliberate simplifications, recorded so they don't become invisible.
   custom `archetypeDir` are not supported. A new page's title comes from the
   archetype (the file name, title-cased), not from what the user typed.
 - The content tree only lists `.md`, `.markdown`, `.mdx` and `.html`.
-- `RenamePage` on a filesystem without hard links falls back to Lstat then
-  rename, so a file created at the target in between would be overwritten
-  (TOCTOU). With hard links the move cannot overwrite.
+- On a filesystem without hard links, `RenamePage` falls back to Lstat then
+  rename, and a restore after a conflicting save or delete falls back the
+  same way, so a file created at the target in between could be overwritten
+  (TOCTOU). With hard links nothing is overwritten.
 - The preview URL for a page follows Hugo's default permalinks and path
   cleaning (lowercase, spaces to hyphens) only. Front matter `url` and
   `slug`, language subdirectories or suffixes, custom `permalinks`, and

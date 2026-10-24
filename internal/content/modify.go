@@ -118,23 +118,43 @@ func RenamePage(root *os.Root, dirs Dirs, from, to string) (string, error) {
 	if err := root.MkdirAll(dir, 0o750); err != nil {
 		return "", fmt.Errorf("creating %s: %w", dir, err)
 	}
+	hook("rename:after-regular")
+	checked, err := root.Lstat(from)
+	if err != nil {
+		return "", ErrNotFound
+	}
+	if !checked.Mode().IsRegular() {
+		return "", ErrNotEditable
+	}
+	// Grab-then-verify: move from aside so nobody can swap it any more, check
+	// the grabbed copy is the file that was checked, then link it to its new
+	// name. On any problem it is put back.
+	hook("rename:before-link")
+	grabbed, err := grabFile(root, from)
+	if errors.Is(err, fs.ErrNotExist) {
+		return "", ErrNotFound
+	} else if err != nil {
+		return "", fmt.Errorf("renaming %s: %w", from, err)
+	}
+	if gi, gerr := root.Lstat(grabbed); gerr != nil || !os.SameFile(checked, gi) {
+		return "", undoGrab(root, grabbed, from, ErrConflict)
+	}
+	hook("rename:after-grab")
 	// A hard link fails if to exists, so a race cannot overwrite anything.
-	err = linkFile(root, from, to)
+	err = linkFile(root, grabbed, to)
 	switch {
 	case err == nil:
-		if err := root.Remove(from); err != nil {
-			_ = root.Remove(to)
-			return "", fmt.Errorf("removing %s: %w", from, err)
-		}
+		_ = root.Remove(grabbed)
 	case errors.Is(err, fs.ErrExist):
-		return "", ErrPageExists
+		return "", undoGrab(root, grabbed, from, ErrPageExists)
 	default:
 		// No hard link support: check again, then rename.
 		if _, statErr := root.Lstat(to); statErr == nil {
-			return "", ErrPageExists
+			return "", undoGrab(root, grabbed, from, ErrPageExists)
 		}
-		if err := root.Rename(from, to); err != nil {
-			return "", fmt.Errorf("renaming %s: %w", from, err)
+		if err := root.Rename(grabbed, to); err != nil {
+			rerr := fmt.Errorf("renaming %s: %w", from, err)
+			return "", undoGrab(root, grabbed, from, rerr)
 		}
 	}
 	syncDir(root, dir)
@@ -142,9 +162,22 @@ func RenamePage(root *os.Root, dirs Dirs, from, to string) (string, error) {
 	return to, nil
 }
 
+// undoGrab puts a grabbed file back at name and returns cause, or ErrConflict
+// if name was recreated meanwhile (the grabbed copy is then kept aside), or
+// the restore error.
+func undoGrab(root *os.Root, grabbed, name string, cause error) error {
+	if _, err := restoreFile(root, grabbed, name); err != nil {
+		return err
+	}
+	return cause
+}
+
 // DeletePage removes the page name: a plain file inside a content dir with an
-// editable extension. Folders are never removed.
-func DeletePage(root *os.Root, dirs Dirs, name string) error {
+// editable extension. Folders are never removed. hash must be the hash of the
+// file as the caller last read it; otherwise ErrConflict is returned and the
+// file is kept. The file is first moved aside and verified, so a change made
+// by an external editor after the check is never deleted unseen.
+func DeletePage(root *os.Root, dirs Dirs, name, hash string) error {
 	defer lockRoot(root)()
 	contentDir, err := checkPagePath(dirs, name)
 	if err != nil {
@@ -159,7 +192,31 @@ func DeletePage(root *os.Root, dirs Dirs, name string) error {
 	if err := regularFile(root, name); err != nil {
 		return err
 	}
-	if err := root.Remove(name); err != nil {
+	// Hash as a stream so pages of any size can be deleted.
+	got, err := hashFile(root, name)
+	if err != nil {
+		return err
+	}
+	if got != hash {
+		return ErrConflict
+	}
+
+	hook("delete:before-grab")
+	grabbed, err := grabFile(root, name)
+	if errors.Is(err, fs.ErrNotExist) {
+		return ErrNotFound
+	} else if err != nil {
+		return fmt.Errorf("deleting %s: %w", name, err)
+	}
+	got, err = hashFile(root, grabbed)
+	if err != nil {
+		return undoGrab(root, grabbed, name, err)
+	}
+	if got != hash {
+		return undoGrab(root, grabbed, name, ErrConflict)
+	}
+	if err := root.Remove(grabbed); err != nil {
+		_, _ = restoreFile(root, grabbed, name)
 		return fmt.Errorf("deleting %s: %w", name, err)
 	}
 	syncDir(root, path.Dir(name))
@@ -223,9 +280,34 @@ func SavePage(root *os.Root, dirs Dirs, name, body, hash string, fields *frontma
 	if len(out) > maxPageSize {
 		return "", ErrTooLarge
 	}
-	if err := writeFileAtomic(root, name, out, info.Mode().Perm()); err != nil {
+
+	// Grab-then-verify: move the file aside so no writer can change what is
+	// checked, verify the hash on the moved copy, then link the new content
+	// into place without overwriting anything created at name meanwhile.
+	hook("save:before-grab")
+	grabbed, err := grabFile(root, name)
+	if errors.Is(err, fs.ErrNotExist) {
+		return "", ErrNotFound
+	} else if err != nil {
 		return "", fmt.Errorf("saving %s: %w", name, err)
 	}
+	if _, err := verifyGrabbed(root, grabbed, name, hash); err != nil {
+		return "", err
+	}
+	hook("save:after-grab")
+	if err := writeFileAtomicNew(root, name, out, info.Mode().Perm()); err != nil {
+		if errors.Is(err, fs.ErrExist) {
+			// Recreated externally: keep that file, drop our grabbed copy
+			// (identical to what the caller read).
+			_ = root.Remove(grabbed)
+			return "", ErrConflict
+		}
+		if _, rerr := restoreFile(root, grabbed, name); rerr != nil {
+			return "", fmt.Errorf("saving %s: %w", name, errors.Join(err, rerr))
+		}
+		return "", fmt.Errorf("saving %s: %w", name, err)
+	}
+	_ = root.Remove(grabbed)
 	return hashBytes(out), nil
 }
 

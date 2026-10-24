@@ -6,7 +6,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
+	"os"
 	"path"
 	"strings"
 
@@ -94,4 +96,18 @@ func checkPagePath(dirs Dirs, name string) (string, error) {
 func hashBytes(data []byte) string {
 	sum := sha256.Sum256(data)
 	return hex.EncodeToString(sum[:])
+}
+
+// hashFile hashes name as a stream, whatever its size.
+func hashFile(root *os.Root, name string) (string, error) {
+	f, err := root.Open(name)
+	if err != nil {
+		return "", fmt.Errorf("reading %s: %w", name, err)
+	}
+	defer func() { _ = f.Close() }()
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", fmt.Errorf("reading %s: %w", name, err)
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
 }

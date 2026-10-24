@@ -5,6 +5,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Save and delete move the file aside, verify its hash there and only then
+  replace or remove it, so a change made by an external editor in between is
+  reported as a conflict instead of being lost. A file recreated at the name
+  is kept. Rename verifies the moved file is the one it checked.
+- `DELETE /api/page` requires `hash`, the hash of the page as last read; the
+  delete dialog reads the page first when it is not open.
+
 ### Added
 
 - Pages in every resolved content dir can be opened, saved, created, renamed

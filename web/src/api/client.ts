@@ -112,8 +112,10 @@ export const api = {
     request<{ hash: string }>('/api/page', { method: 'PUT', body: { path, body, hash, fields } }),
   renamePage: (req: RenamePageRequest) =>
     request<{ path: string }>('/api/page/rename', { method: 'POST', body: req }),
-  deletePage: (path: string) =>
-    request<void>(`/api/page?path=${encodeURIComponent(path)}`, { method: 'DELETE' }),
+  deletePage: (path: string, hash: string) =>
+    request<void>(`/api/page?path=${encodeURIComponent(path)}&hash=${encodeURIComponent(hash)}`, {
+      method: 'DELETE',
+    }),
   uploadAsset: (file: File) => {
     const form = new FormData()
     form.append('file', file)

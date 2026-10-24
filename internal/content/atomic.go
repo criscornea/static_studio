@@ -123,3 +123,93 @@ func writeTemp(root *os.Root, name string, data []byte, perm os.FileMode) (strin
 	}
 	return tmp, nil
 }
+
+// raceHook is called at named points between a check and the write that
+// follows it. It is nil outside tests, which use it to simulate an external
+// editor changing the file in that window.
+var raceHook func(stage string)
+
+// SetRaceHook installs fn as the race hook and returns a function that
+// removes it. Tests in other packages use it to provoke races.
+func SetRaceHook(fn func(stage string)) (restore func()) {
+	raceHook = fn
+	return func() { raceHook = nil }
+}
+
+func hook(stage string) {
+	if raceHook != nil {
+		raceHook(stage)
+	}
+}
+
+// grabFile moves name atomically to a hidden sibling and returns that path.
+// From then on nobody addressing name sees the file, so what is read from
+// the grabbed copy is exactly what will be replaced or deleted. A missing
+// name yields fs.ErrNotExist.
+func grabFile(root *os.Root, name string) (string, error) {
+	var suffix [6]byte
+	if _, err := rand.Read(suffix[:]); err != nil {
+		return "", fmt.Errorf("temp name: %w", err)
+	}
+	base := path.Base(name)
+	if len(base) > 64 {
+		base = base[:64]
+	}
+	grabbed := path.Join(path.Dir(name), "."+base+"."+hex.EncodeToString(suffix[:])+".grab")
+	if err := root.Rename(name, grabbed); err != nil {
+		return "", err
+	}
+	return grabbed, nil
+}
+
+// restoreFile puts a grabbed file back at name without overwriting. If name
+// was recreated meanwhile, the grabbed copy is kept under a visible
+// ".conflict" sibling so no data is lost, and ErrConflict is returned along
+// with that path. Without hard link support it checks name, then renames.
+func restoreFile(root *os.Root, grabbed, name string) (string, error) {
+	err := linkFile(root, grabbed, name)
+	switch {
+	case err == nil:
+		_ = root.Remove(grabbed)
+		syncDir(root, path.Dir(name))
+		return "", nil
+	case errors.Is(err, fs.ErrExist):
+		return keepConflict(root, grabbed, name)
+	}
+	if _, statErr := root.Lstat(name); statErr == nil {
+		return keepConflict(root, grabbed, name)
+	}
+	if err := root.Rename(grabbed, name); err != nil {
+		return "", fmt.Errorf("restoring %s: %w", name, err)
+	}
+	syncDir(root, path.Dir(name))
+	return "", nil
+}
+
+func keepConflict(root *os.Root, grabbed, name string) (string, error) {
+	var suffix [3]byte
+	if _, err := rand.Read(suffix[:]); err != nil {
+		return "", fmt.Errorf("temp name: %w", err)
+	}
+	kept := name + ".conflict-" + hex.EncodeToString(suffix[:])
+	if err := root.Rename(grabbed, kept); err != nil {
+		return "", fmt.Errorf("keeping %s: %w", grabbed, err)
+	}
+	return kept, ErrConflict
+}
+
+// verifyGrabbed reads the grabbed copy and compares its hash. On a mismatch
+// (or read failure) it restores the file to name and returns ErrConflict.
+func verifyGrabbed(root *os.Root, grabbed, name, hash string) ([]byte, error) {
+	data, err := fs.ReadFile(root.FS(), grabbed)
+	if err == nil && hashBytes(data) == hash {
+		return data, nil
+	}
+	if _, rerr := restoreFile(root, grabbed, name); rerr != nil && !errors.Is(rerr, ErrConflict) {
+		return nil, rerr
+	}
+	if err != nil {
+		return nil, fmt.Errorf("reading %s: %w", name, err)
+	}
+	return nil, ErrConflict
+}

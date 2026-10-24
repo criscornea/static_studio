@@ -259,13 +259,13 @@ Branch: feat/p22-toctou
 Goal: A file changed by an external editor between the check and the write is never overwritten or deleted unseen.
 Done when: save and delete use grab-then-verify: the file is first moved atomically to a hidden sibling, its hash is checked on the moved copy, and on mismatch it is restored with a no-overwrite link and `ErrConflict` is returned; the new content is put in place with a no-overwrite link, so a file recreated at the name in between is kept and reported as a conflict; `DELETE /api/page` requires the hash the client last read (the client reads the page first when deleting from the sidebar); rename verifies after linking that the moved file is the one checked (`os.SameFile`) and undoes on mismatch; on filesystems without hard links the old behaviour remains and is documented; a test hook between check and write simulates an external writer for each operation under `-race`; no hidden temp or backup file is left after success or failure; `make check` green.
 Risk: high (data writes, deletion of data, public API change, concurrency)
-Status: todo
-- [ ] M22.1 Add grab and restore helpers in `atomic.go` with no-overwrite tests
-- [ ] M22.2 Verify the hash on the grabbed copy in `SavePage`
-- [ ] M22.3 Require the page hash for `DELETE /api/page` in handler, client and sidebar
-- [ ] M22.4 Delete only the grabbed copy after its hash is verified
-- [ ] M22.5 Verify the moved file's identity in `RenamePage`
-- [ ] M22.6 Update ROADMAP.md, CHANGELOG.md and the known-shortcuts note
+Status: merged
+- [x] M22.1 Add grab and restore helpers in `atomic.go` with no-overwrite tests
+- [x] M22.2 Verify the hash on the grabbed copy in `SavePage`
+- [x] M22.3 Require the page hash for `DELETE /api/page` in handler, client and sidebar
+- [x] M22.4 Delete only the grabbed copy after its hash is verified
+- [x] M22.5 Verify the moved file's identity in `RenamePage`
+- [x] M22.6 Update ROADMAP.md, CHANGELOG.md and the known-shortcuts note
 
 ## Phase 23: Cached page index for tree and search
 Branch: feat/p23-page-index

@@ -19,6 +19,9 @@ function stubBackend(del: () => Response) {
     if (method === 'DELETE') {
       return Promise.resolve(del())
     }
+    if (url.startsWith('/api/page?')) {
+      return Promise.resolve(new Response(JSON.stringify({ hash: 'h1' }), { status: 200 }))
+    }
     if (url === '/api/content') {
       return Promise.resolve(new Response(JSON.stringify({ root: tree }), { status: 200 }))
     }
@@ -60,7 +63,11 @@ describe('DeletePageDialog', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Delete' }))
 
     await waitFor(() => expect(onClose).toHaveBeenCalled())
-    expect(calls[0]).toEqual({ method: 'DELETE', url: '/api/page?path=content%2Fa.md' })
+    expect(calls[0]).toEqual({ method: 'GET', url: '/api/page?path=content%2Fa.md' })
+    expect(calls[1]).toEqual({
+      method: 'DELETE',
+      url: '/api/page?path=content%2Fa.md&hash=h1',
+    })
     expect(calls.some((c) => c.url === '/api/content')).toBe(true)
     expect(usePageStore.getState().path).toBeNull()
   })

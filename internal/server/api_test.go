@@ -763,16 +763,46 @@ func TestRenamePage(t *testing.T) {
 	}
 }
 
+func TestRenamePageConflict(t *testing.T) {
+	dir := withPages(t)
+	a := newAPI(t)
+	id := decodeProject(t, a.open(dir)).ID
+
+	restore := content.SetRaceHook(func(stage string) {
+		if stage != "rename:before-link" {
+			return
+		}
+		tmp := filepath.Join(dir, "content", "swap.tmp")
+		_ = os.WriteFile(tmp, []byte("swapped"), 0o644)
+		_ = os.Rename(tmp, filepath.Join(dir, "content", "post.md"))
+	})
+	defer restore()
+
+	rec := a.send(http.MethodPost, "/api/page/rename", id, `{"from":"content/post.md","to":"content/moved.md"}`)
+	if rec.Code != http.StatusConflict || decodeError(t, rec).Code != "page_conflict" {
+		t.Fatalf("got %d %s", rec.Code, rec.Body)
+	}
+}
+
 func TestDeletePage(t *testing.T) {
 	dir := withPages(t)
 	a := newAPI(t)
 	id := decodeProject(t, a.open(dir)).ID
+	var page struct {
+		Hash string `json:"hash"`
+	}
+	if err := json.Unmarshal(a.page(id, "content/post.md").Body.Bytes(), &page); err != nil || page.Hash == "" {
+		t.Fatalf("no hash: %v", err)
+	}
+	h := "&hash=" + url.QueryEscape(page.Hash)
 
 	cases := []struct {
 		name, id, path string
 		status         int
 		code           string
 	}{
+		{"no hash", id, "content/post.md", 400, "missing_hash"},
+		{"wrong hash", id, "content/post.md", 409, "page_conflict"},
 		{"outside", id, "static/x.md", 400, "not_editable"},
 		{"traversal", id, "content/../static/x.md", 400, "not_editable"},
 		{"missing", id, "content/none.md", 404, "page_not_found"},
@@ -782,7 +812,15 @@ func TestDeletePage(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			rec := a.send(http.MethodDelete, "/api/page?path="+url.QueryEscape(tc.path), tc.id, "")
+			q := "/api/page?path=" + url.QueryEscape(tc.path)
+			switch tc.name {
+			case "no hash":
+			case "wrong hash":
+				q += "&hash=bogus"
+			default:
+				q += h
+			}
+			rec := a.send(http.MethodDelete, q, tc.id, "")
 			if rec.Code != tc.status || decodeError(t, rec).Code != tc.code {
 				t.Fatalf("got %d %s", rec.Code, rec.Body)
 			}
@@ -794,7 +832,7 @@ func TestDeletePage(t *testing.T) {
 		}
 	}
 
-	rec := a.send(http.MethodDelete, "/api/page?path=content/post.md", id, "")
+	rec := a.send(http.MethodDelete, "/api/page?path=content/post.md"+h, id, "")
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("got %d %s", rec.Code, rec.Body)
 	}

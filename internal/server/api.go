@@ -387,6 +387,10 @@ func (s *Server) handleRenamePage(w http.ResponseWriter, r *http.Request) {
 		s.writeError(w, http.StatusConflict, "page_exists",
 			"A page with this name already exists in that folder.")
 
+	case errors.Is(err, content.ErrConflict):
+		s.writeError(w, http.StatusConflict, "page_conflict",
+			"This page was changed outside the editor while it was being moved, so it was not renamed. Try again.")
+
 	default:
 		s.log.Warn("renaming a page failed", "from", req.From, "to", req.To, "err", err)
 		s.writeError(w, http.StatusInternalServerError, "cannot_rename_page",
@@ -406,7 +410,13 @@ func (s *Server) handleDeletePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := content.DeletePage(open.Root(), contentDirs(open.Info), name)
+	hash := r.URL.Query().Get("hash")
+	if hash == "" {
+		s.writeError(w, http.StatusBadRequest, "missing_hash", "The version of the page to delete was not given. Reload the page and try again.")
+		return
+	}
+
+	err := content.DeletePage(open.Root(), contentDirs(open.Info), name, hash)
 	switch {
 	case err == nil:
 		s.log.Info("page deleted", "path", name)
@@ -419,6 +429,14 @@ func (s *Server) handleDeletePage(w http.ResponseWriter, r *http.Request) {
 	case errors.Is(err, content.ErrNotFound):
 		s.writeError(w, http.StatusNotFound, "page_not_found",
 			"This page no longer exists. It may have been moved or deleted outside the editor.")
+
+	case errors.Is(err, content.ErrConflict):
+		s.writeError(w, http.StatusConflict, "page_conflict",
+			"This page was changed outside the editor since you opened it, so it was not deleted. Reload it to see the latest version.")
+
+	case errors.Is(err, content.ErrTooLarge):
+		s.writeError(w, http.StatusUnprocessableEntity, "page_too_large",
+			"This page is too large to delete in the editor.")
 
 	default:
 		s.log.Warn("deleting a page failed", "path", name, "err", err)
