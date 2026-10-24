@@ -73,3 +73,24 @@ func TestStoreCorruptAndDisabled(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestSetFailsWhenConfigDirIsAFile(t *testing.T) {
+	cfg := filepath.Join(t.TempDir(), "cfg")
+	if err := os.WriteFile(cfg, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	s := NewStore(nil, cfg)
+	if _, err := s.Set(t.TempDir(), Settings{Remote: "https://github.com/a/b.git", Branch: "gh-pages"}); err == nil {
+		t.Fatal("want write error")
+	}
+}
+
+func TestSetRejectsInvalidWithoutWriting(t *testing.T) {
+	s := NewStore(nil, t.TempDir())
+	if _, err := s.Set(t.TempDir(), Settings{Remote: "", Branch: "bad branch"}); err == nil {
+		t.Fatal("want validation error")
+	}
+	if _, err := os.Stat(s.file); !os.IsNotExist(err) {
+		t.Fatalf("file written: %v", err)
+	}
+}

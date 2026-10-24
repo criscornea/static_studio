@@ -13,6 +13,7 @@ import {
   type Project,
   type SearchResults,
 } from './types'
+import { readableMessage } from '@/lib/errors'
 
 /**
  * The id of the open project, sent with every request that touches project
@@ -80,7 +81,7 @@ function toApiError(payload: unknown, status: number): ApiError {
     typeof payload.code === 'string' &&
     typeof payload.message === 'string'
   ) {
-    return new ApiError(payload.code as ApiErrorCode, payload.message, status)
+    return new ApiError(payload.code as ApiErrorCode, readableMessage(payload.code, payload.message), status)
   }
 
   return new ApiError('unknonw', `The backend returned an unexpected response (${status})`, status)

@@ -73,6 +73,7 @@ export type ApiErrorCode =
   | 'asset_exists'
   | 'cannot_save_asset'
   | 'build_running'
+  | 'recent_failed'
 
 /** An error response from the backend, or a transport failure. */
 export class ApiError extends Error {

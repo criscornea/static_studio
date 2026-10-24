@@ -6,6 +6,8 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"net/http"
@@ -29,9 +31,14 @@ func main() {
 
 func run() error {
 	addr := flag.String("addr", "127.0.0.1:7777", "address to listen on")
+	logLevel := flag.String("log-level", "info", "log level: debug, info, warn or error")
+	logFormat := flag.String("log-format", "text", "log format: text or json")
 	flag.Parse()
 
-	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
+	logger, err := newLogger(os.Stderr, *logLevel, *logFormat)
+	if err != nil {
+		return err
+	}
 	slog.SetDefault(logger)
 
 	app := server.New(logger, web.Assets())
@@ -73,5 +80,22 @@ func run() error {
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		return srv.Shutdown(shutdownCtx)
+	}
+}
+
+// newLogger builds a slog logger for the given level and format.
+func newLogger(w io.Writer, level, format string) (*slog.Logger, error) {
+	var lvl slog.Level
+	if err := lvl.UnmarshalText([]byte(level)); err != nil {
+		return nil, fmt.Errorf("invalid -log-level %q: want debug, info, warn or error", level)
+	}
+	opts := &slog.HandlerOptions{Level: lvl}
+	switch format {
+	case "text":
+		return slog.New(slog.NewTextHandler(w, opts)), nil
+	case "json":
+		return slog.New(slog.NewJSONHandler(w, opts)), nil
+	default:
+		return nil, fmt.Errorf("invalid -log-format %q: want text or json", format)
 	}
 }

@@ -93,12 +93,12 @@ renders it, not the app.
 
 No new features. Zero.
 
-- [ ] Raise coverage where failure hurts: writes, paths, processes
-- [ ] Error messages readable by non-developers, end to end
-- [ ] `-log-level` and `-log-format=json` flags
-- [ ] README: problem, screenshots, quickstart, architecture, scope decisions
+- [x] Raise coverage where failure hurts: writes, paths, processes
+- [x] Error messages readable by non-developers, end to end
+- [x] `-log-level` and `-log-format=json` flags
+- [x] README: problem, screenshots, quickstart, architecture, scope decisions
 - [ ] **Screencast, 2–3 minutes**
-- [ ] Release binaries for macOS/Linux/Windows, tag `v1.0.0`
+- [x] Release binaries for macOS/Linux/Windows, tag `v1.0.0`
 - [ ] Closing blog post
 
 🎯 **Milestone:** v1.0.0 released, screencast online.

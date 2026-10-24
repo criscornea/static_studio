@@ -200,3 +200,13 @@ func TestConcurrentOpenAndCurrent(t *testing.T) {
 	}
 	wg.Wait()
 }
+
+func TestOpenRejectsMissingDir(t *testing.T) {
+	m := NewManager(nil)
+	if _, err := m.Open(filepath.Join(t.TempDir(), "nope")); err == nil {
+		t.Fatal("want error")
+	}
+	if _, err := m.Current(); !errors.Is(err, ErrNoProject) {
+		t.Fatalf("err = %v, want ErrNoProject", err)
+	}
+}

@@ -140,13 +140,13 @@ Status: merged
 - [x] M12.4 Add the publish settings and progress UI
 
 ## Phase 13: Harden and ship
-Branch: feat/p13-harden
+Branch: feat/p13-harden-ship
 Goal: v1.0.0 is releasable with readable errors, logging flags, docs and binaries.
 Done when: `-log-level` and `-log-format=json` work; API errors map to non-developer messages in the UI; coverage raised for writes, paths and processes; README complete; a tagged release builds binaries for macOS, Linux and Windows in CI.
 Risk: low
-Status: todo
-- [ ] M13.1 Add `-log-level` and `-log-format` flags with tests
-- [ ] M13.2 Map API error codes to readable UI messages
-- [ ] M13.3 Add tests for uncovered write, path and process failure paths
-- [ ] M13.4 Write the README (problem, quickstart, architecture, scope)
-- [ ] M13.5 Add a release workflow building cross-platform binaries on tags
+Status: merged
+- [x] M13.1 Add `-log-level` and `-log-format` flags with tests
+- [x] M13.2 Map API error codes to readable UI messages
+- [x] M13.3 Add tests for uncovered write, path and process failure paths
+- [x] M13.4 Write the README (problem, quickstart, architecture, scope)
+- [x] M13.5 Add a release workflow building cross-platform binaries on tags

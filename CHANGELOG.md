@@ -12,6 +12,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- `-log-level` and `-log-format` (`text` or `json`) flags.
+- Readable UI messages for API error codes (`web/src/lib/errors.ts`).
+- Tests for store write failures and opening a missing project folder.
+- README: problem, quickstart, architecture and scope.
+- Release workflow: a `v*` tag builds Linux, macOS and Windows binaries and
+  attaches them to a GitHub release.
 - Publish to GitHub Pages: the Publish button saves a remote and branch (kept in the
   user config dir, per project; default `gh-pages`), runs a Hugo build, then commits
   `public/` in a temporary repository and force-pushes it with the system `git`. No
