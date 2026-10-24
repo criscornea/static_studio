@@ -163,66 +163,119 @@ Status: todo
 - [ ] M14.4 Show the config error on the open screen via the readable-message map
 - [ ] M14.5 Update ROADMAP.md, CHANGELOG.md and the known-shortcuts note
 
-## Phase 15: Merged config directory and environment overrides
-Branch: feat/p15-config-merge
+## Phase 15: App shell and theme
+Branch: feat/p15-app-shell
+Goal: The open project shows as a fixed-viewport desktop editor shell with dark and light themes that follow the OS.
+Done when: the document never scrolls (`html`, `body` and `#root` are fixed to the viewport; only panes scroll internally); the shell is a grid of a title bar, an activity bar, a resizable sidebar, the main area and a status bar; a theme store applies the `.dark` class from `prefers-color-scheme`, reacts to OS changes and lets the user override with light, dark or system (persisted in `localStorage`); design tokens give compact density (13px UI text, 28px rows and controls, small radius, Geist UI font, a monospace font for code and paths) and tuned light and dark palettes; the sidebar width and collapsed state persist across reloads and Ctrl/Cmd+B toggles it; the status bar shows the project name, save state, preview-server state and build state; the project picker is a centered welcome screen with recent projects; vitest covers the theme store and the sidebar toggle; Playwright check in both themes once at the end; `make check` green.
+Risk: low
+Status: todo
+- [ ] M15.1 Add a theme store following `prefers-color-scheme` with a persisted override and tests
+- [ ] M15.2 Retune the design tokens in `index.css` for compact density and both palettes
+- [ ] M15.3 Replace the page layout in `App.tsx` with a fixed-viewport shell grid
+- [ ] M15.4 Persist the sidebar size and collapsed state with a Ctrl/Cmd+B toggle
+- [ ] M15.5 Add a status bar for project, save, preview-server and build state
+- [ ] M15.6 Restyle `ProjectPicker` as a welcome screen
+
+## Phase 16: Explorer sidebar
+Branch: feat/p16-explorer
+Goal: The sidebar looks and behaves like an editor file explorer with icons, keyboard navigation and context menus.
+Done when: the sidebar has a compact section header with icon buttons (new page, sort and filter menu, collapse all) carrying tooltips; tree rows are single-line, 22-24px high, with folder and file icons from `lucide-react`, indent guides, chevrons, a draft marker and an error marker, and a clear active-row highlight; arrow keys, Home, End and Enter move through and open tree rows (roving focus, `role="tree"` and `treeitem`); right-clicking a row opens a context menu (open, new page here, rename, delete, copy path) that reuses the existing dialogs, and the browser's own menu is suppressed only inside the tree; search sits in the header as a compact field and results use the same row style; vitest covers keyboard navigation and context-menu actions; `make check` green.
+Risk: low
+Status: todo
+- [ ] M16.1 Add the shadcn `tooltip`, `dropdown-menu` and `context-menu` components
+- [ ] M16.2 Replace the sidebar controls with an icon toolbar header
+- [ ] M16.3 Restyle `ContentTree` rows with icons, indent guides and state markers
+- [ ] M16.4 Add keyboard navigation to `ContentTree` with tests
+- [ ] M16.5 Add a tree row context menu reusing the page dialogs, with tests
+- [ ] M16.6 Restyle `SearchResults` to match the tree rows
+
+## Phase 17: Editor chrome and split preview
+Branch: feat/p17-editor-chrome
+Goal: The main area is a full-height editor with a breadcrumb toolbar, a collapsible properties panel and a resizable side-by-side preview.
+Done when: the main area has an editor header with a breadcrumb of the page path, the save state and icon actions (preview, build, publish, preview server) with tooltips and shortcut hints, and the old header buttons are gone; CodeMirror fills the remaining height, scrolls internally and uses a theme that follows the app theme (gutter, cursor, selection, markdown highlight colors, monospace font); frontmatter shows as a compact, collapsible properties panel above the editor whose open state persists; the preview opens in a resizable split pane to the right of the editor with a persisted size; the build log is a bottom panel inside the main area, resizable and toggled from the status bar and Ctrl/Cmd+J; existing autosave, conflict and error behaviour is unchanged and its tests still pass; vitest covers the header actions and panel toggles; `make check` green.
+Risk: low
+Status: todo
+- [ ] M17.1 Add an editor header with a path breadcrumb and save state
+- [ ] M17.2 Move build, publish and preview-server actions into header icon buttons
+- [ ] M17.3 Make the CodeMirror editor fill its pane with a theme following the app theme
+- [ ] M17.4 Turn `FrontmatterForm` into a collapsible properties panel
+- [ ] M17.5 Show the preview in a resizable split pane beside the editor
+- [ ] M17.6 Dock the build log as a resizable bottom panel toggled by Ctrl/Cmd+J
+
+## Phase 18: Command palette, shortcuts and polish
+Branch: feat/p18-commands
+Goal: Every action is reachable from the keyboard through a command palette and shortcuts, and every empty or loading state looks finished.
+Done when: a command registry lists each action (open page, new page, rename, delete, save, toggle sidebar, toggle preview, toggle build log, build, publish, start or stop the preview server, switch theme, close project) with its shortcut; one global key handler dispatches shortcuts and does not steal keys the CodeMirror editor or open dialogs handle; Ctrl/Cmd+Shift+P opens the command palette and Ctrl/Cmd+P opens quick-open over page titles and paths using the existing search; a shortcuts dialog lists all bindings; empty states (no page selected, empty content dir, no search hits, preview server stopped, empty build log) show an icon, one line of text and the relevant action; loading states use skeletons; app chrome is not text-selectable, uses the default cursor and shows focus rings only for keyboard focus; vitest covers the registry, shortcut dispatch and palette filtering; Playwright check once at the end; ROADMAP.md and CHANGELOG.md updated; `make check` green.
+Risk: low
+Status: todo
+- [ ] M18.1 Add a command registry with a global shortcut handler and tests
+- [ ] M18.2 Add the shadcn `command` component as the command palette on Ctrl/Cmd+Shift+P
+- [ ] M18.3 Add quick-open for pages on Ctrl/Cmd+P
+- [ ] M18.4 Add a keyboard shortcuts dialog
+- [ ] M18.5 Add polished empty and loading states across sidebar, editor, preview and build log
+- [ ] M18.6 Remove web-page behaviour from app chrome (selection, cursors, focus rings)
+- [ ] M18.7 Update ROADMAP.md and CHANGELOG.md
+
+## Phase 19: Merged config directory and environment overrides
+Branch: feat/p19-config-merge
 Goal: `contentDir` and `staticDir` are resolved the way Hugo resolves them: root config, `config/_default/*`, `config/<environment>/*` and `HUGO_*` environment variables merged in Hugo's order.
 Done when: a `config` loader in `internal/ssg` merges the root config file with every `config/_default/*.{toml,yaml,yml,json}` (files named after a top-level key such as `languages.toml` or `module.toml` nest under that key) following Hugo's documented precedence; `config/<env>/` is overlaid where env is `HUGO_ENVIRONMENT`, else `development` (the dev server's default); `HUGO_CONTENTDIR` and `HUGO_STATICDIR` override the merged values and still pass `configDir` confinement; the environment is injected so tests do not touch the process env; invalid files in the config dir surface `ErrInvalidConfig` from Phase 14; table tests cover each precedence step; `make check` green.
 Risk: low
 Status: todo
-- [ ] M15.1 Add a case-insensitive deep merge of config maps with tests
-- [ ] M15.2 Load and merge `config/_default/*` on top of the root config file
-- [ ] M15.3 Overlay `config/<environment>/*` selected by `HUGO_ENVIRONMENT`
-- [ ] M15.4 Apply `HUGO_CONTENTDIR` and `HUGO_STATICDIR` overrides from an injected environment
-- [ ] M15.5 Update ROADMAP.md, CHANGELOG.md and the known-shortcuts note
+- [ ] M19.1 Add a case-insensitive deep merge of config maps with tests
+- [ ] M19.2 Load and merge `config/_default/*` on top of the root config file
+- [ ] M19.3 Overlay `config/<environment>/*` selected by `HUGO_ENVIRONMENT`
+- [ ] M19.4 Apply `HUGO_CONTENTDIR` and `HUGO_STATICDIR` overrides from an injected environment
+- [ ] M19.5 Update ROADMAP.md, CHANGELOG.md and the known-shortcuts note
 
-## Phase 16: Resolve every content directory
-Branch: feat/p16-content-dirs
+## Phase 20: Resolve every content directory
+Branch: feat/p20-content-dirs
 Goal: Per-language `contentDir` values and project-local module mounts are discovered, and the tree and search show pages from all of them.
 Done when: `ssg.Project` gains `ContentDirs []ContentDir{Path, Lang}` (primary first, deduplicated; `ContentDir` kept as the primary for compatibility) and `types.ts` mirrors it; `languages.<lang>.contentDir` entries are added; `module.mounts` with target `content` or `content/...` are added, and per Hugo, any content mount replaces the implicit `contentDir` mount; the first `static` mount source sets `AssetDir`; mount sources that are absolute, escape the root or belong to imported modules are skipped and logged, never followed; `GET /api/content` returns one root per content dir and the sidebar renders them with a language label; search walks every content dir; Go tests cover language dirs, mounts, the implicit-mount rule and refused sources; vitest covers the multi-root tree; `make check` green.
 Risk: high (security: config-controlled paths feed path confinement; public API shape change)
 Status: todo
-- [ ] M16.1 Collect per-language `contentDir` values into a deduplicated `ContentDirs` list
-- [ ] M16.2 Add content and static module mounts, skipping sources outside the project
-- [ ] M16.3 Expose `contentDirs` in the project JSON and `types.ts`
-- [ ] M16.4 Return one tree root per content dir from `GET /api/content`
-- [ ] M16.5 Render multiple labelled roots in `ContentTree`
-- [ ] M16.6 Search across every content dir
+- [ ] M20.1 Collect per-language `contentDir` values into a deduplicated `ContentDirs` list
+- [ ] M20.2 Add content and static module mounts, skipping sources outside the project
+- [ ] M20.3 Expose `contentDirs` in the project JSON and `types.ts`
+- [ ] M20.4 Return one tree root per content dir from `GET /api/content`
+- [ ] M20.5 Render multiple labelled roots in `ContentTree`
+- [ ] M20.6 Search across every content dir
 
-## Phase 17: Edit pages in every content directory
-Branch: feat/p17-multi-dir-edit
+## Phase 21: Edit pages in every content directory
+Branch: feat/p21-multi-dir-edit
 Goal: Pages in any resolved content dir can be opened, saved, created, renamed and deleted with the same confinement guarantees as the primary dir.
 Done when: a single `content.Dirs` check replaces the `contentDir` prefix checks in read, save, rename, delete and create, accepting a path only when it lies inside one resolved content dir (rename may move between dirs only if both are resolved); `POST /api/page` accepts a target content dir validated against the resolved set; `NewPageDialog` offers a content-dir picker when there is more than one; `RenamePageDialog` accepts a path in any content dir; Go tests prove paths outside every resolved dir, including sibling-prefix names like `content-old/`, are refused for each operation; vitest covers both dialogs; `make check` green; ROADMAP, CHANGELOG and known shortcuts updated (per-language preview URLs stay a separate shortcut).
 Risk: high (security: write-path confinement; data writes)
 Status: todo
-- [ ] M17.1 Add a `content.Dirs` membership check with sibling-prefix tests
-- [ ] M17.2 Use the dir-set check in read, save and delete
-- [ ] M17.3 Use the dir-set check in rename, allowing moves between resolved dirs
-- [ ] M17.4 Accept a target content dir in page creation and the new-page dialog
-- [ ] M17.5 Accept any content dir in the rename dialog
-- [ ] M17.6 Update ROADMAP.md, CHANGELOG.md and the known-shortcuts note
+- [ ] M21.1 Add a `content.Dirs` membership check with sibling-prefix tests
+- [ ] M21.2 Use the dir-set check in read, save and delete
+- [ ] M21.3 Use the dir-set check in rename, allowing moves between resolved dirs
+- [ ] M21.4 Accept a target content dir in page creation and the new-page dialog
+- [ ] M21.5 Accept any content dir in the rename dialog
+- [ ] M21.6 Update ROADMAP.md, CHANGELOG.md and the known-shortcuts note
 
-## Phase 18: Close the save, rename and delete race window
-Branch: feat/p18-toctou
+## Phase 22: Close the save, rename and delete race window
+Branch: feat/p22-toctou
 Goal: A file changed by an external editor between the check and the write is never overwritten or deleted unseen.
 Done when: save and delete use grab-then-verify: the file is first moved atomically to a hidden sibling, its hash is checked on the moved copy, and on mismatch it is restored with a no-overwrite link and `ErrConflict` is returned; the new content is put in place with a no-overwrite link, so a file recreated at the name in between is kept and reported as a conflict; `DELETE /api/page` requires the hash the client last read (the client reads the page first when deleting from the sidebar); rename verifies after linking that the moved file is the one checked (`os.SameFile`) and undoes on mismatch; on filesystems without hard links the old behaviour remains and is documented; a test hook between check and write simulates an external writer for each operation under `-race`; no hidden temp or backup file is left after success or failure; `make check` green.
 Risk: high (data writes, deletion of data, public API change, concurrency)
 Status: todo
-- [ ] M18.1 Add grab and restore helpers in `atomic.go` with no-overwrite tests
-- [ ] M18.2 Verify the hash on the grabbed copy in `SavePage`
-- [ ] M18.3 Require the page hash for `DELETE /api/page` in handler, client and sidebar
-- [ ] M18.4 Delete only the grabbed copy after its hash is verified
-- [ ] M18.5 Verify the moved file's identity in `RenamePage`
-- [ ] M18.6 Update ROADMAP.md, CHANGELOG.md and the known-shortcuts note
+- [ ] M22.1 Add grab and restore helpers in `atomic.go` with no-overwrite tests
+- [ ] M22.2 Verify the hash on the grabbed copy in `SavePage`
+- [ ] M22.3 Require the page hash for `DELETE /api/page` in handler, client and sidebar
+- [ ] M22.4 Delete only the grabbed copy after its hash is verified
+- [ ] M22.5 Verify the moved file's identity in `RenamePage`
+- [ ] M22.6 Update ROADMAP.md, CHANGELOG.md and the known-shortcuts note
 
-## Phase 19: Cached page index for tree and search
-Branch: feat/p19-page-index
+## Phase 23: Cached page index for tree and search
+Branch: feat/p23-page-index
 Goal: Loading the tree and searching do not re-read unchanged pages, so a site with thousands of pages stays fast.
 Done when: a `content.Index` owned by each open project caches per-page frontmatter fields and search text, keyed by path and validated by size, modification time and file identity on each lookup, so an external edit is picked up on the next load without a file watcher or new dependency; save, create, rename and delete update or drop their entries; the index is dropped on project close; it is safe under `-race` with concurrent tree, search and save calls; benchmarks on a generated 5,000-page site show warm tree and search at least 5x faster than the baseline; search semantics (case-insensitive substring, title and tag hits first, 50-hit cap) are unchanged; `make check` green.
 Risk: high (concurrency; a stale cache shows wrong content)
 Status: todo
-- [ ] M19.1 Add tree and search benchmarks over a generated 5,000-page site
-- [ ] M19.2 Add `content.Index` with stat-validated entries and staleness tests
-- [ ] M19.3 Read tree frontmatter through the index
-- [ ] M19.4 Match search queries against indexed text
-- [ ] M19.5 Own one index per open project and update it on writes
-- [ ] M19.6 Update ROADMAP.md, CHANGELOG.md and the known-shortcuts note
+- [ ] M23.1 Add tree and search benchmarks over a generated 5,000-page site
+- [ ] M23.2 Add `content.Index` with stat-validated entries and staleness tests
+- [ ] M23.3 Read tree frontmatter through the index
+- [ ] M23.4 Match search queries against indexed text
+- [ ] M23.5 Own one index per open project and update it on writes
+- [ ] M23.6 Update ROADMAP.md, CHANGELOG.md and the known-shortcuts note
