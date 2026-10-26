@@ -5,6 +5,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-26
+
 ### Added
 
 - rsync over SSH publish target alongside GitHub Pages. The publish dialog has
@@ -36,17 +38,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `.deb`, `.rpm` and `.apk` packages for Linux, and a `checksums.txt`. The
   archives keep the executable bit, so macOS and Linux downloads run after
   extracting. Binaries are still unsigned.
-- The content tree and search read pages through a per-project cached index
-  validated by size, mtime and file identity, so unchanged pages are not read
-  again. On a generated 5,000-page site a warm tree load is about 35x faster
-  and a warm search about 30x faster. External edits are still picked up on
-  the next load.
-- Save and delete move the file aside, verify its hash there and only then
-  replace or remove it, so a change made by an external editor in between is
-  reported as a conflict instead of being lost. A file recreated at the name
-  is kept. Rename verifies the moved file is the one it checked.
-- `DELETE /api/page` requires `hash`, the hash of the page as last read; the
-  delete dialog reads the page first when it is not open.
+
+## [1.1.0] - 2026-10-24
 
 ### Added
 
@@ -81,6 +74,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- The content tree and search read pages through a per-project cached index
+  validated by size, mtime and file identity, so unchanged pages are not read
+  again. On a generated 5,000-page site a warm tree load is about 35x faster
+  and a warm search about 30x faster. External edits are still picked up on
+  the next load.
+- Save and delete move the file aside, verify its hash there and only then
+  replace or remove it, so a change made by an external editor in between is
+  reported as a conflict instead of being lost. A file recreated at the name
+  is kept. Rename verifies the moved file is the one it checked.
+- `DELETE /api/page` requires `hash`, the hash of the page as last read; the
+  delete dialog reads the page first when it is not open.
 - `contentDir` and `staticDir` are resolved from the merged Hugo config:
   root file, `config/_default/*`, `config/<environment>/*` (from
   `HUGO_ENVIRONMENT`, else `development`) and the `HUGO_CONTENTDIR` and
@@ -89,6 +93,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - App chrome is not text-selectable, uses the default cursor and shows
   focus rings only for keyboard focus; editor text, logs and inputs stay
   selectable.
+
+## [1.0.0] - 2026-10-24
 
 ### Fixed
 
