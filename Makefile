@@ -23,12 +23,12 @@ server: web-stub ## run the server
 run: SHELL := /bin/bash
 run: build-dev ## run the server and the vite dev server together (Ctrl+C stops both)
 	@trap 'trap - EXIT INT TERM; kill 0' EXIT INT TERM; \
-	$(DIST)/$(BINARY) & \
+	$(DIST)/$(BINARY) & server=$$!; \
 	until curl -sf http://127.0.0.1:7777/api/health >/dev/null; do \
-		kill -0 $$! 2>/dev/null || exit 1; sleep 0.2; \
+		kill -0 $$server 2>/dev/null || exit 1; sleep 0.2; \
 	done; \
-	(cd web && npm run dev) & \
-	wait -n
+	(cd web && npm run dev) & vite=$$!; \
+	while kill -0 $$server 2>/dev/null && kill -0 $$vite 2>/dev/null; do sleep 0.5; done
 
 sample: ## create ./sample-site, a Hugo site for manual testing (FORCE=1 recreates it)
 	scripts/sample-site.sh sample-site $(if $(FORCE),--force)
