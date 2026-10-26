@@ -26,7 +26,10 @@ func TestMain(m *testing.M) {
 			if err := child.Start(); err != nil {
 				os.Exit(4)
 			}
-			select {}
+			// Block on the grandchild; a bare select{} trips Go's deadlock
+			// detector and kills the wrapper before the test can stop it.
+			_ = child.Wait()
+			os.Exit(5)
 		}
 		l, err := net.Listen("tcp", net.JoinHostPort(Host, port))
 		if err != nil {
