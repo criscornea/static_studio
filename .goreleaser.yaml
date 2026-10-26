@@ -48,6 +48,33 @@ nfpms:
       - git
       - hugo
 
+# Both publish steps skip prerelease tags (skip_upload: auto), so a
+# vX.Y.Z-rc1 tag exercises the build without touching the tap or bucket.
+brews:
+  - name: static-studio
+    repository:
+      owner: criscornea
+      name: homebrew-tap
+      token: "{{ .Env.TAP_GITHUB_TOKEN }}"
+    homepage: https://github.com/criscornea/static_studio
+    description: Local editor for Hugo sites with preview, build and publish.
+    skip_upload: auto
+    dependencies:
+      - hugo
+      - git
+    test: |
+      assert_match "-addr", shell_output("#{bin}/static-studio -h 2>&1")
+
+scoops:
+  - name: static-studio
+    repository:
+      owner: criscornea
+      name: scoop-bucket
+      token: "{{ .Env.TAP_GITHUB_TOKEN }}"
+    homepage: https://github.com/criscornea/static_studio
+    description: Local editor for Hugo sites with preview, build and publish.
+    skip_upload: auto
+
 checksum:
   name_template: checksums.txt
 
@@ -55,6 +82,7 @@ changelog:
   use: github-native
 
 release:
+  prerelease: auto
   github:
     owner: criscornea
     name: static_studio
