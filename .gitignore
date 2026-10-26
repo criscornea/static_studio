@@ -6,3 +6,6 @@
 
 # Sample Hugo site for manual testing (scripts/sample-site.sh)
 /sample-site/
+
+# GoReleaser output
+/dist/

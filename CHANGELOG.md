@@ -31,6 +31,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Releases are built with GoReleaser. Each release now ships `.tar.gz`
+  archives (`.zip` on Windows) named `static-studio_<version>_<os>_<arch>`,
+  `.deb`, `.rpm` and `.apk` packages for Linux, and a `checksums.txt`. The
+  archives keep the executable bit, so macOS and Linux downloads run after
+  extracting. Binaries are still unsigned.
 - The content tree and search read pages through a per-project cached index
   validated by size, mtime and file identity, so unchanged pages are not read
   again. On a generated 5,000-page site a warm tree load is about 35x faster

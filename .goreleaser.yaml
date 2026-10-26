@@ -1,0 +1,60 @@
+version: 2
+
+project_name: static-studio
+
+before:
+  hooks:
+    # The frontend is embedded into the binary, so it has to exist first.
+    - make web-install
+    - make web-build
+
+builds:
+  - id: studio
+    main: ./cmd/studio
+    binary: static-studio
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ignore:
+      - { goos: windows, goarch: arm64 }
+
+archives:
+  - id: default
+    formats: [tar.gz]
+    format_overrides:
+      - { goos: windows, formats: [zip] }
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - README.md
+      - CHANGELOG.md
+
+nfpms:
+  - id: packages
+    package_name: static-studio
+    file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    homepage: https://github.com/criscornea/static_studio
+    maintainer: criscornea <cornea84@googlemail.com>
+    description: Local editor for Hugo sites with preview, build and publish.
+    formats: [deb, rpm, apk]
+    bindir: /usr/bin
+    # Hugo and git are needed at run time, but distros name them differently
+    # and Hugo is often too old there, so they are not hard dependencies.
+    recommends:
+      - git
+      - hugo
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  use: github-native
+
+release:
+  github:
+    owner: criscornea
+    name: static_studio
