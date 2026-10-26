@@ -86,3 +86,7 @@ Flags:
 
 📋 See [`ROADMAP.md`](ROADMAP.md) for known shortcuts and
 [`CHANGELOG.md`](CHANGELOG.md) for releases.
+
+## 📄 License
+
+[MIT](LICENSE)

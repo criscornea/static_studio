@@ -9,3 +9,4 @@
 
 # GoReleaser output
 /dist/
+/bin/

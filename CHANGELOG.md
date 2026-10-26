@@ -5,6 +5,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- MIT license. The `LICENSE` file ships in every archive and the license is
+  set in the Linux, Homebrew and Scoop packages.
+
+### Fixed
+
+- `make run` works on macOS, where the system bash is 3.2 and has no
+  `wait -n`.
+
 ## [1.2.0] - 2026-10-26
 
 ### Added

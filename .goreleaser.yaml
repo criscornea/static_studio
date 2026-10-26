@@ -30,6 +30,7 @@ archives:
       - { goos: windows, formats: [zip] }
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:
+      - LICENSE
       - README.md
       - CHANGELOG.md
 
@@ -39,6 +40,7 @@ nfpms:
     file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     homepage: https://github.com/criscornea/static_studio
     maintainer: criscornea <cornea84@googlemail.com>
+    license: MIT
     description: Local editor for Hugo sites with preview, build and publish.
     formats: [deb, rpm, apk]
     bindir: /usr/bin
@@ -59,6 +61,7 @@ brews:
     homepage: https://github.com/criscornea/static_studio
     description: Local editor for Hugo sites with preview, build and publish.
     skip_upload: auto
+    license: MIT
     dependencies:
       - hugo
       - git
@@ -74,6 +77,7 @@ scoops:
     homepage: https://github.com/criscornea/static_studio
     description: Local editor for Hugo sites with preview, build and publish.
     skip_upload: auto
+    license: MIT
 
 checksum:
   name_template: checksums.txt
