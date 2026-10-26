@@ -16,11 +16,25 @@ It is one Go binary that serves a JSON API and an embedded React app on
 
 Requirements: [Hugo](https://gohugo.io/) and `git` on your `PATH`.
 
-Download a binary from the Releases page, or build from source (Go and Node 22):
+**Install**
+
+| Platform | Command |
+| --- | --- |
+| 🍺 macOS, Linux (Homebrew) | `brew install criscornea/tap/static-studio` |
+| 🪟 Windows (Scoop) | `scoop bucket add criscornea https://github.com/criscornea/scoop-bucket` then `scoop install static-studio` |
+| 🐧 Debian, Ubuntu | `sudo dpkg -i static-studio_<version>_linux_<arch>.deb` |
+| 🎩 Fedora | `sudo rpm -i static-studio_<version>_linux_<arch>.rpm` |
+| 📦 Any | archive from the Releases page |
+
+Archives and Linux packages are on the Releases page. Releases are not signed,
+so a browser download on macOS is blocked by Gatekeeper. Homebrew avoids this;
+for an archive run `xattr -d com.apple.quarantine static-studio` once.
+
+Or build from source (Go and Node 22):
 
 ```sh
 make build
-./bin/studio
+./bin/static_studio
 ```
 
 Open http://127.0.0.1:7777, pick your site folder, and edit.
