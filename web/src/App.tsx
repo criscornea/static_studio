@@ -72,20 +72,24 @@ export default function App() {
               </Tooltip>
             )
           })}
-        </TooltipProvider>
         {/* TODO: options panel (theme toggle goes here) */}
-        <Button variant="ghost" size="icon" aria-label="Options" title="Options" className="mt-auto">
-          <Settings />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="Close"
-          title="Close"
-          onClick={() => void close()}
-        >
-          <X />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" aria-label="Options" className="mt-auto">
+              <Settings />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="right">Options</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" aria-label="Close" onClick={() => void close()}>
+              <X />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="right">Close</TooltipContent>
+        </Tooltip>
+        </TooltipProvider>
       </nav>
 
       <div className="min-h-0 min-w-0">
