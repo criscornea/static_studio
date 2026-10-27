@@ -29,14 +29,14 @@ describe('ContentTree file row', () => {
 
     expect(screen.getByText('Hello World')).toBeInTheDocument()
     expect(screen.getByRole('treeitem')).toHaveAttribute('title', 'content/hello.md')
-    expect(screen.getByText('Draft')).toBeInTheDocument()
+    expect(screen.getByRole('treeitem').querySelector('svg')).toHaveClass('text-yellow-500')
   })
 
   it('falls back to the filename without frontmatter', () => {
     renderNode(file('plain.md'))
 
     expect(screen.getByText('plain.md')).toBeInTheDocument()
-    expect(screen.queryByText('Draft')).not.toBeInTheDocument()
+    expect(screen.getByRole('treeitem').querySelector('svg')).not.toHaveClass('text-yellow-500')
   })
 
   it('falls back to the filename when the title is empty', () => {

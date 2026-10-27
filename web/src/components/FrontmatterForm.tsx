@@ -1,10 +1,10 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Pencil } from 'lucide-react'
+import { FileText, Pencil } from 'lucide-react'
 import type { PageFields } from '@/api/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { cn } from '@/lib/utils'
 import { Calendar } from '@/components/ui/calendar'
 
 interface Props {
@@ -138,6 +138,19 @@ export function FrontmatterForm({ fields, onChange }: Props) {
   return (
     <section aria-label="Properties" className="grid gap-1 border-b bg-sidebar/50 px-3 py-3">
       <div className="group flex min-w-0 items-center gap-1.5">
+        <button
+          type="button"
+          aria-label="Draft"
+          title="Draft"
+          aria-pressed={fields.draft}
+          className={cn(
+            'shrink-0 cursor-pointer rounded',
+            fields.draft ? 'text-yellow-500' : 'text-muted-foreground',
+          )}
+          onClick={() => onChange({ ...fields, draft: !fields.draft })}
+        >
+          <FileText aria-hidden className="size-5" />
+        </button>
         <InlineEdit
           value={fields.title}
           label="Title"
@@ -190,15 +203,6 @@ export function FrontmatterForm({ fields, onChange }: Props) {
               </button>
             )}
           </InlineEdit>
-        </div>
-        <div className="flex items-center gap-2">
-          <input
-            id="fm-draft"
-            type="checkbox"
-            checked={fields.draft}
-            onChange={(e) => onChange({ ...fields, draft: e.target.checked })}
-          />
-          <Label htmlFor="fm-draft">Draft</Label>
         </div>
         <Button type="button" variant="outline" size="sm" className="h-7">
           Tags

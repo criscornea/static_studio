@@ -11,7 +11,8 @@ describe('FrontmatterForm', () => {
     render(<FrontmatterForm fields={fields} onChange={() => {}} />)
     expect(screen.getByRole('button', { name: 'Edit title' })).toHaveTextContent('Hello')
     expect(screen.getByText('2026-01-01T00:00:00Z')).toBeInTheDocument()
-    expect(screen.getByLabelText('Draft')).not.toBeChecked()
+    expect(screen.getByRole('button', { name: 'Draft' })).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Tags' })).toBeInTheDocument()
     expect(screen.queryByText('Static Studio YAML')).not.toBeInTheDocument()
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
@@ -46,10 +47,17 @@ describe('FrontmatterForm', () => {
     expect(screen.getByRole('button', { name: 'Edit title' })).toBeInTheDocument()
   })
 
+  it('draft button is yellow and pressed when draft', () => {
+    render(<FrontmatterForm fields={{ ...fields, draft: true }} onChange={() => {}} />)
+    const b = screen.getByRole('button', { name: 'Draft' })
+    expect(b).toHaveAttribute('aria-pressed', 'true')
+    expect(b).toHaveClass('text-yellow-500')
+  })
+
   it('edits and clears the date, and toggles draft', async () => {
     const onChange = vi.fn<(f: PageFields) => void>()
     render(<FrontmatterForm fields={fields} onChange={onChange} />)
-    await userEvent.click(screen.getByLabelText('Draft'))
+    await userEvent.click(screen.getByRole('button', { name: 'Draft' }))
     expect(onChange).toHaveBeenLastCalledWith({ ...fields, draft: true })
 
     await userEvent.click(screen.getByRole('button', { name: 'Edit date' }))

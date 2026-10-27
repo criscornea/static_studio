@@ -134,8 +134,12 @@ export const usePageStore = create<PageState>()((set, get) => ({
   },
 
   setFieldsDraft(fields) {
-    const { page, draft } = get()
+    const { page, draft, fieldsDraft: fieldsDraftBefore } = get()
     set({ fieldsDraft: fields, dirty: isDirty(page, draft, fields) })
+    // Reflect the draft flag in the tree right away, before the autosave lands.
+    if (page && fields.draft !== (fieldsDraftBefore ?? page.fields).draft) {
+      useProjectStore.getState().patchNodeFields(page.path, { ...page.fields, draft: fields.draft })
+    }
     scheduleAutosave()
   },
 

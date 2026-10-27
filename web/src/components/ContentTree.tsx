@@ -237,7 +237,12 @@ export function ContentTree({
             ) : (
               <span className="w-3 shrink-0" />
             )}
-            <Icon className="size-3.5 shrink-0" />
+            <Icon
+              className={cn(
+                'size-3.5 shrink-0',
+                !node.isDir && node.fields?.draft && 'text-yellow-500',
+              )}
+            />
             <span className="min-w-0 flex-1 truncate">{label}</span>
             {!node.isDir && errorPaths?.has(node.path) && (
               <span
@@ -246,12 +251,6 @@ export function ContentTree({
               >
                 <CircleAlert className="size-3.5" />
                 <span className="sr-only">Error</span>
-              </span>
-            )}
-            {!node.isDir && node.fields?.draft && (
-              <span className="shrink-0 text-muted-foreground" title="Draft">
-                <span aria-hidden className="block size-1.5 rounded-full bg-amber-500" />
-                <span className="sr-only">Draft</span>
               </span>
             )}
           </div>
