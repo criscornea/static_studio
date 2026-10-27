@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 
 import { api } from '@/api/client'
 import { asApiError } from '@/api/types'
-import { Eye, MonitorOff } from 'lucide-react'
+import { Eye, MonitorOff, Server } from 'lucide-react'
 
 import { EmptyState, SkeletonRows } from '@/components/EmptyState'
 import { IconButton } from '@/components/IconButton'
@@ -43,10 +43,11 @@ export function DevServerStatus() {
       disabled={busy}
       onClick={() => void (running ? stop() : start())}
       className={cn(
-        'rounded px-1.5 hover:bg-accent hover:text-accent-foreground disabled:opacity-50',
+        'inline-flex items-center gap-1 rounded px-1.5 hover:bg-accent hover:text-accent-foreground disabled:opacity-50',
         error && 'text-destructive',
       )}
     >
+      <Server aria-hidden="true" className="size-3.5" />
       {text}
     </button>
   )

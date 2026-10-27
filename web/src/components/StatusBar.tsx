@@ -1,3 +1,4 @@
+import { Terminal } from 'lucide-react'
 import { DevServerStatus } from '@/components/DevServer'
 import { cn } from '@/lib/utils'
 import { useLayoutStore } from '@/stores/layout'
@@ -58,11 +59,12 @@ export function StatusBar() {
         title="Toggle build log (Ctrl+J)"
         onClick={toggleLog}
         className={cn(
-          'rounded px-1.5 hover:bg-accent hover:text-accent-foreground',
+          'inline-flex items-center gap-1 rounded px-1.5 hover:bg-accent hover:text-accent-foreground',
           logOpen && 'bg-accent text-accent-foreground',
           build === 'failed' && 'text-destructive',
         )}
       >
+        <Terminal aria-hidden="true" className="size-3.5" />
         {buildText[build]}
       </button>
     </footer>
