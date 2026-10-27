@@ -9,7 +9,6 @@ export const defaultBuildLogSize = 30
 interface Saved {
   sidebarSize: number
   sidebarCollapsed: boolean
-  propertiesOpen: boolean
   /** Preview width as a percentage of the editor area. */
   previewSize: number
   /** Build log height as a percentage of the main area. */
@@ -24,7 +23,6 @@ interface LayoutState extends Saved {
   toggleSidebar: () => void
   /** Sidebar width as a percentage of the work area. */
   setSidebarSize: (percent: number) => void
-  toggleProperties: () => void
   togglePreview: () => void
   setPreviewOpen: (open: boolean) => void
   setPreviewSize: (percent: number) => void
@@ -41,7 +39,6 @@ function read(): Saved {
   const fallback: Saved = {
     sidebarSize: defaultSidebarSize,
     sidebarCollapsed: false,
-    propertiesOpen: true,
     previewSize: defaultPreviewSize,
     buildLogSize: defaultBuildLogSize,
   }
@@ -54,7 +51,6 @@ function read(): Saved {
     return {
       sidebarSize: size(v.sidebarSize, fallback.sidebarSize),
       sidebarCollapsed: v.sidebarCollapsed === true,
-      propertiesOpen: v.propertiesOpen !== false,
       previewSize: size(v.previewSize, fallback.previewSize),
       buildLogSize: size(v.buildLogSize, fallback.buildLogSize),
     }
@@ -70,7 +66,6 @@ export const useLayoutStore = create<LayoutState>()((set) => ({
   buildLogOpen: false,
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
   setSidebarSize: (percent) => set({ sidebarSize: percent }),
-  toggleProperties: () => set((s) => ({ propertiesOpen: !s.propertiesOpen })),
   togglePreview: () => set((s) => ({ previewOpen: !s.previewOpen })),
   setPreviewOpen: (open) => set({ previewOpen: open }),
   setPreviewSize: (percent) => set({ previewSize: percent }),
@@ -83,7 +78,6 @@ useLayoutStore.subscribe((s) => {
   const saved: Saved = {
     sidebarSize: s.sidebarSize,
     sidebarCollapsed: s.sidebarCollapsed,
-    propertiesOpen: s.propertiesOpen,
     previewSize: s.previewSize,
     buildLogSize: s.buildLogSize,
   }

@@ -1,99 +1,129 @@
-import { useId, useState } from 'react'
-import { ChevronRight } from 'lucide-react'
+import { useState } from 'react'
+import { Pencil } from 'lucide-react'
 import type { PageFields } from '@/api/types'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { cn } from '@/lib/utils'
-import { useLayoutStore } from '@/stores/layout'
 
 interface Props {
   fields: PageFields
-  /** Frontmatter format of the page, shown in the collapsed summary. */
-  format?: string
   onChange: (fields: PageFields) => void
 }
 
-function parseTags(text: string): string[] {
-  return text
-    .split(',')
-    .map((t) => t.trim())
-    .filter((t) => t !== '')
+interface InlineProps {
+  value: string
+  label: string
+  placeholder?: string
+  inputClassName?: string
+  onCommit: (value: string) => void
+  children: (startEdit: () => void) => React.ReactNode
 }
 
-function formatLabel(format: string | undefined): string {
-  switch (format) {
-    case 'yaml':
-      return 'YAML'
-    case 'toml':
-      return 'TOML'
-    default:
-      return 'no frontmatter'
+/** Shows children until edited; Enter or blur commits, Escape cancels. */
+function InlineEdit({ value, label, placeholder, inputClassName, onCommit, children }: InlineProps) {
+  const [editing, setEditing] = useState(false)
+  const [text, setText] = useState(value)
+
+  if (!editing) {
+    return (
+      <>
+        {children(() => {
+          setText(value)
+          setEditing(true)
+        })}
+      </>
+    )
   }
+  const finish = (commit: boolean) => {
+    setEditing(false)
+    if (commit && text !== value) {
+      onCommit(text)
+    }
+  }
+  return (
+    <Input
+      autoFocus
+      aria-label={label}
+      placeholder={placeholder}
+      className={inputClassName}
+      value={text}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={() => finish(true)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault()
+          finish(true)
+        } else if (e.key === 'Escape') {
+          e.preventDefault()
+          finish(false)
+        }
+      }}
+    />
+  )
 }
 
 /**
- * Edits the known frontmatter fields in a collapsible panel. Mount it with a
- * key per page: the tags text is held locally so typing a trailing comma is
- * not swallowed. The fields stay mounted while collapsed so that state lives on.
+ * Title, date, draft flag and a tags placeholder. Mount it with a key per page.
  */
-export function FrontmatterForm({ fields, format, onChange }: Props) {
-  const [tagsText, setTagsText] = useState((fields.tags ?? []).join(', '))
-  const open = useLayoutStore((s) => s.propertiesOpen)
-  const toggle = useLayoutStore((s) => s.toggleProperties)
-  const panelID = useId()
-
+export function FrontmatterForm({ fields, onChange }: Props) {
   return (
-    <section aria-label="Properties" className="border-b bg-sidebar/50">
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-controls={panelID}
-        onClick={toggle}
-        className="flex w-full items-center gap-1.5 px-3 py-1.5 text-left text-xs"
-      >
-        <ChevronRight className={cn('size-3.5 transition-transform', open && 'rotate-90')} />
-        <span className="font-medium">Properties</span>
-        <span className="min-w-0 flex-1 truncate text-muted-foreground">
-          {fields.title || 'Untitled'}
-          {fields.draft ? ' · draft' : ''}
-          {format !== undefined ? ` · ${formatLabel(format)}` : ''}
-        </span>
-      </button>
-      <form
-        id={panelID}
-        hidden={!open}
-        className="grid gap-2 px-3 pb-3 sm:grid-cols-[2fr_1.5fr_1.5fr_auto]"
-        onSubmit={(e) => e.preventDefault()}
-      >
-        <div className="grid gap-1">
-          <Label htmlFor="fm-title">Title</Label>
-          <Input
-            id="fm-title"
-            value={fields.title}
-            onChange={(e) => onChange({ ...fields, title: e.target.value })}
-          />
-        </div>
-        <div className="grid gap-1">
-          <Label htmlFor="fm-date">Date (RFC 3339)</Label>
-          <Input
-            id="fm-date"
-            placeholder="2026-02-01T09:30:00+01:00"
+    <section aria-label="Properties" className="grid gap-1 border-b bg-sidebar/50 px-3 py-3">
+      <div className="flex min-w-0 items-center gap-1.5">
+        <InlineEdit
+          value={fields.title}
+          label="Title"
+          inputClassName="h-9 text-xl font-semibold md:text-xl"
+          onCommit={(title) => onChange({ ...fields, title })}
+        >
+          {(startEdit) => (
+            <>
+              <h1
+                className="min-w-0 cursor-text truncate text-xl font-semibold"
+                onClick={startEdit}
+              >
+                {fields.title || 'Untitled'}
+              </h1>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-7 shrink-0"
+                aria-label="Edit title"
+                onClick={startEdit}
+              >
+                <Pencil className="size-3.5" />
+              </Button>
+            </>
+          )}
+        </InlineEdit>
+      </div>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+        <div className="flex items-center gap-1">
+          <InlineEdit
             value={fields.date ?? ''}
-            onChange={(e) => onChange({ ...fields, date: e.target.value || undefined })}
-          />
+            label="Date (RFC 3339)"
+            placeholder="2026-02-01T09:30:00+01:00"
+            inputClassName="h-7 w-64"
+            onCommit={(date) => onChange({ ...fields, date: date || undefined })}
+          >
+            {(startEdit) => (
+              <>
+                <span className="text-muted-foreground">{fields.date || 'No date'}</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="size-6"
+                  aria-label="Edit date"
+                  onClick={startEdit}
+                >
+                  <Pencil className="size-3" />
+                </Button>
+              </>
+            )}
+          </InlineEdit>
         </div>
-        <div className="grid gap-1">
-          <Label htmlFor="fm-tags">Tags (comma separated)</Label>
-          <Input
-            id="fm-tags"
-            value={tagsText}
-            onChange={(e) => {
-              setTagsText(e.target.value)
-              onChange({ ...fields, tags: parseTags(e.target.value) })
-            }}
-          />
-        </div>
-        <div className="flex items-end gap-2 pb-1.5">
+        <div className="flex items-center gap-2">
           <input
             id="fm-draft"
             type="checkbox"
@@ -102,7 +132,10 @@ export function FrontmatterForm({ fields, format, onChange }: Props) {
           />
           <Label htmlFor="fm-draft">Draft</Label>
         </div>
-      </form>
+        <Button type="button" variant="outline" size="sm" className="h-7">
+          Tags
+        </Button>
+      </div>
     </section>
   )
 }

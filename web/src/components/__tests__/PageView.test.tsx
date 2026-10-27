@@ -28,12 +28,13 @@ afterEach(() => {
 })
 
 describe('PageView', () => {
-  it('keeps a single form and unique keys while typing', async () => {
+  it('keeps a single panel and unique keys while typing', async () => {
     const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
     await usePageStore.getState().load('content/a.md')
-    const { container } = render(<PageView />)
-    await userEvent.type(screen.getByLabelText(/title/i), 'fg')
-    expect(container.querySelectorAll('form')).toHaveLength(1)
+    render(<PageView />)
+    await userEvent.click(screen.getByRole('button', { name: 'Edit title' }))
+    await userEvent.type(screen.getByLabelText(/title/i), 'fg{Enter}')
+    expect(screen.getAllByRole('region', { name: 'Properties' })).toHaveLength(1)
     const dup = errors.mock.calls.filter((c) => String(c[0]).includes('same key'))
     expect(dup).toHaveLength(0)
   })

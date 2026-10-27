@@ -1,55 +1,59 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { useLayoutStore } from '@/stores/layout'
+import { describe, expect, it, vi } from 'vitest'
 import type { PageFields } from '@/api/types'
 import { FrontmatterForm } from '../FrontmatterForm'
 
 const fields: PageFields = { title: 'Hello', draft: false, tags: ['a'], date: '2026-01-01T00:00:00Z' }
 
 describe('FrontmatterForm', () => {
-  it('shows the fields', () => {
+  it('shows title, date, draft and a Tags button, without a toggle', () => {
     render(<FrontmatterForm fields={fields} onChange={() => {}} />)
-    expect(screen.getByLabelText('Title')).toHaveValue('Hello')
-    expect(screen.getByLabelText(/Tags/)).toHaveValue('a')
-    expect(screen.getByLabelText(/Date/)).toHaveValue('2026-01-01T00:00:00Z')
+    expect(screen.getByRole('heading', { name: 'Hello' })).toBeInTheDocument()
+    expect(screen.getByText('2026-01-01T00:00:00Z')).toBeInTheDocument()
     expect(screen.getByLabelText('Draft')).not.toBeChecked()
+    expect(screen.getByRole('button', { name: 'Tags' })).toBeInTheDocument()
+    expect(screen.queryByText('Static Studio YAML')).not.toBeInTheDocument()
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Properties/ })).not.toBeInTheDocument()
   })
 
-  it('reports edits', async () => {
+  it('edits the title via heading click, committing on Enter', async () => {
+    const onChange = vi.fn<(f: PageFields) => void>()
+    render(<FrontmatterForm fields={fields} onChange={onChange} />)
+    await userEvent.click(screen.getByRole('heading', { name: 'Hello' }))
+    await userEvent.type(screen.getByLabelText('Title'), ' world{Enter}')
+    expect(onChange).toHaveBeenCalledWith({ ...fields, title: 'Hello world' })
+    expect(screen.queryByLabelText('Title')).not.toBeInTheDocument()
+  })
+
+  it('edits the title via the pencil, committing on blur', async () => {
+    const onChange = vi.fn<(f: PageFields) => void>()
+    render(<FrontmatterForm fields={fields} onChange={onChange} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Edit title' }))
+    await userEvent.type(screen.getByLabelText('Title'), '!')
+    await userEvent.tab()
+    expect(onChange).toHaveBeenCalledWith({ ...fields, title: 'Hello!' })
+  })
+
+  it('cancels title edit on Escape', async () => {
+    const onChange = vi.fn<(f: PageFields) => void>()
+    render(<FrontmatterForm fields={fields} onChange={onChange} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Edit title' }))
+    await userEvent.type(screen.getByLabelText('Title'), 'x{Escape}')
+    expect(onChange).not.toHaveBeenCalled()
+    expect(screen.getByRole('heading', { name: 'Hello' })).toBeInTheDocument()
+  })
+
+  it('edits and clears the date, and toggles draft', async () => {
     const onChange = vi.fn<(f: PageFields) => void>()
     render(<FrontmatterForm fields={fields} onChange={onChange} />)
     await userEvent.click(screen.getByLabelText('Draft'))
     expect(onChange).toHaveBeenLastCalledWith({ ...fields, draft: true })
 
-    await userEvent.type(screen.getByLabelText(/Tags/), ', b')
-    expect(onChange).toHaveBeenLastCalledWith({ ...fields, tags: ['a', 'b'] })
-
+    await userEvent.click(screen.getByRole('button', { name: 'Edit date' }))
     await userEvent.clear(screen.getByLabelText(/Date/))
+    await userEvent.keyboard('{Enter}')
     expect(onChange).toHaveBeenLastCalledWith({ ...fields, date: undefined })
-  })
-})
-
-describe('FrontmatterForm panel', () => {
-  afterEach(() => {
-    useLayoutStore.setState({ propertiesOpen: true })
-  })
-
-  it('collapses and expands, keeping the fields mounted', async () => {
-    render(<FrontmatterForm fields={fields} onChange={() => {}} />)
-    const toggle = screen.getByRole('button', { name: /Properties/ })
-    expect(toggle).toHaveAttribute('aria-expanded', 'true')
-    await userEvent.click(toggle)
-    expect(toggle).toHaveAttribute('aria-expanded', 'false')
-    expect(useLayoutStore.getState().propertiesOpen).toBe(false)
-    expect(screen.getByLabelText('Title', { selector: 'input' })).not.toBeVisible()
-    await userEvent.click(toggle)
-    expect(screen.getByLabelText('Title')).toBeVisible()
-  })
-
-  it('shows a summary while collapsed', () => {
-    useLayoutStore.setState({ propertiesOpen: false })
-    render(<FrontmatterForm fields={{ ...fields, draft: true }} format="yaml" onChange={() => {}} />)
-    expect(screen.getByRole('button', { name: /Hello · draft · YAML/ })).toBeInTheDocument()
   })
 })

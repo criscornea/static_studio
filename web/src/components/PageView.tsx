@@ -99,7 +99,6 @@ export function PageView() {
         <FrontmatterForm
           key={`form-${page.path}`}
           fields={fieldsDraft ?? page.fields}
-          format={page.format}
           onChange={setFieldsDraft}
         />
         {frontmatterLine !== null && (
