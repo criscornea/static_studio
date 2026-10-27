@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Pencil } from 'lucide-react'
 import type { PageFields } from '@/api/types'
 import { Button } from '@/components/ui/button'
@@ -82,13 +83,51 @@ function InlineEdit({ value, label, placeholder, inputClassName, onCommit, extra
   )
   if (!extra) return input
   return (
-    <div className="flex flex-col items-start">
+    <div className="relative flex flex-col items-start">
       {input}
       {/* Keep focus in the input so clicking the calendar does not blur-commit. */}
-      <div className="mt-1 rounded-md border shadow-sm" onMouseDown={(e) => e.preventDefault()}>
-        {extra(text, (v) => finish(true, v))}
-      </div>
+      <FloatingPanel>{extra(text, (v) => finish(true, v))}</FloatingPanel>
     </div>
+  )
+}
+
+/**
+ * Renders children in a body portal, fixed under its parent, so ancestors with
+ * overflow clipping neither clip it nor grow around it.
+ */
+function FloatingPanel({ children }: { children: React.ReactNode }) {
+  const anchor = useRef<HTMLSpanElement>(null)
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null)
+  useLayoutEffect(() => {
+    const parent = anchor.current?.parentElement
+    if (!parent) return
+    const update = () => {
+      const r = parent.getBoundingClientRect()
+      setPos({ left: r.left, top: r.bottom + 4 })
+    }
+    update()
+    window.addEventListener('resize', update)
+    window.addEventListener('scroll', update, true)
+    return () => {
+      window.removeEventListener('resize', update)
+      window.removeEventListener('scroll', update, true)
+    }
+  }, [])
+  return (
+    <>
+      <span ref={anchor} hidden />
+      {pos &&
+        createPortal(
+          <div
+            style={{ position: 'fixed', left: pos.left, top: pos.top }}
+            className="z-50 rounded-md border bg-popover p-2 text-popover-foreground shadow-md"
+            onMouseDown={(e) => e.preventDefault()}
+          >
+            {children}
+          </div>,
+          document.body,
+        )}
+    </>
   )
 }
 
