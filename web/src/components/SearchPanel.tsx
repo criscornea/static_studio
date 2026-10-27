@@ -43,10 +43,12 @@ export function SearchPanel() {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-sidebar text-sidebar-foreground">
-      <div className="space-y-1.5 border-b p-2">
+      <div className="box-border flex h-9 shrink-0 items-center border-b px-2">
         <h2 className="px-1 text-[0.6875rem] font-semibold tracking-wide text-muted-foreground uppercase">
           Search
         </h2>
+      </div>
+      <div className="border-b p-2">
         <div className="relative">
           <Search className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input

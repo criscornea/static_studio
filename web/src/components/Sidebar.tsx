@@ -106,8 +106,8 @@ export function Sidebar() {
   return (
     <TooltipProvider>
       <div className="flex h-full min-h-0 flex-col bg-sidebar text-sidebar-foreground">
-        <div className="space-y-1.5 border-b p-2">
-          <div className="flex items-center gap-0.5">
+        <div className="box-border flex h-9 shrink-0 items-center border-b px-2">
+          <div className="flex min-w-0 flex-1 items-center gap-0.5">
             <h2 className="flex-1 truncate px-1 text-[0.6875rem] font-semibold tracking-wide text-muted-foreground uppercase">
               Pages
             </h2>
