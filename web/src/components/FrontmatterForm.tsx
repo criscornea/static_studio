@@ -79,11 +79,11 @@ export function FrontmatterForm({ fields, onChange }: Props) {
             <button
               type="button"
               aria-label="Edit title"
-              className="flex min-w-0 cursor-text items-center gap-1.5 rounded text-left text-xl font-semibold"
+              className="flex min-w-0 cursor-pointer items-center gap-1.5 rounded text-left text-xl font-semibold"
               onClick={startEdit}
             >
-              <span className="truncate">{fields.title || 'Untitled'}</span>
-              <Pencil aria-hidden className="size-3.5 shrink-0 opacity-0 group-focus-within:opacity-100 group-hover:opacity-100" />
+              <span className="cursor-pointer truncate">{fields.title || 'Untitled'}</span>
+              <Pencil aria-hidden className="cursor-pointer size-3.5 shrink-0 opacity-0 group-focus-within:opacity-100 group-hover:opacity-100" />
             </button>
           )}
         </InlineEdit>
@@ -101,11 +101,11 @@ export function FrontmatterForm({ fields, onChange }: Props) {
               <button
                 type="button"
                 aria-label="Edit date"
-                className="flex cursor-text items-center gap-1 rounded text-muted-foreground"
+                className="flex cursor-pointer items-center gap-1 rounded text-muted-foreground"
                 onClick={startEdit}
               >
-                <span>{fields.date || 'No date'}</span>
-                <Pencil aria-hidden className="size-3 shrink-0 opacity-0 group-focus-within:opacity-100 group-hover:opacity-100" />
+                <span className="cursor-pointer">{fields.date || 'No date'}</span>
+                <Pencil aria-hidden className="cursor-pointer size-3 shrink-0 opacity-0 group-focus-within:opacity-100 group-hover:opacity-100" />
               </button>
             )}
           </InlineEdit>
