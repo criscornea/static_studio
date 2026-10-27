@@ -1,13 +1,15 @@
 import { useEffect } from 'react'
-import { Files } from 'lucide-react'
+import { Files, Search } from 'lucide-react'
 
 import { AppDialogs } from '@/components/AppDialogs'
 import { BuildPanel } from '@/components/BuildPanel'
 import { EditorHeader } from '@/components/EditorHeader'
 import { PageView } from '@/components/PageView'
 import { ProjectPicker } from '@/components/ProjectPicker'
+import { SearchPanel } from '@/components/SearchPanel'
 import { Sidebar } from '@/components/Sidebar'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
 import { StatusBar } from '@/components/StatusBar'
 import { ThemeButton } from '@/components/ThemeButton'
@@ -23,6 +25,8 @@ export default function App() {
 
   const collapsed = useLayoutStore((s) => s.sidebarCollapsed)
   const sidebarSize = useLayoutStore((s) => s.sidebarSize)
+  const panel = useLayoutStore((s) => s.sidebarPanel)
+  const showPanel = useLayoutStore((s) => s.showSidebarPanel)
   const toggleSidebar = useLayoutStore((s) => s.toggleSidebar)
   const setSidebarSize = useLayoutStore((s) => s.setSidebarSize)
   const buildLogOpen = useLayoutStore((s) => s.buildLogOpen)
@@ -53,16 +57,32 @@ export default function App() {
         aria-label="Activity bar"
         className="flex flex-col items-center gap-1 border-r bg-sidebar py-1"
       >
-        <Button
-          variant={collapsed ? 'ghost' : 'secondary'}
-          size="icon"
-          aria-label={collapsed ? 'Show sidebar' : 'Hide sidebar'}
-          aria-pressed={!collapsed}
-          title="Toggle sidebar (Ctrl+B)"
-          onClick={toggleSidebar}
-        >
-          <Files />
-        </Button>
+        <TooltipProvider>
+          {(
+            [
+              { id: 'files', label: 'Files', Icon: Files },
+              { id: 'search', label: 'Search', Icon: Search },
+            ] as const
+          ).map(({ id, label, Icon }) => {
+            const active = !collapsed && panel === id
+            return (
+              <Tooltip key={id}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={active ? 'secondary' : 'ghost'}
+                    size="icon"
+                    aria-label={label}
+                    aria-pressed={active}
+                    onClick={() => (active ? toggleSidebar() : showPanel(id))}
+                  >
+                    <Icon />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">{label}</TooltipContent>
+              </Tooltip>
+            )
+          })}
+        </TooltipProvider>
       </nav>
 
       <div className="min-h-0 min-w-0">
@@ -84,7 +104,7 @@ export default function App() {
                 minSize="12%"
                 maxSize="45%"
               >
-                <Sidebar />
+                {panel === 'search' ? <SearchPanel /> : <Sidebar />}
               </ResizablePanel>
               <ResizableHandle />
             </>

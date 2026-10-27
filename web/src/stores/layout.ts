@@ -6,7 +6,11 @@ export const defaultSidebarSize = 22
 export const defaultPreviewSize = 45
 export const defaultBuildLogSize = 30
 
+export type SidebarPanel = 'files' | 'search'
+
 interface Saved {
+  /** Which panel the sidebar shows. */
+  sidebarPanel: SidebarPanel
   sidebarSize: number
   sidebarCollapsed: boolean
   /** Preview width as a percentage of the editor area. */
@@ -21,6 +25,8 @@ interface LayoutState extends Saved {
   /** Whether the build log panel is shown. */
   buildLogOpen: boolean
   toggleSidebar: () => void
+  /** Shows a panel and expands the sidebar if it was collapsed. */
+  showSidebarPanel: (panel: SidebarPanel) => void
   /** Sidebar width as a percentage of the work area. */
   setSidebarSize: (percent: number) => void
   togglePreview: () => void
@@ -37,6 +43,7 @@ function size(v: unknown, fallback: number): number {
 
 function read(): Saved {
   const fallback: Saved = {
+    sidebarPanel: 'files',
     sidebarSize: defaultSidebarSize,
     sidebarCollapsed: false,
     previewSize: defaultPreviewSize,
@@ -49,6 +56,7 @@ function read(): Saved {
     }
     const v = JSON.parse(raw) as Partial<Saved>
     return {
+      sidebarPanel: v.sidebarPanel === 'search' ? 'search' : 'files',
       sidebarSize: size(v.sidebarSize, fallback.sidebarSize),
       sidebarCollapsed: v.sidebarCollapsed === true,
       previewSize: size(v.previewSize, fallback.previewSize),
@@ -65,6 +73,7 @@ export const useLayoutStore = create<LayoutState>()((set) => ({
   previewOpen: false,
   buildLogOpen: false,
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
+  showSidebarPanel: (panel) => set({ sidebarPanel: panel, sidebarCollapsed: false }),
   setSidebarSize: (percent) => set({ sidebarSize: percent }),
   togglePreview: () => set((s) => ({ previewOpen: !s.previewOpen })),
   setPreviewOpen: (open) => set({ previewOpen: open }),
@@ -76,6 +85,7 @@ export const useLayoutStore = create<LayoutState>()((set) => ({
 
 useLayoutStore.subscribe((s) => {
   const saved: Saved = {
+    sidebarPanel: s.sidebarPanel,
     sidebarSize: s.sidebarSize,
     sidebarCollapsed: s.sidebarCollapsed,
     previewSize: s.previewSize,

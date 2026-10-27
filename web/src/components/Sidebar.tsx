@@ -1,11 +1,9 @@
-import { useEffect, useMemo, useRef } from 'react'
-import { ChevronsDownUp, FilePlus, ListFilter, Plus, Search, X } from 'lucide-react'
+import { useMemo } from 'react'
+import { ChevronsDownUp, FilePlus, ListFilter, Plus } from 'lucide-react'
 
 import { ContentTree, TreeRoot } from '@/components/ContentTree'
-import { SearchResults } from '@/components/SearchResults'
 import { EmptyState, SkeletonRows } from '@/components/EmptyState'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,7 +27,6 @@ import {
 import { useBuildStore } from '@/stores/build'
 import { usePageStore } from '@/stores/page'
 import { useProjectStore } from '@/stores/project'
-import { useSearchStore } from '@/stores/search'
 import { useUiStore } from '@/stores/ui'
 import { useViewStore } from '@/stores/view'
 
@@ -78,26 +75,12 @@ export function Sidebar() {
   const errorPaths = useMemo(() => new Set(problems.map((p) => p.file)), [problems])
   const load = usePageStore((s) => s.load)
 
-  const search = useSearchStore()
   const view = useViewStore()
 
-  const searchBox = useRef<HTMLInputElement>(null)
   const contentDir = useProjectStore((s) => s.project?.contentDir ?? 'content')
   const openNewPage = useUiStore((s) => s.openNewPage)
   const openRename = useUiStore((s) => s.openRename)
   const openDelete = useUiStore((s) => s.openDelete)
-  const focusRequested = useUiStore((s) => s.searchFocusRequested)
-  const clearSearchFocus = useUiStore((s) => s.clearSearchFocus)
-  const searching = search.query.trim() !== ''
-
-  // The focus-search command (Ctrl/Cmd+K) lands here.
-  useEffect(() => {
-    if (focusRequested) {
-      searchBox.current?.focus()
-      searchBox.current?.select()
-      clearSearchFocus()
-    }
-  }, [focusRequested, clearSearchFocus])
 
   // Every content dir gets its own labelled group; a single dir needs no label.
   const groups = useMemo(
@@ -205,46 +188,11 @@ export function Sidebar() {
               <ChevronsDownUp />
             </IconButton>
           </div>
-
-          <div className="relative">
-            <Search className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              ref={searchBox}
-              type="search"
-              value={search.query}
-              onChange={(e) => search.setQuery(e.target.value)}
-              onKeyDown={(e) => e.key === 'Escape' && search.clear()}
-              placeholder="Search  (Ctrl+K)"
-              aria-label="Search pages"
-              spellCheck={false}
-              autoComplete="off"
-              className="h-7 px-7 text-[0.8125rem] [&::-webkit-search-cancel-button]:hidden"
-            />
-            {searching && (
-              <button
-                type="button"
-                aria-label="Clear search"
-                onClick={search.clear}
-                className="absolute top-1/2 right-2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                <X className="size-3.5" />
-              </button>
-            )}
-          </div>
         </div>
 
         <ScrollArea className="min-h-0 flex-1">
           <nav className="py-1">
-            {searching ? (
-              <SearchResults
-                query={search.query}
-                results={search.results}
-                loading={search.loading}
-                error={search.error}
-                selected={selected}
-                onSelect={(path) => void load(path)}
-              />
-            ) : visible.length > 0 ? (
+            {visible.length > 0 ? (
               visibleGroups
                 .filter((g) => g.children.length > 0)
                 .map((g) => (

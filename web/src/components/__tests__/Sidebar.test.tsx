@@ -1,8 +1,8 @@
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { ContentNode, SearchResults } from '@/api/types'
+import type { ContentNode } from '@/api/types'
 import { defaultView } from '@/lib/tree'
 import { useProjectStore } from '@/stores/project'
 import { useSearchStore } from '@/stores/search'
@@ -29,26 +29,6 @@ const tree: ContentNode = {
       fields: { title: 'Work In Progress', draft: true },
     },
   ],
-}
-
-const found: SearchResults = {
-  hits: [
-    {
-      path: 'content/live.md',
-      title: 'Live Post',
-      draft: false,
-      snippet: 'all about golang here',
-    },
-  ],
-  truncated: false,
-}
-
-function stubSearch(results: SearchResults) {
-  const fetch = vi.fn<(input: RequestInfo) => Promise<Response>>(() =>
-    Promise.resolve(new Response(JSON.stringify(results), { status: 200 })),
-  )
-  vi.stubGlobal('fetch', fetch)
-  return fetch
 }
 
 beforeEach(() => {
@@ -83,48 +63,10 @@ describe('Sidebar', () => {
     expect(await screen.findByText('Live Post')).toBeInTheDocument()
   })
 
-  it('replaces the tree with search results while a query is typed, and brings it back', async () => {
-    const fetch = stubSearch(found)
+  it('has no search box', () => {
     render(<Sidebar />)
 
-    await userEvent.type(screen.getByRole('searchbox', { name: 'Search pages' }), 'golang')
-
-    expect(await screen.findByText('content/live.md')).toBeInTheDocument()
-    expect(screen.queryByText('Work In Progress')).not.toBeInTheDocument()
-    expect(screen.getByText('golang', { selector: 'mark' })).toBeInTheDocument()
-    expect(fetch).toHaveBeenCalledTimes(1)
-    expect(String(fetch.mock.calls[0]?.[0])).toBe('/api/search?q=golang')
-
-    await userEvent.click(screen.getByRole('button', { name: 'Clear search' }))
-
-    expect(await screen.findByText('Work In Progress')).toBeInTheDocument()
-  })
-
-  it('says so when nothing matches', async () => {
-    stubSearch({ hits: [], truncated: false })
-    render(<Sidebar />)
-
-    await userEvent.type(screen.getByRole('searchbox'), 'zzz')
-
-    expect(await screen.findByText('No pages match “zzz”.')).toBeInTheDocument()
-  })
-
-  it('clears the search on Escape', async () => {
-    stubSearch(found)
-    render(<Sidebar />)
-    const box = screen.getByRole('searchbox')
-
-    await userEvent.type(box, 'golang{Escape}')
-
-    await waitFor(() => expect(box).toHaveValue(''))
-  })
-
-  it('focuses the search box when the focus command asks', () => {
-    render(<Sidebar />)
-
-    act(() => useUiStore.getState().requestSearchFocus())
-
-    expect(screen.getByRole('searchbox')).toHaveFocus()
+    expect(screen.queryByRole('searchbox')).not.toBeInTheDocument()
   })
 })
 

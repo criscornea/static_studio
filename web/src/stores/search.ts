@@ -14,7 +14,10 @@ interface SearchState {
   results: SearchResults | null
   loading: boolean
   error: ApiError | null
+  // Scroll offset of the results list, kept so it survives switching panels.
+  scrollTop: number
 
+  setScrollTop: (scrollTop: number) => void
   setQuery: (query: string) => void
   clear: () => void
 }
@@ -50,10 +53,15 @@ export const useSearchStore = create<SearchState>()((set) => {
     results: null,
     loading: false,
     error: null,
+    scrollTop: 0,
+
+    setScrollTop(scrollTop) {
+      set({ scrollTop })
+    },
 
     setQuery(query) {
       clearTimeout(timer)
-      set({ query })
+      set({ query, scrollTop: 0 })
 
       if (query.trim() === '') {
         latest++
@@ -68,7 +76,7 @@ export const useSearchStore = create<SearchState>()((set) => {
     clear() {
       clearTimeout(timer)
       latest++
-      set({ query: '', results: null, error: null, loading: false })
+      set({ query: '', results: null, error: null, loading: false, scrollTop: 0 })
     },
   }
 })

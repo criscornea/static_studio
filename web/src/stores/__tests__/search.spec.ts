@@ -178,3 +178,12 @@ describe('clear', () => {
     expect(store().query).toBe('')
   })
 })
+
+describe('search scroll position', () => {
+  it('is kept, and reset on clear', () => {
+    store().setScrollTop(120)
+    expect(store().scrollTop).toBe(120)
+    store().clear()
+    expect(store().scrollTop).toBe(0)
+  })
+})

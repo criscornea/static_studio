@@ -76,12 +76,10 @@ export function buildCommands(): Command[] {
       id: 'search.focus',
       title: 'Search pages',
       group: 'Navigate',
-      shortcut: 'Mod+K',
+      shortcut: 'Mod+Shift+F',
       enabled: true,
       run: () => {
-        if (layout.sidebarCollapsed) {
-          layout.toggleSidebar()
-        }
+        layout.showSidebarPanel('search')
         ui.requestSearchFocus()
       },
     },
