@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { FileText } from 'lucide-react'
+import { FileCode, FileText } from 'lucide-react'
 
 import { api } from '@/api/client'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
@@ -80,6 +80,9 @@ export function PageView() {
     return <SkeletonRows count={8} label="Loading page" className="p-6" />
   }
 
+  // An HTML content file with no body: the page comes from a layout template.
+  const templateOnly = /\.html$/i.test(page.path) && page.body.trim() === ''
+
   return (
     <article className={cn('flex h-full min-h-0 flex-col', loading && 'opacity-50')}>
       <div className="max-h-[60%] shrink-0 overflow-auto">
@@ -118,6 +121,13 @@ export function PageView() {
         }}
       >
         <ResizablePanel id="editor" minSize="25%">
+          {templateOnly ? (
+            <EmptyState
+              icon={FileCode}
+              className="h-full"
+              text="This page has no markdown content. It is built from an HTML template, so there is nothing to edit here."
+            />
+          ) : (
           <MarkdownEditor
             key={`editor-${page.path}`}
             jumpLine={editorLine}
@@ -133,6 +143,7 @@ export function PageView() {
               setUploadError({ path, message: err instanceof Error ? err.message : String(err) })
             }
           />
+          )}
         </ResizablePanel>
         {previewing && (
           <>

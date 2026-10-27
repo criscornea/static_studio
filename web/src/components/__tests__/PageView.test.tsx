@@ -39,6 +39,31 @@ describe('PageView', () => {
   })
 })
 
+describe('PageView template-only page', () => {
+  const noBody = 'This page has no markdown content.'
+
+  it('explains an HTML page with no body', async () => {
+    vi.spyOn(api, 'page').mockResolvedValue({ ...page, path: 'content/index.html', body: '\n' })
+    await usePageStore.getState().load('content/index.html')
+    render(<PageView />)
+    expect(screen.getByText(new RegExp(noBody))).toBeInTheDocument()
+  })
+
+  it('keeps an empty markdown body editable', async () => {
+    vi.spyOn(api, 'page').mockResolvedValue({ ...page, body: '' })
+    await usePageStore.getState().load('content/a.md')
+    render(<PageView />)
+    expect(screen.queryByText(new RegExp(noBody))).not.toBeInTheDocument()
+  })
+
+  it('keeps an HTML page with a body editable', async () => {
+    vi.spyOn(api, 'page').mockResolvedValue({ ...page, path: 'content/b.html', body: '<p>x</p>' })
+    await usePageStore.getState().load('content/b.html')
+    render(<PageView />)
+    expect(screen.queryByText(new RegExp(noBody))).not.toBeInTheDocument()
+  })
+})
+
 describe('PageView preview pane', () => {
   afterEach(() => {
     useLayoutStore.setState({ previewOpen: false })
