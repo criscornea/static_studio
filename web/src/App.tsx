@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Files, Search, X } from 'lucide-react'
+import { Files, Search, Settings, X } from 'lucide-react'
 
 import { AppDialogs } from '@/components/AppDialogs'
 import { BuildPanel } from '@/components/BuildPanel'
@@ -12,14 +12,12 @@ import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
 import { StatusBar } from '@/components/StatusBar'
-import { ThemeButton } from '@/components/ThemeButton'
 import { useCommandShortcuts } from '@/hooks/useCommandShortcuts'
 import { useLayoutStore } from '@/stores/layout'
 import { selectIsOpen, useProjectStore } from '@/stores/project'
 
 export default function App() {
   const isOpen = useProjectStore(selectIsOpen)
-  const root = useProjectStore((s) => s.project?.root)
   const close = useProjectStore((s) => s.close)
   const restore = useProjectStore((s) => s.restore)
 
@@ -44,21 +42,7 @@ export default function App() {
   }
 
   return (
-    <div className="grid h-full grid-cols-[2.5rem_minmax(0,1fr)] grid-rows-[2.25rem_minmax(0,1fr)_1.5rem] overflow-hidden">
-      <header className="col-span-2 flex items-center gap-3 border-b bg-sidebar px-3">
-        <span className="flex-1 truncate font-mono text-xs text-muted-foreground">{root}</span>
-        <ThemeButton />
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="Close"
-          title="Close"
-          onClick={() => void close()}
-        >
-          <X />
-        </Button>
-      </header>
-
+    <div className="grid h-full grid-cols-[2.5rem_minmax(0,1fr)] grid-rows-[minmax(0,1fr)_1.5rem] overflow-hidden">
       <nav
         aria-label="Activity bar"
         className="flex flex-col items-center gap-1 border-r bg-sidebar py-1"
@@ -89,6 +73,19 @@ export default function App() {
             )
           })}
         </TooltipProvider>
+        {/* TODO: options panel (theme toggle goes here) */}
+        <Button variant="ghost" size="icon" aria-label="Options" title="Options" className="mt-auto">
+          <Settings />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Close"
+          title="Close"
+          onClick={() => void close()}
+        >
+          <X />
+        </Button>
       </nav>
 
       <div className="min-h-0 min-w-0">

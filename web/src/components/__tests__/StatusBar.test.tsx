@@ -21,7 +21,8 @@ describe('StatusBar', () => {
   it('shows the project name and idle states', () => {
     useProjectStore.setState({ project: { root: '/home/me/site' } as Project })
     render(<StatusBar />)
-    expect(screen.getByText('site')).toBeInTheDocument()
+    expect(screen.getByText('site')).toHaveClass('font-semibold')
+    expect(screen.getByTitle('/home/me/site')).toHaveTextContent('/home/me/site')
     expect(screen.getByText('Server: stopped')).toBeInTheDocument()
     expect(screen.getByText('Build: idle')).toBeInTheDocument()
   })
@@ -34,6 +35,15 @@ describe('StatusBar', () => {
     expect(screen.getByText('Unsaved changes')).toBeInTheDocument()
     expect(screen.getByText('Server: running :4000')).toBeInTheDocument()
     expect(screen.getByText('Build: failed')).toBeInTheDocument()
+  })
+})
+
+describe('StatusBar path', () => {
+  it('bolds the last segment for both separators and trailing ones', () => {
+    useProjectStore.setState({ project: { root: 'C:\\sites\\blog\\' } as Project })
+    render(<StatusBar />)
+    expect(screen.getByText('blog')).toHaveClass('font-semibold')
+    expect(screen.getByTitle('C:\\sites\\blog\\')).toHaveTextContent('C:\\sites\\blog')
   })
 })
 

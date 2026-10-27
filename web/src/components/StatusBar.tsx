@@ -13,9 +13,11 @@ const buildText: Record<BuildStatus, string> = {
   failed: 'Build: failed',
 }
 
-function baseName(root: string): string {
-  const parts = root.split(/[\\/]/).filter(Boolean)
-  return parts[parts.length - 1] ?? root
+/** Splits a path into its parent part (with trailing separator) and last segment. */
+function splitPath(root: string): { dir: string; name: string } {
+  const trimmed = root.replace(/[\\/]+$/, '')
+  const i = Math.max(trimmed.lastIndexOf('/'), trimmed.lastIndexOf('\\'))
+  return { dir: trimmed.slice(0, i + 1), name: trimmed.slice(i + 1) || root }
 }
 
 /** The bottom bar: project, save, server and build state. */
@@ -48,8 +50,13 @@ export function StatusBar() {
       aria-label="Status bar"
       className="col-span-2 flex items-center gap-4 border-t bg-sidebar px-3 text-xs text-muted-foreground"
     >
-      <span className="truncate font-medium text-foreground" title={root}>
-        {root ? baseName(root) : ''}
+      <span className="truncate font-mono" title={root}>
+        {root && (
+          <>
+            {splitPath(root).dir}
+            <span className="font-semibold text-foreground">{splitPath(root).name}</span>
+          </>
+        )}
       </span>
       <span className="flex-1 truncate">{save}</span>
       <DevServerStatus />
