@@ -15,12 +15,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `known_hosts`; host key checking is never turned off and no credentials are
   stored. Unknown host keys, refused logins, missing programs and unreachable
   hosts give readable messages. Existing settings load as GitHub Pages.
-- Live preview in the editor: headings, bold, italic, strikethrough, inline
-  code, links, quotes, list markers and horizontal rules render inline, with
-  the markup revealed only on lines touched by the cursor or selection. Code
-  blocks and HTML stay as source and the document text is never changed. A
-  live-preview/source switch (default live preview, saved in localStorage) is
-  in the editor header, the status bar and the command palette.
+- Removed the live preview mode before release. The editor always shows plain
+  markdown source; the switch in the header, status bar and command palette is
+  gone.
 - Floating formatting toolbar at the bottom center of the editor: H1-H3, bold,
   italic, strikethrough, inline code, link, bullet and numbered lists and
   quote. Active formats are highlighted from the markdown syntax tree. It shows

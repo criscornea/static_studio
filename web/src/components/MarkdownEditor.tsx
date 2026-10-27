@@ -8,10 +8,8 @@ import { FormatToolbar } from '@/components/FormatToolbar'
 import { insertLink, toggleBold, toggleItalic } from '@/lib/editorFormat'
 import { editorTheme } from '@/lib/editorTheme'
 import { activeFormats } from '@/lib/formatState'
-import { livePreview } from '@/lib/livePreview'
 import { imageMarkdown } from '@/lib/markdown'
 import { useEditorStore } from '@/stores/editor'
-import { useEditorModeStore } from '@/stores/editorMode'
 import { useThemeStore } from '@/stores/theme'
 
 interface Props {
@@ -46,9 +44,6 @@ export function MarkdownEditor({
   // Insertion points of in-flight drops, mapped through every document change.
   const trackers = useRef(new Set<{ pos: number }>())
   const theme = useRef(new Compartment())
-  const modeSlot = useRef(new Compartment())
-  const live = useEditorModeStore((s) => s.mode === 'live')
-  const liveNow = useRef(live)
   const dark = useThemeStore((s) => s.resolved === 'dark')
   const darkNow = useRef(dark)
   const handlers = useRef({ onChange, onSave, onUploadImage, onUploadError })
@@ -81,7 +76,6 @@ export function MarkdownEditor({
           ]),
           EditorState.lineSeparator.of(sep.current),
           theme.current.of(editorTheme(darkNow.current)),
-          modeSlot.current.of(liveNow.current ? livePreview() : []),
           history(),
           markdown({ base: markdownLanguage }),
           EditorView.lineWrapping,
@@ -157,11 +151,6 @@ export function MarkdownEditor({
       v.focus()
     }
   }, [jumpLine, jumpToken])
-
-  useEffect(() => {
-    liveNow.current = live
-    view.current?.dispatch({ effects: modeSlot.current.reconfigure(live ? livePreview() : []) })
-  }, [live])
 
   useEffect(() => {
     darkNow.current = dark

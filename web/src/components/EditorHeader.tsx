@@ -1,10 +1,9 @@
-import { ChevronRight, Eye, FileCode, Save } from 'lucide-react'
+import { ChevronRight, Save } from 'lucide-react'
 
 import { BuildButton } from '@/components/BuildPanel'
 import { PreviewButton } from '@/components/DevServer'
 import { IconButton } from '@/components/IconButton'
 import { PublishButton } from '@/components/PublishDialog'
-import { useEditorModeStore } from '@/stores/editorMode'
 import { useLayoutStore } from '@/stores/layout'
 import { usePageStore } from '@/stores/page'
 
@@ -23,9 +22,6 @@ export function EditorHeader() {
   const save = usePageStore((s) => s.save)
   const previewOpen = useLayoutStore((s) => s.previewOpen)
   const togglePreview = useLayoutStore((s) => s.togglePreview)
-
-  const live = useEditorModeStore((s) => s.mode === 'live')
-  const toggleMode = useEditorModeStore((s) => s.toggle)
 
   const saving = page !== null && savingPath === page.path
   const conflict = saveError?.code === 'page_conflict'
@@ -58,13 +54,6 @@ export function EditorHeader() {
             disabled={saving || !dirty}
           >
             <Save />
-          </IconButton>
-          <IconButton
-            label={live ? 'Show source' : 'Show live preview'}
-            aria-pressed={live}
-            onClick={toggleMode}
-          >
-            {live ? <Eye /> : <FileCode />}
           </IconButton>
         </>
       )}

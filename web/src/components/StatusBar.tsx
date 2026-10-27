@@ -1,6 +1,5 @@
 import { DevServerStatus } from '@/components/DevServer'
 import { cn } from '@/lib/utils'
-import { useEditorModeStore } from '@/stores/editorMode'
 import { useLayoutStore } from '@/stores/layout'
 import { useBuildStore, type BuildStatus } from '@/stores/build'
 import { usePageStore } from '@/stores/page'
@@ -29,9 +28,6 @@ export function StatusBar() {
   const logOpen = useLayoutStore((s) => s.buildLogOpen)
   const toggleLog = useLayoutStore((s) => s.toggleBuildLog)
 
-  const mode = useEditorModeStore((s) => s.mode)
-  const toggleMode = useEditorModeStore((s) => s.toggle)
-
   const saving = page !== null && savingPath === page.path
   let save = ''
   if (page !== null) {
@@ -55,16 +51,6 @@ export function StatusBar() {
         {root ? baseName(root) : ''}
       </span>
       <span className="flex-1 truncate">{save}</span>
-      {page !== null && (
-        <button
-          type="button"
-          title="Toggle live preview or source editing"
-          onClick={toggleMode}
-          className="rounded px-1.5 hover:bg-accent hover:text-accent-foreground"
-        >
-          {mode === 'live' ? 'Live preview' : 'Source'}
-        </button>
-      )}
       <DevServerStatus />
       <button
         type="button"

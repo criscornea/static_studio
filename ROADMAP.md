@@ -112,11 +112,8 @@ No new features. Zero.
   list, quote; built on CodeMirror commands; active-state highlighting;
   Ctrl/Cmd+B, I, K in the editor; reachable from the command palette; themed
   for light and dark; hidden when the editor is unfocused
-- [x] Live preview in the editor (Obsidian-style hybrid): markup shown only on
-  the cursor line or selection, headings, emphasis, links, inline code, lists,
-  quotes and horizontal rules rendered inline via CodeMirror decorations;
-  persisted toggle between live preview and source mode; the document text is
-  never altered
+- [removed] Live preview in the editor (Obsidian-style hybrid): dropped again;
+  the editor always shows plain markdown source
 - [x] rsync/SFTP publish target alongside GitHub Pages: target setting
   (`github-pages` | `rsync`), destination `user@host:path`, port, optional
   identity file, delete and dry-run flags; system `rsync`/`ssh` with argv only
@@ -125,6 +122,21 @@ No new features. Zero.
   `StrictHostKeyChecking=no`
 
 🎯 **Milestone:** format, preview and publish a post to your own server without leaving the app.
+
+## Website
+
+**Goal:** a project site for Static Studio, maintained with Static Studio.
+Lives in the separate repo `../static_studio_web` (Hugo).
+
+- [ ] Docs section: layouts for single and list pages, header navigation, a
+  docs index and pages for getting started, editing, build and serve, and
+  publish (GitHub Pages and rsync)
+- [ ] Changelog page
+- [ ] Replace the `[...]` placeholders in `hugo.toml` (domain, links, download
+  URLs, AUR once registration opens)
+- [ ] Open the site in Static Studio and fix what breaks (dogfooding)
+
+🎯 **Milestone:** the website is updated from Static Studio itself.
 
 ## Explicitly out of scope for v1.0
 

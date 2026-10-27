@@ -5,7 +5,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { EditorHeader } from '@/components/EditorHeader'
 import { useBuildStore } from '@/stores/build'
 import { useDevServerStore } from '@/stores/devserver'
-import { useEditorModeStore } from '@/stores/editorMode'
 import { useLayoutStore } from '@/stores/layout'
 import { usePageStore } from '@/stores/page'
 
@@ -53,15 +52,5 @@ describe('EditorHeader', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Build' }))
     expect(start).toHaveBeenCalled()
     expect(useLayoutStore.getState().buildLogOpen).toBe(true)
-  })
-
-  it('toggles live preview and source mode', async () => {
-    useEditorModeStore.getState().setMode('live')
-    usePageStore.setState({ path: 'content/a.md', page: { path: 'content/a.md' } as never })
-    render(<EditorHeader />)
-    await userEvent.click(screen.getByRole('button', { name: 'Show source' }))
-    expect(useEditorModeStore.getState().mode).toBe('source')
-    await userEvent.click(screen.getByRole('button', { name: 'Show live preview' }))
-    expect(useEditorModeStore.getState().mode).toBe('live')
   })
 })

@@ -42,7 +42,6 @@ describe('registry', () => {
       'site.publish',
       'server.toggle',
       'theme.dark',
-      'view.livepreview',
       'project.close',
       'palette',
     ]) {
