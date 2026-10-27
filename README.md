@@ -1,4 +1,15 @@
-# ✨ Static Studio
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="logo_dark.png">
+    <img src="logo_light.png" alt="Static Studio, local editor for static sites" width="420">
+  </picture>
+</p>
+
+<p align="center">
+  <a href="https://github.com/criscornea/static_studio/actions/workflows/ci.yml"><img src="https://github.com/criscornea/static_studio/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/criscornea/static_studio/releases/latest"><img src="https://img.shields.io/github/v/release/criscornea/static_studio" alt="Latest release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/criscornea/static_studio" alt="MIT license"></a>
+</p>
 
 A local editor for static-site projects. Open a Hugo site folder and edit pages
 with a markdown editor and a frontmatter form. Preview with the real Hugo
