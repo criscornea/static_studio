@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Files, Search } from 'lucide-react'
+import { Files, Search, X } from 'lucide-react'
 
 import { AppDialogs } from '@/components/AppDialogs'
 import { BuildPanel } from '@/components/BuildPanel'
@@ -48,8 +48,14 @@ export default function App() {
       <header className="col-span-2 flex items-center gap-3 border-b bg-sidebar px-3">
         <span className="flex-1 truncate font-mono text-xs text-muted-foreground">{root}</span>
         <ThemeButton />
-        <Button variant="ghost" size="sm" onClick={() => void close()}>
-          Close
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Close"
+          title="Close"
+          onClick={() => void close()}
+        >
+          <X />
         </Button>
       </header>
 
