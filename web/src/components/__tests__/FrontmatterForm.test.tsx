@@ -57,4 +57,38 @@ describe('FrontmatterForm', () => {
     await userEvent.keyboard('{Enter}')
     expect(onChange).toHaveBeenLastCalledWith({ ...fields, date: undefined })
   })
+
+  it('sets the date from a calendar day click, keeping time and zone', async () => {
+    const onChange = vi.fn<(f: PageFields) => void>()
+    const f = { ...fields, date: '2026-01-01T09:30:00+01:00' }
+    render(<FrontmatterForm fields={f} onChange={onChange} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Edit date' }))
+    await userEvent.click(screen.getByRole('button', { name: /January 15th, 2026/ }))
+    expect(onChange).toHaveBeenCalledTimes(1)
+    expect(onChange).toHaveBeenCalledWith({ ...f, date: '2026-01-15T09:30:00+01:00' })
+    expect(screen.queryByLabelText(/Date/)).not.toBeInTheDocument()
+  })
+
+  it('still accepts typing, and calendar follows the typed date', async () => {
+    const onChange = vi.fn<(f: PageFields) => void>()
+    render(<FrontmatterForm fields={fields} onChange={onChange} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Edit date' }))
+    const input = screen.getByLabelText(/Date/)
+    await userEvent.clear(input)
+    await userEvent.type(input, '2027-03-05T10:00:00Z')
+    expect(screen.getByText(/March 2027/)).toBeInTheDocument()
+    await userEvent.keyboard('{Enter}')
+    expect(onChange).toHaveBeenCalledWith({ ...fields, date: '2027-03-05T10:00:00Z' })
+  })
+
+  it('does not blur-commit or cancel when pressing inside the calendar', async () => {
+    const onChange = vi.fn<(f: PageFields) => void>()
+    render(<FrontmatterForm fields={fields} onChange={onChange} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Edit date' }))
+    const input = screen.getByLabelText(/Date/)
+    await userEvent.type(input, 'x')
+    await userEvent.click(screen.getByRole('button', { name: /Go to the Next Month/i }))
+    expect(onChange).not.toHaveBeenCalled()
+    expect(screen.getByLabelText(/Date/)).toHaveFocus()
+  })
 })

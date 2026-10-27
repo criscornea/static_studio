@@ -4,6 +4,7 @@ import type { PageFields } from '@/api/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Calendar } from '@/components/ui/calendar'
 
 interface Props {
   fields: PageFields
@@ -16,11 +17,30 @@ interface InlineProps {
   placeholder?: string
   inputClassName?: string
   onCommit: (value: string) => void
+  /** Extra UI shown under the input while editing; setValue commits and closes. */
+  extra?: (text: string, setValue: (value: string) => void) => React.ReactNode
   children: (startEdit: () => void) => React.ReactNode
 }
 
+const DATE_PREFIX = /^\s*(\d{4})-(\d{2})-(\d{2})/
+
+function parseDay(text: string): Date | undefined {
+  const m = DATE_PREFIX.exec(text)
+  if (!m) return undefined
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+  return d.getMonth() === Number(m[2]) - 1 ? d : undefined
+}
+
+const pad = (n: number, w = 2) => String(n).padStart(w, '0')
+
+/** Replaces the date part, keeping any time-of-day and timezone suffix. */
+function withDay(text: string, day: Date): string {
+  const ymd = `${pad(day.getFullYear(), 4)}-${pad(day.getMonth() + 1)}-${pad(day.getDate())}`
+  return DATE_PREFIX.test(text) ? text.replace(DATE_PREFIX, ymd) : ymd
+}
+
 /** Shows children until edited; Enter or blur commits, Escape cancels. */
-function InlineEdit({ value, label, placeholder, inputClassName, onCommit, children }: InlineProps) {
+function InlineEdit({ value, label, placeholder, inputClassName, onCommit, extra, children }: InlineProps) {
   const [editing, setEditing] = useState(false)
   const [text, setText] = useState(value)
 
@@ -34,13 +54,13 @@ function InlineEdit({ value, label, placeholder, inputClassName, onCommit, child
       </>
     )
   }
-  const finish = (commit: boolean) => {
+  const finish = (commit: boolean, next = text) => {
     setEditing(false)
-    if (commit && text !== value) {
-      onCommit(text)
+    if (commit && next !== value) {
+      onCommit(next)
     }
   }
-  return (
+  const input = (
     <Input
       autoFocus
       aria-label={label}
@@ -59,6 +79,16 @@ function InlineEdit({ value, label, placeholder, inputClassName, onCommit, child
         }
       }}
     />
+  )
+  if (!extra) return input
+  return (
+    <div className="flex flex-col items-start">
+      {input}
+      {/* Keep focus in the input so clicking the calendar does not blur-commit. */}
+      <div className="mt-1 rounded-md border shadow-sm" onMouseDown={(e) => e.preventDefault()}>
+        {extra(text, (v) => finish(true, v))}
+      </div>
+    </div>
   )
 }
 
@@ -96,6 +126,18 @@ export function FrontmatterForm({ fields, onChange }: Props) {
             placeholder="2026-02-01T09:30:00+01:00"
             inputClassName="h-7 w-64"
             onCommit={(date) => onChange({ ...fields, date: date || undefined })}
+            extra={(text, setValue) => {
+              const selected = parseDay(text)
+              return (
+                <Calendar
+                  key={selected ? `${selected.getFullYear()}-${selected.getMonth()}` : 'none'}
+                  mode="single"
+                  selected={selected}
+                  defaultMonth={selected}
+                  onSelect={(day) => day && setValue(withDay(text, day))}
+                />
+              )
+            }}
           >
             {(startEdit) => (
               <button
