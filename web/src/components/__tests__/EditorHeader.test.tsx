@@ -17,7 +17,7 @@ afterEach(() => {
 })
 
 describe('EditorHeader', () => {
-  it('shows the page path as a breadcrumb and the save state', () => {
+  it('shows the page path as a breadcrumb', () => {
     usePageStore.setState({
       path: 'content/posts/a.md',
       page: { path: 'content/posts/a.md' } as never,
@@ -26,7 +26,8 @@ describe('EditorHeader', () => {
     render(<EditorHeader />)
     const crumbs = screen.getByRole('navigation', { name: 'Breadcrumb' })
     expect(crumbs).toHaveTextContent('contentpostsa.md')
-    expect(screen.getByRole('status')).toHaveTextContent('Unsaved changes')
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 
   it('offers the icon actions with accessible names', () => {

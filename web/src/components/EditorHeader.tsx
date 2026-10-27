@@ -42,23 +42,20 @@ export function EditorHeader() {
           ))}
         </ol>
       </nav>
-      {page !== null && (
-        <>
-          <span className="text-xs text-muted-foreground" role="status">
-            {status}
-          </span>
-          <IconButton
-            label="Save"
-            shortcut="Ctrl/Cmd+S"
-            onClick={() => void save()}
-            disabled={saving || !dirty}
-          >
-            <Save />
-          </IconButton>
-        </>
-      )}
-      <span className="mx-1 h-4 w-px bg-border" aria-hidden />
       <PreviewButton open={previewOpen} onToggle={togglePreview} />
+      <span className="mx-1 h-4 w-px bg-border" aria-hidden />
+      {page !== null && (
+        <IconButton
+          label="Save"
+          tip={`Save (${status})`}
+          shortcut="Ctrl/Cmd+S"
+          onClick={() => void save()}
+          disabled={saving || !dirty}
+          className={conflict ? 'text-destructive' : dirty ? 'text-foreground' : undefined}
+        >
+          <Save />
+        </IconButton>
+      )}
       <BuildButton />
       <PublishButton />
     </div>
