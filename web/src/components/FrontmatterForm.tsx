@@ -68,7 +68,7 @@ function InlineEdit({ value, label, placeholder, inputClassName, onCommit, child
 export function FrontmatterForm({ fields, onChange }: Props) {
   return (
     <section aria-label="Properties" className="grid gap-1 border-b bg-sidebar/50 px-3 py-3">
-      <div className="flex min-w-0 items-center gap-1.5">
+      <div className="group flex min-w-0 items-center gap-1.5">
         <InlineEdit
           value={fields.title}
           label="Title"
@@ -76,29 +76,20 @@ export function FrontmatterForm({ fields, onChange }: Props) {
           onCommit={(title) => onChange({ ...fields, title })}
         >
           {(startEdit) => (
-            <>
-              <h1
-                className="min-w-0 cursor-text truncate text-xl font-semibold"
-                onClick={startEdit}
-              >
-                {fields.title || 'Untitled'}
-              </h1>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-7 shrink-0"
-                aria-label="Edit title"
-                onClick={startEdit}
-              >
-                <Pencil className="size-3.5" />
-              </Button>
-            </>
+            <button
+              type="button"
+              aria-label="Edit title"
+              className="flex min-w-0 cursor-text items-center gap-1.5 rounded text-left text-xl font-semibold"
+              onClick={startEdit}
+            >
+              <span className="truncate">{fields.title || 'Untitled'}</span>
+              <Pencil aria-hidden className="size-3.5 shrink-0 opacity-0 group-focus-within:opacity-100 group-hover:opacity-100" />
+            </button>
           )}
         </InlineEdit>
       </div>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-        <div className="flex items-center gap-1">
+        <div className="group flex items-center gap-1">
           <InlineEdit
             value={fields.date ?? ''}
             label="Date (RFC 3339)"
@@ -107,19 +98,15 @@ export function FrontmatterForm({ fields, onChange }: Props) {
             onCommit={(date) => onChange({ ...fields, date: date || undefined })}
           >
             {(startEdit) => (
-              <>
-                <span className="text-muted-foreground">{fields.date || 'No date'}</span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="size-6"
-                  aria-label="Edit date"
-                  onClick={startEdit}
-                >
-                  <Pencil className="size-3" />
-                </Button>
-              </>
+              <button
+                type="button"
+                aria-label="Edit date"
+                className="flex cursor-text items-center gap-1 rounded text-muted-foreground"
+                onClick={startEdit}
+              >
+                <span>{fields.date || 'No date'}</span>
+                <Pencil aria-hidden className="size-3 shrink-0 opacity-0 group-focus-within:opacity-100 group-hover:opacity-100" />
+              </button>
             )}
           </InlineEdit>
         </div>
