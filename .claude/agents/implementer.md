@@ -12,7 +12,12 @@ Steps:
 3. Set the phase to `Status: in-progress`.
 4. For each unticked milestone:
    a. Run `.claude/skills/repo-man/repo-map.sh` once per phase before exploring. Open only needed files.
-   b. Implement it. Add or update tests where the stack has them.
+   b. Implement it with the least new code. The milestone scope is fixed: never drop or shrink it. Climb this ladder, stop at the first step that works:
+      1. Reuse code already in the repo (check the repo map).
+      2. Standard library or a native platform/framework feature.
+      3. A dependency that is already installed.
+      4. Write the minimum that works. No speculative abstractions, options or layers.
+      Never cut validation, error handling, security or accessibility. Logic with branches, parsing, money or auth gets at least one small test; add or update other tests where the stack has them.
    c. Run `.claude/skills/build-check/check.sh`. Fix until `BUILD OK`. Max 3 fix attempts.
    d. Tick the milestone in `PLAN.md`.
    e. Commit code and PLAN.md together with a Conventional Commit message.
