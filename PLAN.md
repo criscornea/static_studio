@@ -318,3 +318,16 @@ Status: ready
 - [x] M26.4 Dispatch the publish job by target with a local path end-to-end test
 - [x] M26.5 Add the target picker and rsync fields to the publish dialog
 - [x] M26.6 Update ROADMAP.md, CHANGELOG.md, README and the known-shortcuts note
+
+## Phase 27: Website docs section
+Branch: feat/p27-website-docs (in the repo `../static_studio_web`, not in this repo)
+Goal: The Static Studio website has a docs section with navigation, built from layouts that need no per-page HTML, so new pages are plain Markdown files editable in Static Studio.
+Done when: `layouts/_default/single.html` and `list.html` exist and share the header, footer and `main.css` of the front page; the header shows nav links (Docs, Changelog, GitHub) from `[menu]` in `hugo.toml`; `content/docs/` holds an index plus getting-started, editing, build-and-serve and publish pages (GitHub Pages and rsync) written from this repo's README and CHANGELOG, with title, weight and description frontmatter; `content/changelog.md` renders the release history; `.DS_Store` files are removed and ignored; `hugo` builds with no warnings; opening `../static_studio_web` in Static Studio shows the whole tree and every page opens in the editor; the front page is unchanged visually.
+Risk: low
+Status: pending
+- [x] M27.1 Add single and list layouts, nav menu in the header, `.gitignore`, remove `.DS_Store`
+- [x] M27.2 Add the docs index and getting-started page
+- [x] M27.3 Add editing, build-and-serve and publish pages
+- [x] M27.4 Add the changelog page
+- [ ] M27.5 Open the site in Static Studio, list what breaks and record it in ROADMAP.md known shortcuts or as bugs
+- [ ] M27.6 Update ROADMAP.md and CHANGELOG.md
