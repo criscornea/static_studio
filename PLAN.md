@@ -338,7 +338,7 @@ Done when: publish settings gain `siteKind` (`project` | `user` | `custom`, miss
 Risk: high (writes the user's Hugo config file; a bad edit breaks the site build)
 Status: in-progress
 - [x] M28.1 Add site kind and custom domain settings with address derivation and validation tests
-- [ ] M28.2 Add a format-preserving `baseURL` writer for TOML, YAML and JSON configs
+- [x] M28.2 Add a format-preserving `baseURL` writer for TOML, YAML and JSON configs
 - [ ] M28.3 Compare `customDomain` with `static/CNAME` and record an explicit choice, with tests
 - [ ] M28.4 Generate `.nojekyll` and `CNAME` in the temp publish copy only, with tests
 - [ ] M28.5 Expose `GET`/`PUT /api/publish/site-address` with conflict and suggestion, mirrored in the web API client
