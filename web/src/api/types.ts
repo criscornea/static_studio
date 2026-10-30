@@ -65,6 +65,9 @@ export type ApiErrorCode =
   | 'devserver_failed'
   | 'publish_running'
   | 'invalid_publish_settings'
+  | 'invalid_site_config'
+  | 'cname_conflict'
+  | 'config_changed'
   | 'internal'
   | 'unknonw'
   | 'not_editable'
@@ -97,9 +100,12 @@ export type ApiErrorCode =
 export class ApiError extends Error {
   readonly code: ApiErrorCode
   readonly status: number
+  /** Set with code 'cname_conflict': the two disagreeing domains. */
+  readonly conflict?: CnameConflict
 
-  constructor(code: ApiErrorCode, message: string, status: number) {
+  constructor(code: ApiErrorCode, message: string, status: number, conflict?: CnameConflict) {
     super(message)
+    this.conflict = conflict
 
     this.name = 'ApiError'
     this.code = code
@@ -172,6 +178,40 @@ export function asApiError(err: unknown): ApiError {
     return err
   }
   return new ApiError('unknonw', 'Something went wrong. Please try again.', 0)
+}
+
+/** The saved custom domain and static/CNAME disagree. */
+export interface CnameConflict {
+  setting: string
+  static: string
+}
+
+export type SiteKind = 'project' | 'user' | 'custom'
+
+/** Body of PUT /api/publish/site-address. */
+export interface SiteAddressRequest {
+  siteKind: SiteKind | ''
+  customDomain: string
+  /** The user's explicit answer to a conflict: keep the saved domain or adopt static/CNAME. */
+  cnameChoice?: 'setting' | 'static'
+}
+
+/** The chosen site address and what it changes. */
+export interface SiteAddress {
+  siteKind: SiteKind | ''
+  customDomain: string
+  /** Derived public URL; empty while it cannot be derived (addressError says why). */
+  address: string
+  addressError: string
+  /** The config file whose baseURL is changed, and its current value. */
+  configFile: string
+  currentBaseUrl: string
+  warnings: string[]
+  /** Value of static/CNAME, empty when absent or invalid. */
+  staticCname: string
+  conflict: CnameConflict | null
+  /** static/CNAME domain offered when no domain is saved; never applied without a request. */
+  suggestion: string
 }
 
 /** Where the site is published. */

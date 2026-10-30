@@ -11,6 +11,9 @@ import {
   type PreflightReport,
   type PublishSettings,
   type RecentProject,
+  type SiteAddress,
+  type SiteAddressRequest,
+  type CnameConflict,
   type Project,
   type SearchResults,
 } from './types'
@@ -82,7 +85,13 @@ function toApiError(payload: unknown, status: number): ApiError {
     typeof payload.code === 'string' &&
     typeof payload.message === 'string'
   ) {
-    return new ApiError(payload.code as ApiErrorCode, readableMessage(payload.code, payload.message), status)
+    const conflict = 'conflict' in payload ? (payload.conflict as CnameConflict) : undefined
+    return new ApiError(
+      payload.code as ApiErrorCode,
+      readableMessage(payload.code, payload.message),
+      status,
+      conflict,
+    )
   }
 
   return new ApiError('unknonw', `The backend returned an unexpected response (${status})`, status)
@@ -129,6 +138,9 @@ export const api = {
   publishSettings: () => request<PublishSettings>('/api/publish/settings'),
   savePublishSettings: (settings: PublishSettings) =>
     request<PublishSettings>('/api/publish/settings', { method: 'PUT', body: settings }),
+  siteAddress: () => request<SiteAddress>('/api/publish/site-address'),
+  saveSiteAddress: (req: SiteAddressRequest) =>
+    request<SiteAddress>('/api/publish/site-address', { method: 'PUT', body: req }),
   publishPreflight: () => request<PreflightReport>('/api/publish/preflight'),
   startPublish: () => request<{ started: boolean }>('/api/publish', { method: 'POST' }),
   cancelPublish: () => request<void>('/api/publish/cancel', { method: 'POST' }),

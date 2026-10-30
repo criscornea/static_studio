@@ -11,6 +11,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   CLI and its login, SSH access to GitHub and the origin remote, with a
   readable fix for each. A small `gh api` client runs with an argv only,
   validated names and the body on stdin; no token is read or stored.
+- Site address for GitHub Pages (`GET`/`PUT /api/publish/site-address`):
+  project site, user site or custom domain. The matching `baseURL` is written
+  into the Hugo config (TOML, YAML or JSON) without touching other lines or
+  comments, and a `static/CNAME` that disagrees with the saved domain asks
+  for an explicit choice. Publish ships `.nojekyll` and, for a custom domain,
+  a `CNAME`, generated in the temporary publish copy only.
 - MIT license. The `LICENSE` file ships in every archive and the license is
   set in the Linux, Homebrew and Scoop packages.
 

@@ -121,3 +121,74 @@ func TestPublishPreflightAPI(t *testing.T) {
 		t.Fatalf("get = %d %s", rec.Code, rec.Body)
 	}
 }
+
+func TestSiteAddressAPI(t *testing.T) {
+	a := newPublishAPI(t, "true")
+	dir := newHugoDir(t)
+	if err := os.WriteFile(filepath.Join(dir, "hugo.toml"), []byte("title = 'x' # t\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, "static"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	cname := filepath.Join(dir, "static", "CNAME")
+	if err := os.WriteFile(cname, []byte("blog.example.com\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	id := decodeProject(t, a.open(dir)).ID
+	a.send(http.MethodPut, "/api/publish/settings", id, `{"target":"github-pages","remote":"git@github.com:alice/blog.git","branch":"gh-pages"}`)
+
+	// Suggestion only; nothing applied.
+	rec := a.send(http.MethodGet, "/api/publish/site-address", id, "")
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"suggestion":"blog.example.com"`) ||
+		!strings.Contains(rec.Body.String(), `"configFile":"hugo.toml"`) {
+		t.Fatalf("get = %d %s", rec.Code, rec.Body)
+	}
+
+	// Project site writes baseURL.
+	rec = a.send(http.MethodPut, "/api/publish/site-address", id, `{"siteKind":"project"}`)
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"address":"https://alice.github.io/blog/"`) {
+		t.Fatalf("put project = %d %s", rec.Code, rec.Body)
+	}
+	got, _ := os.ReadFile(filepath.Join(dir, "hugo.toml"))
+	if string(got) != "baseURL = \"https://alice.github.io/blog/\"\ntitle = 'x' # t\n" {
+		t.Fatalf("hugo.toml = %q", got)
+	}
+
+	// Conflict: 409 with both values, nothing saved or written.
+	rec = a.send(http.MethodPut, "/api/publish/site-address", id, `{"siteKind":"custom","customDomain":"www.example.com"}`)
+	if rec.Code != http.StatusConflict || !strings.Contains(rec.Body.String(), `"setting":"www.example.com"`) ||
+		!strings.Contains(rec.Body.String(), `"static":"blog.example.com"`) {
+		t.Fatalf("conflict = %d %s", rec.Code, rec.Body)
+	}
+	if rec := a.send(http.MethodGet, "/api/publish/site-address", id, ""); !strings.Contains(rec.Body.String(), `"siteKind":"project"`) {
+		t.Fatalf("conflict saved: %s", rec.Body)
+	}
+
+	// Explicit choice adopts static/CNAME.
+	rec = a.send(http.MethodPut, "/api/publish/site-address", id, `{"siteKind":"custom","customDomain":"www.example.com","cnameChoice":"static"}`)
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"customDomain":"blog.example.com"`) {
+		t.Fatalf("choice = %d %s", rec.Code, rec.Body)
+	}
+	got, _ = os.ReadFile(filepath.Join(dir, "hugo.toml"))
+	if !strings.Contains(string(got), `baseURL = "https://blog.example.com/"`) {
+		t.Fatalf("hugo.toml = %q", got)
+	}
+	if b, _ := os.ReadFile(cname); string(b) != "blog.example.com\n" {
+		t.Fatalf("static/CNAME changed: %q", b)
+	}
+
+	// Saving the target settings keeps the site address.
+	a.send(http.MethodPut, "/api/publish/settings", id, `{"target":"github-pages","remote":"git@github.com:alice/blog.git","branch":"gh-pages"}`)
+	if rec := a.send(http.MethodGet, "/api/publish/site-address", id, ""); !strings.Contains(rec.Body.String(), `"siteKind":"custom"`) {
+		t.Fatalf("site address lost: %s", rec.Body)
+	}
+
+	// Invalid input.
+	if rec := a.send(http.MethodPut, "/api/publish/site-address", id, `{"siteKind":"user"}`); rec.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("user site on wrong repo = %d %s", rec.Code, rec.Body)
+	}
+	if rec := a.send(http.MethodPut, "/api/publish/site-address", id, `{"siteKind":"custom","customDomain":"https://x.com"}`); rec.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("bad domain = %d", rec.Code)
+	}
+}

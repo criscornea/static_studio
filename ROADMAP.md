@@ -135,9 +135,9 @@ No new features. Zero.
   and `gh` with readable fixes
 - [ ] Create the GitHub repo from the wizard (public or private) when none
   exists, and fill in the remote
-- [ ] Site address choice (project site, user site, custom domain) that writes
+- [x] Site address choice (project site, user site, custom domain) that writes
   `baseURL` into the Hugo config
-- [ ] Publish always ships `.nojekyll`, and `CNAME` when a custom domain is set,
+- [x] Publish always ships `.nojekyll`, and `CNAME` when a custom domain is set,
   so the replaced `gh-pages` branch keeps working
 - [ ] Turn GitHub Pages on through the API (`POST/PUT /repos/{owner}/{repo}/pages`)
   and show build status and the live URL (`GET .../pages`)
@@ -164,6 +164,13 @@ Deliberate simplifications, recorded so they don't become invisible.
   paths with spaces or special characters, identity files with spaces and
   `~` in remote paths are refused. SFTP-only servers are not supported, and
   the host key must already be in `known_hosts` (connect once with `ssh`).
+- The `baseURL` writer edits only the top-level `baseURL` key (TOML, YAML or
+  JSON), found in the root `hugo.*`/`config.*` or `config/_default/*`; it
+  inserts the key at the top when no file defines it. It refuses multi-line
+  or non-string values and cannot tell when `baseURL` sits inside a TOML
+  multi-line string. It warns about `HUGO_BASEURL` and `config/production/*`
+  overrides but does not edit them. `static/CNAME` is read from `static/`,
+  not from a configured `staticDir`.
 - Preview URLs are derived from the primary content dir only; pages in
   other content dirs (per-language) get no preview link until per-language
   URL mapping lands.

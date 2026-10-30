@@ -28,6 +28,11 @@ func (s *Server) handlePublishSettingsSave(w http.ResponseWriter, r *http.Reques
 		s.writeError(w, http.StatusBadRequest, "bad_request", "The request could not be read.")
 		return
 	}
+	// The site address has its own endpoint; saving the target settings
+	// keeps what was chosen there.
+	cur := s.pubset.Get(open.Info.Root)
+	in.SiteKind, in.CustomDomain = cur.SiteKind, cur.CustomDomain
+	in.CNAMEChoice, in.CNAMEChoiceFor = cur.CNAMEChoice, cur.CNAMEChoiceFor
 	saved, err := s.pubset.Set(open.Info.Root, in)
 	switch {
 	case err == nil:
