@@ -80,6 +80,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /api/build/stream", s.handleBuildStream)
 	mux.HandleFunc("GET /api/publish/settings", s.handlePublishSettings)
 	mux.HandleFunc("PUT /api/publish/settings", s.handlePublishSettingsSave)
+	mux.HandleFunc("GET /api/publish/preflight", s.handlePublishPreflight)
 	mux.HandleFunc("POST /api/publish", s.handlePublish)
 	mux.HandleFunc("POST /api/publish/cancel", s.handlePublishCancel)
 	mux.HandleFunc("GET /api/publish/stream", s.handlePublishStream)

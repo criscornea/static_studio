@@ -142,7 +142,7 @@ No new features. Zero.
 - [ ] Turn GitHub Pages on through the API (`POST/PUT /repos/{owner}/{repo}/pages`)
   and show build status and the live URL (`GET .../pages`)
 - [ ] Custom domain help: the exact DNS records to add, HTTPS enforcement
-- [ ] Auth via the `gh` CLI first (`gh auth token` / `gh api`, nothing stored);
+- [x] Auth via the `gh` CLI first (`gh auth token` / `gh api`, nothing stored);
   readable "run `gh auth login`" hint when missing
 - [ ] Auth via GitHub device-flow login (no `gh` needed), token kept in the OS
   keychain only

@@ -7,6 +7,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Publish preflight (`GET /api/publish/preflight`): checks git, the GitHub
+  CLI and its login, SSH access to GitHub and the origin remote, with a
+  readable fix for each. A small `gh api` client runs with an argv only,
+  validated names and the body on stdin; no token is read or stored.
 - MIT license. The `LICENSE` file ships in every archive and the license is
   set in the Linux, Homebrew and Scoop packages.
 

@@ -90,3 +90,11 @@ func (s *Server) handlePublishStream(w http.ResponseWriter, r *http.Request) {
 	}
 	s.streamEvents(w, r, &s.publish.Events, s.publish.Running)
 }
+
+func (s *Server) handlePublishPreflight(w http.ResponseWriter, r *http.Request) {
+	open, ok := s.requireProject(w, r)
+	if !ok {
+		return
+	}
+	s.writeJSON(w, http.StatusOK, publish.Preflight{}.Run(r.Context(), open.Root()))
+}

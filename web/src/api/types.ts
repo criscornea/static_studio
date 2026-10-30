@@ -186,6 +186,21 @@ export interface PublishSettings {
   rsyncDryRun: boolean
 }
 
+/** One publish preflight item; fix is set when it failed. */
+export interface PreflightCheck {
+  id: string
+  label: string
+  ok: boolean
+  detail?: string
+  fix?: string
+}
+
+/** What GitHub Pages publishing needs. */
+export interface PreflightReport {
+  checks: PreflightCheck[]
+  ok: boolean
+}
+
 /** One server-sent event from the build stream. */
 export interface BuildEvent {
   kind: 'line' | 'done'

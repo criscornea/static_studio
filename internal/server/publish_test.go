@@ -109,3 +109,15 @@ func TestPublishStreamToBareRepo(t *testing.T) {
 		t.Fatalf("remote index = %q, %v", out, err)
 	}
 }
+
+func TestPublishPreflightAPI(t *testing.T) {
+	a := newPublishAPI(t, "true")
+	if rec := a.do(http.MethodGet, "/api/publish/preflight", ""); rec.Code != http.StatusConflict {
+		t.Fatalf("no project: %d", rec.Code)
+	}
+	id := decodeProject(t, a.open(newHugoDir(t))).ID
+	rec := a.send(http.MethodGet, "/api/publish/preflight", id, "")
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"checks"`) {
+		t.Fatalf("get = %d %s", rec.Code, rec.Body)
+	}
+}

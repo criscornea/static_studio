@@ -324,12 +324,12 @@ Branch: feat/p27-gh-preflight
 Goal: The backend can check everything GitHub Pages publishing needs (git, SSH access, `gh` and its login) and talk to the GitHub API through the user's own `gh` CLI, storing nothing.
 Done when: a small `gh` client in `internal/publish` (or `internal/github`) runs `gh` with `exec.CommandContext` and an argv only (no shell), calls the API with `gh api --method <M> <path>` and sends JSON bodies on stdin (`--input -`), never reads, logs or returns the token, and validates every path segment (owner, repo) against a strict GitHub name pattern before it is put in argv; auth state comes from `gh auth status --hostname github.com`; a preflight reports per check (git present, `gh` present, `gh` logged in, SSH access to `git@github.com` via `ssh -T -o BatchMode=yes` with the user's own config and known_hosts, origin remote) ok/failed plus a readable fix (install link, "run `gh auth login` in a terminal", "connect once with `ssh -T git@github.com`", "add your SSH key to GitHub"); the origin remote URL is read from `.git/config` through `Open.Root()`, not by shelling out in the project; `GET /api/publish/preflight` returns the report with its struct mirrored in `web/src/api/types.ts` and `client.ts`; Go tests use fake `gh`, `git` and `ssh` binaries that record their argv (no shell, no token in output, injection attempts refused); `make check` green; ROADMAP item for `gh` auth ticked, CHANGELOG updated.
 Risk: high (auth: GitHub credentials via gh; security: subprocess argv built from user input)
-Status: todo
-- [ ] M27.1 Add a gh CLI client that runs `gh api` with an argv and stdin body, tested with a fake binary
-- [ ] M27.2 Read the origin remote from `.git/config` through the confined root with tests
-- [ ] M27.3 Add preflight checks for git, gh login and SSH access with readable fixes
-- [ ] M27.4 Expose `GET /api/publish/preflight` and mirror it in the web API client
-- [ ] M27.5 Update ROADMAP.md and CHANGELOG.md
+Status: merged
+- [x] M27.1 Add a gh CLI client that runs `gh api` with an argv and stdin body, tested with a fake binary
+- [x] M27.2 Read the origin remote from `.git/config` through the confined root with tests
+- [x] M27.3 Add preflight checks for git, gh login and SSH access with readable fixes
+- [x] M27.4 Expose `GET /api/publish/preflight` and mirror it in the web API client
+- [x] M27.5 Update ROADMAP.md and CHANGELOG.md
 
 ## Phase 28: Site address, baseURL and published files
 Branch: feat/p28-site-address

@@ -8,6 +8,7 @@ import {
   type RenamePageRequest,
   type Page,
   type PageFields,
+  type PreflightReport,
   type PublishSettings,
   type RecentProject,
   type Project,
@@ -128,6 +129,7 @@ export const api = {
   publishSettings: () => request<PublishSettings>('/api/publish/settings'),
   savePublishSettings: (settings: PublishSettings) =>
     request<PublishSettings>('/api/publish/settings', { method: 'PUT', body: settings }),
+  publishPreflight: () => request<PreflightReport>('/api/publish/preflight'),
   startPublish: () => request<{ started: boolean }>('/api/publish', { method: 'POST' }),
   cancelPublish: () => request<void>('/api/publish/cancel', { method: 'POST' }),
   publishStreamURL: () => `/api/publish/stream?projectId=${encodeURIComponent(projectID ?? '')}`,
