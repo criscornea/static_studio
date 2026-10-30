@@ -92,62 +92,63 @@ func (s *Server) handleSiteAddressSave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cur := s.pubset.Get(open.Info.Root)
-	next, conflict, err := publish.UpdateSite(cur, in, publish.ReadStaticCNAME(open.Root()))
-	switch {
-	case errors.Is(err, publish.ErrInvalid):
-		s.writeError(w, http.StatusUnprocessableEntity, "invalid_publish_settings", invalidMessage(err))
-		return
-	case err != nil:
-		s.writeError(w, http.StatusInternalServerError, "internal", "Something went wrong. Please try again.")
-		return
-	case conflict != nil:
-		s.writeJSON(w, http.StatusConflict, map[string]any{
-			"code":     "cname_conflict",
-			"message":  "The custom domain you entered differs from static/CNAME. Choose which one to keep.",
-			"conflict": conflict,
-		})
-		return
-	}
-
-	// Fail on invalid settings before the config file is touched.
-	if _, err := next.Validate(); err != nil {
-		s.writeError(w, http.StatusUnprocessableEntity, "invalid_publish_settings", invalidMessage(err))
-		return
-	}
-
-	resp, cfg := siteState(open, next)
-	if next.SiteKind != "" {
-		if resp.Address == "" {
-			s.writeError(w, http.StatusUnprocessableEntity, "invalid_publish_settings",
-				"Check the site address: "+resp.AddressError)
-			return
-		}
-		if cfg == nil {
-			s.writeError(w, http.StatusUnprocessableEntity, "invalid_site_config",
-				"The site configuration cannot be changed: "+resp.AddressError)
-			return
-		}
-		if cfg.Current != resp.Address {
-			if err := cfg.Write(open.Root(), resp.Address); err != nil {
-				if errors.Is(err, ssg.ErrConfigChanged) {
-					s.writeError(w, http.StatusConflict, "config_changed", err.Error())
-					return
-				}
-				s.log.Warn("writing baseURL failed", "err", err)
-				s.writeError(w, http.StatusInternalServerError, "internal",
-					"The site configuration could not be changed.")
-				return
-			}
-			resp.CurrentBaseURL = resp.Address
-		}
-	}
-	saved, err := s.pubset.Set(open.Info.Root, next)
-	if err != nil {
-		if errors.Is(err, publish.ErrInvalid) {
+	// The whole read-modify-write runs under the store lock; errAnswered
+	// means the closure already wrote the response.
+	var resp siteAddressResponse
+	errAnswered := errors.New("answered")
+	saved, err := s.pubset.Update(open.Info.Root, func(cur publish.Settings) (publish.Settings, error) {
+		next, conflict, err := publish.UpdateSite(cur, in, publish.ReadStaticCNAME(open.Root()))
+		switch {
+		case errors.Is(err, publish.ErrInvalid):
 			s.writeError(w, http.StatusUnprocessableEntity, "invalid_publish_settings", invalidMessage(err))
-			return
+			return cur, errAnswered
+		case err != nil:
+			s.writeError(w, http.StatusInternalServerError, "internal", "Something went wrong. Please try again.")
+			return cur, errAnswered
+		case conflict != nil:
+			s.writeJSON(w, http.StatusConflict, map[string]any{
+				"code":     "cname_conflict",
+				"message":  "The custom domain you entered differs from static/CNAME. Choose which one to keep.",
+				"conflict": conflict,
+			})
+			return cur, errAnswered
 		}
+
+		// UpdateSite validated the site fields; the remote is only needed to
+		// publish, so it is not checked here.
+		var cfg *ssg.BaseURLConfig
+		resp, cfg = siteState(open, next)
+		if next.SiteKind != "" {
+			if resp.Address == "" {
+				s.writeError(w, http.StatusUnprocessableEntity, "invalid_publish_settings",
+					"Check the site address: "+resp.AddressError)
+				return cur, errAnswered
+			}
+			if cfg == nil {
+				s.writeError(w, http.StatusUnprocessableEntity, "invalid_site_config",
+					"The site configuration cannot be changed: "+resp.AddressError)
+				return cur, errAnswered
+			}
+			if cfg.Current != resp.Address {
+				if err := cfg.Write(open.Root(), resp.Address); err != nil {
+					if errors.Is(err, ssg.ErrConfigChanged) {
+						s.writeError(w, http.StatusConflict, "config_changed", err.Error())
+						return cur, errAnswered
+					}
+					s.log.Warn("writing baseURL failed", "err", err)
+					s.writeError(w, http.StatusInternalServerError, "internal",
+						"The site configuration could not be changed.")
+					return cur, errAnswered
+				}
+				resp.CurrentBaseURL = resp.Address
+			}
+		}
+		return next, nil
+	})
+	if errors.Is(err, errAnswered) {
+		return
+	}
+	if err != nil {
 		s.log.Warn("saving publish settings failed", "err", err)
 		s.writeError(w, http.StatusInternalServerError, "internal", "The publish settings could not be saved.")
 		return

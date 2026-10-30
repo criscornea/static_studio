@@ -189,6 +189,10 @@ func UpdateSite(cur Settings, in SiteInput, static string) (Settings, *Conflict,
 	}
 	switch in.CNAMEChoice {
 	case "":
+		// A recorded choice answers a conflict about the domain it was made for.
+		if in.CustomDomain != cur.CustomDomain {
+			next.CNAMEChoice, next.CNAMEChoiceFor = "", ""
+		}
 	case CNAMESetting, CNAMEStatic:
 		if static == "" {
 			return cur, nil, fmt.Errorf("%w: there is no static/CNAME to choose", ErrInvalid)

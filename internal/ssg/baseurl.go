@@ -31,8 +31,6 @@ type BaseURLConfig struct {
 }
 
 var baseURLNames = []string{
-	"hugo.toml", "hugo.yaml", "hugo.yml", "hugo.json",
-	"config.toml", "config.yaml", "config.yml", "config.json",
 	"config/_default/hugo.toml", "config/_default/hugo.yaml", "config/_default/hugo.yml", "config/_default/hugo.json",
 	"config/_default/config.toml", "config/_default/config.yaml", "config/_default/config.yml", "config/_default/config.json",
 }
@@ -55,7 +53,7 @@ func readCapped(root *os.Root, name string) ([]byte, fs.FileMode, error) {
 }
 
 // ReadBaseURL finds the config file that defines the top-level baseURL (the
-// root hugo.*/config.* files, then config/_default/*) and reads it. When none
+// primary configFile, as Hugo loads one root file, then config/_default/*) and reads it. When none
 // defines it, the primary configFile is used and Current is empty. Warnings
 // list a HUGO_BASEURL variable and config/production files that would win.
 func ReadBaseURL(root *os.Root, configFile string, getenv func(string) string) (*BaseURLConfig, error) {
@@ -63,7 +61,10 @@ func ReadBaseURL(root *os.Root, configFile string, getenv func(string) string) (
 		getenv = os.Getenv
 	}
 	var primary *BaseURLConfig
-	for _, name := range append(append([]string{}, baseURLNames...), configFile) {
+	for _, name := range append([]string{configFile}, baseURLNames...) {
+		if name == "" {
+			continue
+		}
 		data, mode, err := readCapped(root, name)
 		if errors.Is(err, fs.ErrNotExist) {
 			continue
@@ -140,6 +141,11 @@ func (c *BaseURLConfig) Write(root *os.Root, baseURL string) error {
 	if _, err := rand.Read(sfx[:]); err != nil {
 		return err
 	}
+	if info, err := root.Lstat(c.File); err != nil {
+		return err
+	} else if info.Mode()&fs.ModeSymlink != 0 {
+		return fmt.Errorf("%s is a symbolic link; edit the address in the linked file by hand", c.File)
+	}
 	tmp := c.File + ".studio-" + hex.EncodeToString(sfx[:]) + ".tmp"
 	f, err := root.OpenFile(tmp, os.O_CREATE|os.O_EXCL|os.O_WRONLY, c.mode)
 	if err != nil {
@@ -192,21 +198,42 @@ func locateBaseURL(ext string, data []byte) (valueSpan, error) {
 
 var (
 	tomlKeyRe = regexp.MustCompile(`(?i)^(?:baseurl|"baseurl"|'baseurl')[ \t]*=[ \t]*`)
-	yamlKeyRe = regexp.MustCompile(`(?i)^(?:baseurl|"baseurl"|'baseurl'):(?:[ \t]+|$)`)
+	// A table header is a bracketed name alone on its line; "[1, 2]," is array data.
+	tomlHeaderRe = regexp.MustCompile(`^\s*\[\[?[^\]=]+\]\]?\s*(#.*)?$`)
+	yamlKeyRe    = regexp.MustCompile(`(?i)^(?:baseurl|"baseurl"|'baseurl'):(?:[ \t]+|$)`)
 )
 
 // locateLine finds a top-level "baseURL" line in TOML (before the first
 // table header) or YAML (a key with no indentation).
 func locateLine(data []byte, keyRe *regexp.Regexp, toml bool) (valueSpan, error) {
-	pos := 0
+	pos, depth := 0, 0
+	stoppedAt := -1 // an indented table header ended the top level here
 	for pos < len(data) {
 		end := bytes.IndexByte(data[pos:], '\n')
 		if end < 0 {
 			end = len(data) - pos
 		}
 		line := bytes.TrimRight(data[pos:pos+end], "\r")
-		if toml && bytes.HasPrefix(bytes.TrimLeft(line, " \t"), []byte("[")) {
-			return valueSpan{}, nil
+		if toml && stoppedAt < 0 {
+			if depth == 0 && tomlHeaderRe.Match(line) {
+				if !isIndented(line) {
+					return valueSpan{}, nil
+				}
+				stoppedAt = pos
+			} else {
+				depth += bracketDelta(line)
+			}
+		}
+		if stoppedAt >= 0 && pos > stoppedAt {
+			if m := keyRe.FindIndex(line); m != nil && !isIndented(line) {
+				return valueSpan{}, errors.New("baseURL may be inside an array or table this editor cannot read; edit it by hand")
+			}
+			pos += end + 1
+			continue
+		}
+		if stoppedAt >= 0 {
+			pos += end + 1
+			continue
 		}
 		if m := keyRe.FindIndex(line); m != nil && (toml || !isIndented(line)) {
 			start := pos + m[1]
@@ -219,6 +246,32 @@ func locateLine(data []byte, keyRe *regexp.Regexp, toml bool) (valueSpan, error)
 		pos += end + 1
 	}
 	return valueSpan{}, nil
+}
+
+// bracketDelta is the net count of [ over ] on a TOML line outside strings and comments.
+func bracketDelta(line []byte) int {
+	n := 0
+	var q byte
+	for i := 0; i < len(line); i++ {
+		c := line[i]
+		switch {
+		case q != 0:
+			if c == '\\' && q == '"' {
+				i++
+			} else if c == q {
+				q = 0
+			}
+		case c == '"' || c == '\'':
+			q = c
+		case c == '#':
+			return n
+		case c == '[':
+			n++
+		case c == ']':
+			n--
+		}
+	}
+	return n
 }
 
 func isIndented(line []byte) bool { return len(line) > 0 && (line[0] == ' ' || line[0] == '\t') }

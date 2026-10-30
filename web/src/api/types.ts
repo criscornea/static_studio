@@ -224,6 +224,10 @@ export interface PublishSettings {
   rsyncIdentity: string
   rsyncDelete: boolean
   rsyncDryRun: boolean
+  siteKind?: SiteKind | ''
+  customDomain?: string
+  cnameChoice?: string
+  cnameChoiceFor?: string
 }
 
 /** One publish preflight item; fix is set when it failed. */

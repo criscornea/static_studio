@@ -104,8 +104,14 @@ func (p *Publisher) Push(ctx context.Context, root *os.Root, s Settings, emit fu
 	}
 	// A custom domain needs CNAME on the branch; it lives only in this copy,
 	// never in the project's static folder.
-	if s.SiteKind == SiteCustom {
+	switch s.SiteKind {
+	case SiteCustom:
 		if err := os.WriteFile(filepath.Join(tmp, "CNAME"), []byte(s.CustomDomain), 0o600); err != nil {
+			return err
+		}
+	case SiteProject, SiteUser:
+		// Hugo copies static/CNAME into public/; without a custom domain it must not ship.
+		if err := os.Remove(filepath.Join(tmp, "CNAME")); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return err
 		}
 	}

@@ -147,3 +147,64 @@ func TestBaseURLRefusesUnsupportedValues(t *testing.T) {
 		}
 	}
 }
+
+func TestReadBaseURLOnlyPrimaryRootFile(t *testing.T) {
+	root := baseRoot(t, map[string]string{
+		"hugo.toml":                 "title = 'x'\n",
+		"config.toml":               "baseURL = \"http://stale/\"\n",
+		"config/_default/hugo.toml": "baseURL = \"http://dflt/\"\n",
+	})
+	c, err := ReadBaseURL(root, "hugo.toml", noEnv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.File != "config/_default/hugo.toml" {
+		t.Fatalf("file = %s", c.File)
+	}
+	root = baseRoot(t, map[string]string{"hugo.toml": "title = 'x'\n", "config.toml": "baseURL = \"http://stale/\"\n"})
+	c, err = ReadBaseURL(root, "hugo.toml", noEnv)
+	if err != nil || c.File != "hugo.toml" || c.Current != "" {
+		t.Fatalf("got %+v %v", c, err)
+	}
+}
+
+func TestTOMLNestedArrayIsNotAHeader(t *testing.T) {
+	root := baseRoot(t, map[string]string{"hugo.toml": "pairs = [\n  [1, 2],\n  [3, 4]\n]\nbaseURL = \"http://old/\"\n[params]\nx = 1\n"})
+	c := setBase(t, root, "hugo.toml", "https://n/")
+	if c.Current != "http://old/" {
+		t.Fatalf("current = %q", c.Current)
+	}
+	got, _ := root.ReadFile("hugo.toml")
+	if strings.Count(string(got), "baseURL") != 1 || !strings.Contains(string(got), `baseURL = "https://n/"`) {
+		t.Fatalf("got %q", got)
+	}
+}
+
+func TestTOMLRefusesAmbiguousInsert(t *testing.T) {
+	root := baseRoot(t, map[string]string{"hugo.toml": "  [params]\nbaseURL = \"x\"\n"})
+	if _, err := ReadBaseURL(root, "hugo.toml", noEnv); err == nil {
+		t.Fatal("expected refusal")
+	}
+}
+
+func TestWriteRefusesSymlink(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "real.toml"), []byte("baseURL = \"a\"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("real.toml", filepath.Join(dir, "hugo.toml")); err != nil {
+		t.Skip(err)
+	}
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = root.Close() }()
+	c, err := ReadBaseURL(root, "hugo.toml", noEnv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Write(root, "https://n/"); err == nil || !strings.Contains(err.Error(), "symbolic link") {
+		t.Fatalf("err = %v", err)
+	}
+}

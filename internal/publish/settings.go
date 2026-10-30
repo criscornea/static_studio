@@ -194,18 +194,43 @@ func (s *Store) Get(project string) Settings {
 	return got
 }
 
+// ErrNoChange is returned by an Update callback to leave the stored settings
+// untouched; Update then returns the current settings and no error.
+var ErrNoChange = errors.New("no change")
+
 // Set validates and saves the settings for a project, returning what was saved.
 func (s *Store) Set(project string, in Settings) (Settings, error) {
 	clean, err := in.Validate()
 	if err != nil {
 		return in, err
 	}
-	if s.file == "" {
-		return clean, nil
-	}
+	return s.Update(project, func(Settings) (Settings, error) { return clean, nil })
+}
+
+// Update runs fn on the current settings while holding the store lock and
+// saves its result without validating it, so concurrent read-modify-write
+// requests cannot overwrite each other. fn is responsible for validation.
+func (s *Store) Update(project string, fn func(Settings) (Settings, error)) (Settings, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	all := s.load()
+	cur := all[key(project)]
+	if cur.Branch == "" {
+		cur.Branch = DefaultBranch
+	}
+	if cur.Target == "" {
+		cur.Target = TargetGitHubPages
+	}
+	clean, err := fn(cur)
+	if errors.Is(err, ErrNoChange) {
+		return cur, nil
+	}
+	if err != nil {
+		return cur, err
+	}
+	if s.file == "" {
+		return clean, nil
+	}
 	all[key(project)] = clean
 	data, err := json.Marshal(all)
 	if err != nil {

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 )
 
@@ -161,5 +162,46 @@ func TestUpdateSite(t *testing.T) {
 	in.CNAMEChoice = CNAMEStatic
 	if _, _, err := UpdateSite(cur, in, ""); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestUpdateSiteNewDomainDropsOldChoice(t *testing.T) {
+	cur := Settings{SiteKind: SiteCustom, CustomDomain: "x.example.com", CNAMEChoice: CNAMEStatic, CNAMEChoiceFor: "x.example.com"}
+	in := SiteInput{SiteKind: SiteCustom, CustomDomain: "y.example.com"}
+	got, c, err := UpdateSite(cur, in, "x.example.com")
+	if err != nil || c == nil {
+		t.Fatalf("static choice: %+v %v %v", got, c, err)
+	}
+	cur = Settings{SiteKind: SiteCustom, CustomDomain: "x.example.com", CNAMEChoice: CNAMESetting, CNAMEChoiceFor: "s.example.com"}
+	in.CustomDomain = "z.example.com"
+	if _, c, err := UpdateSite(cur, in, "s.example.com"); err != nil || c == nil {
+		t.Fatalf("setting choice: %v %v", c, err)
+	}
+}
+
+func TestStoreUpdateIsLocked(t *testing.T) {
+	s := NewStore(nil, t.TempDir())
+	proj := t.TempDir()
+	var wg sync.WaitGroup
+	for i := range 20 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, err := s.Update(proj, func(c Settings) (Settings, error) {
+				if i%2 == 0 {
+					c.SiteKind = SiteProject
+				} else {
+					c.Remote = "git@github.com:a/b.git"
+				}
+				return c, nil
+			})
+			if err != nil {
+				t.Error(err)
+			}
+		}()
+	}
+	wg.Wait()
+	if got := s.Get(proj); got.SiteKind != SiteProject || got.Remote == "" {
+		t.Fatalf("lost update: %+v", got)
 	}
 }

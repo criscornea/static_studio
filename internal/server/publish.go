@@ -30,10 +30,11 @@ func (s *Server) handlePublishSettingsSave(w http.ResponseWriter, r *http.Reques
 	}
 	// The site address has its own endpoint; saving the target settings
 	// keeps what was chosen there.
-	cur := s.pubset.Get(open.Info.Root)
-	in.SiteKind, in.CustomDomain = cur.SiteKind, cur.CustomDomain
-	in.CNAMEChoice, in.CNAMEChoiceFor = cur.CNAMEChoice, cur.CNAMEChoiceFor
-	saved, err := s.pubset.Set(open.Info.Root, in)
+	saved, err := s.pubset.Update(open.Info.Root, func(cur publish.Settings) (publish.Settings, error) {
+		in.SiteKind, in.CustomDomain = cur.SiteKind, cur.CustomDomain
+		in.CNAMEChoice, in.CNAMEChoiceFor = cur.CNAMEChoice, cur.CNAMEChoiceFor
+		return in.Validate()
+	})
 	switch {
 	case err == nil:
 		s.writeJSON(w, http.StatusOK, saved)

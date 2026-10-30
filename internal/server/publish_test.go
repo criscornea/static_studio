@@ -192,3 +192,16 @@ func TestSiteAddressAPI(t *testing.T) {
 		t.Fatalf("bad domain = %d", rec.Code)
 	}
 }
+
+func TestSiteAddressWithoutRemote(t *testing.T) {
+	a := newPublishAPI(t, "true")
+	dir := newHugoDir(t)
+	if err := os.WriteFile(filepath.Join(dir, "hugo.toml"), []byte("title = 'x'\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	id := decodeProject(t, a.open(dir)).ID
+	rec := a.send(http.MethodPut, "/api/publish/site-address", id, `{"siteKind":"custom","customDomain":"www.example.com"}`)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("put = %d %s", rec.Code, rec.Body)
+	}
+}

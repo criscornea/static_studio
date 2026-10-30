@@ -237,3 +237,21 @@ func TestPushCNAMEConflict(t *testing.T) {
 		t.Errorf("CNAME = %q", got)
 	}
 }
+
+func TestPushDropsStaticCNAMEForProjectSite(t *testing.T) {
+	remote := bareRepo(t)
+	root := site(t, "x")
+	if err := os.WriteFile(filepath.Join(root.Name(), "public", "CNAME"), []byte("www.example.com"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	s := Settings{Remote: remote, SiteKind: SiteProject}
+	if err := (&Publisher{}).Push(t.Context(), root, s, func(string) {}); err != nil {
+		t.Fatal(err)
+	}
+	if files := gitOut(t, remote, "ls-tree", "-r", "--name-only", "gh-pages"); strings.Contains(files, "CNAME") {
+		t.Errorf("files = %q", files)
+	}
+	if _, err := os.Stat(filepath.Join(root.Name(), "public", "CNAME")); err != nil {
+		t.Errorf("project public/CNAME removed: %v", err)
+	}
+}
