@@ -33,6 +33,17 @@ type Settings struct {
 	Remote string `json:"remote"`
 	Branch string `json:"branch"`
 
+	// SiteKind is SiteProject, SiteUser or SiteCustom; empty means none chosen,
+	// so settings saved before site addresses existed load unchanged.
+	SiteKind string `json:"siteKind"`
+	// CustomDomain is the single source of truth for the custom domain.
+	CustomDomain string `json:"customDomain"`
+	// CNAMEChoice is CNAMESetting or CNAMEStatic, the answer to a conflict
+	// between CustomDomain and static/CNAME, made against the static/CNAME
+	// value kept in CNAMEChoiceFor so a later edit of that file asks again.
+	CNAMEChoice    string `json:"cnameChoice"`
+	CNAMEChoiceFor string `json:"cnameChoiceFor"`
+
 	// Rsync fields apply when Target is TargetRsync. No credentials are kept:
 	// ssh uses the user's own agent, keys, config and known_hosts.
 	RsyncDest     string `json:"rsyncDest"`
@@ -78,6 +89,9 @@ func validRemote(r string) bool {
 func (s Settings) Validate() (Settings, error) {
 	s.Remote = strings.TrimSpace(s.Remote)
 	s.Branch = strings.TrimSpace(s.Branch)
+	if err := s.validateSite(); err != nil {
+		return s, err
+	}
 	if s.Branch == "" {
 		s.Branch = DefaultBranch
 	}
