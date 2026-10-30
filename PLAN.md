@@ -318,3 +318,78 @@ Status: ready
 - [x] M26.4 Dispatch the publish job by target with a local path end-to-end test
 - [x] M26.5 Add the target picker and rsync fields to the publish dialog
 - [x] M26.6 Update ROADMAP.md, CHANGELOG.md, README and the known-shortcuts note
+
+## Phase 27: Publish preflight and gh CLI client
+Branch: feat/p27-gh-preflight
+Goal: The backend can check everything GitHub Pages publishing needs (git, SSH access, `gh` and its login) and talk to the GitHub API through the user's own `gh` CLI, storing nothing.
+Done when: a small `gh` client in `internal/publish` (or `internal/github`) runs `gh` with `exec.CommandContext` and an argv only (no shell), calls the API with `gh api --method <M> <path>` and sends JSON bodies on stdin (`--input -`), never reads, logs or returns the token, and validates every path segment (owner, repo) against a strict GitHub name pattern before it is put in argv; auth state comes from `gh auth status --hostname github.com`; a preflight reports per check (git present, `gh` present, `gh` logged in, SSH access to `git@github.com` via `ssh -T -o BatchMode=yes` with the user's own config and known_hosts, origin remote) ok/failed plus a readable fix (install link, "run `gh auth login` in a terminal", "connect once with `ssh -T git@github.com`", "add your SSH key to GitHub"); the origin remote URL is read from `.git/config` through `Open.Root()`, not by shelling out in the project; `GET /api/publish/preflight` returns the report with its struct mirrored in `web/src/api/types.ts` and `client.ts`; Go tests use fake `gh`, `git` and `ssh` binaries that record their argv (no shell, no token in output, injection attempts refused); `make check` green; ROADMAP item for `gh` auth ticked, CHANGELOG updated.
+Risk: high (auth: GitHub credentials via gh; security: subprocess argv built from user input)
+Status: todo
+- [ ] M27.1 Add a gh CLI client that runs `gh api` with an argv and stdin body, tested with a fake binary
+- [ ] M27.2 Read the origin remote from `.git/config` through the confined root with tests
+- [ ] M27.3 Add preflight checks for git, gh login and SSH access with readable fixes
+- [ ] M27.4 Expose `GET /api/publish/preflight` and mirror it in the web API client
+- [ ] M27.5 Update ROADMAP.md and CHANGELOG.md
+
+## Phase 28: Site address, baseURL and published files
+Branch: feat/p28-site-address
+Goal: The user picks project site, user site or custom domain, the app writes the matching `baseURL` into the Hugo config, and publishing ships `.nojekyll` and `CNAME` as needed.
+Done when: publish settings gain `siteKind` (`project` | `user` | `custom`, missing means none so older settings load unchanged) and `customDomain` (validated as a bare lowercase hostname, no scheme, port, path or wildcard); a pure function derives the address (`https://<owner>.github.io/<repo>/`, `https://<owner>.github.io/` which requires the repo to be named `<owner>.github.io`, or `https://<domain>/`); a `baseURL` writer edits only the top-level `baseURL` key (inserting it when absent) in the config file that defines it (root `hugo.*`/`config.*` or `config/_default/*`) for TOML, YAML and JSON, keeps every other line and comment byte for byte, writes atomically through `Open.Root()`, refuses when the file changed since it was read and warns when an environment override (`config/production/*`, `HUGO_BASEURL`) would win; a mutating `PUT /api/publish/site-address` (behind the existing Origin/Host guards) saves the choice and writes `baseURL`, mirrored in `types.ts` and `client.ts`; the GitHub Pages publish output always contains `.nojekyll` and, for a custom domain, a `CNAME` holding exactly the domain (overriding any `CNAME` from `static/` in the temp copy only, never in the project); rsync output is unchanged; Go tests cover each config format, insert vs replace, comments preserved, the stale-file refusal, address derivation and the published file set; `make check` green; ROADMAP items ticked, CHANGELOG and known shortcuts (top-level key only) updated.
+Risk: high (writes the user's Hugo config file; a bad edit breaks the site build)
+Status: todo
+- [ ] M28.1 Add site kind and custom domain settings with address derivation and validation tests
+- [ ] M28.2 Add a format-preserving `baseURL` writer for TOML, YAML and JSON configs
+- [ ] M28.3 Write `CNAME` into the published output for custom domains with tests
+- [ ] M28.4 Expose `PUT /api/publish/site-address` and mirror it in the web API client
+- [ ] M28.5 Update ROADMAP.md, CHANGELOG.md and the known-shortcuts note
+
+## Phase 29: Create the repo, enable Pages and report status
+Branch: feat/p29-pages-api
+Goal: From the API the app can create a GitHub repo, turn Pages on for the `gh-pages` branch and report build status and the live URL, all through `gh`.
+Done when: GitHub owner and repo are parsed from https and SSH remote forms (other hosts are refused with a readable message); creating a repo calls `POST /user/repos` with name and `private`, validates the name, reports "already exists" readably and fills the publish settings remote with the SSH URL (the project's own git config is not modified); enabling Pages calls `POST /repos/{owner}/{repo}/pages` with source branch `gh-pages` path `/`, falls back to `PUT` when Pages already exists with another source, and returns a readable "publish once first" error when the branch does not exist yet; status calls `GET /repos/{owner}/{repo}/pages` (status, `html_url`, `cname`, `https_enforced`) and `GET .../pages/builds/latest`; mutating endpoints `POST /api/publish/github/repo` and `POST /api/publish/github/pages` (behind the Origin/Host guards) and `GET /api/publish/github/pages` are mirrored in `types.ts` and `client.ts`; GitHub error codes (401, 403, 404, 422) map to readable messages with the `gh auth login` hint on 401; Go tests drive a fake `gh` that returns canned API responses and asserts method, path and stdin body; `make check` green; ROADMAP items ticked, CHANGELOG updated.
+Risk: high (public API: creates repositories and changes Pages settings on the user's GitHub account)
+Status: todo
+- [ ] M29.1 Parse GitHub owner and repo from remote URLs with tests
+- [ ] M29.2 Create a GitHub repo through gh and fill in the publish remote
+- [ ] M29.3 Enable Pages for `gh-pages` with POST and PUT fallback
+- [ ] M29.4 Read Pages status, latest build and live URL
+- [ ] M29.5 Expose the repo, enable and status endpoints and mirror them in the web API client
+- [ ] M29.6 Update ROADMAP.md and CHANGELOG.md
+
+## Phase 30: Publish setup wizard
+Branch: feat/p30-publish-wizard
+Goal: The first Publish to GitHub Pages opens a guided wizard (preflight, repo, site address, files, enable Pages, live URL), reachable later as publish settings.
+Done when: a wizard dialog opens on the first Publish when the target is GitHub Pages and the project has no completed setup (a `githubSetup` flag in publish settings, missing means not done), and from a "Publish settings" button and palette command afterwards; step 1 shows the preflight with each fix and a re-check button and blocks until git and `gh` pass; step 2 uses the detected origin or creates a repo (public/private choice); step 3 picks the site address, shows the resulting `baseURL` and the config file it will change, and lists the files that will ship (`.nojekyll`, `CNAME`); step 4 publishes once, enables Pages, then polls status until built or failed and shows the live URL as a link; errors stay on their step with the readable message; the existing rsync path and `PublishDialog` behaviour are unchanged; the wizard state lives in a Zustand store; vitest covers step gating, first-run vs settings entry, repo create vs detected, address preview and status polling; Playwright check in both themes once at the end; `make check` green; ROADMAP wizard item ticked, CHANGELOG and README publish section updated.
+Risk: low
+Status: todo
+- [ ] M30.1 Add a publish wizard store with step gating and the setup-done flag
+- [ ] M30.2 Add the preflight step with fixes and re-check
+- [ ] M30.3 Add the repo step with detected origin or repo creation
+- [ ] M30.4 Add the site address and files step
+- [ ] M30.5 Add the enable-Pages step with status polling and the live URL
+- [ ] M30.6 Open the wizard on first Publish and from settings, then update docs
+
+## Phase 31: Custom domain help
+Branch: feat/p31-custom-domain
+Goal: For a custom domain the wizard shows the exact DNS records to add, checks them, sets the domain on Pages and enforces HTTPS once the certificate is ready.
+Done when: a pure function returns the records for a domain (apex: four `A` records `185.199.108.153`-`185.199.111.153` and four `AAAA` records `2606:50c0:8000::153`-`2606:50c0:8003::153`; subdomain: one `CNAME` to `<owner>.github.io`), with apex detected by label count (multi-part public suffixes such as `co.uk` recorded as a known shortcut, no new dependency); a DNS check endpoint resolves the domain with the standard resolver and reports per record found/missing; the Pages domain is set with `PUT /repos/{owner}/{repo}/pages` (`cname`) and HTTPS enforcement (`https_enforced: true`) is offered only when the status reports a certificate, with a readable "certificate not ready yet, try again in a few minutes" otherwise; the wizard step shows the records with copy buttons, the check result and the HTTPS toggle; Go tests cover record derivation, the DNS check with a fake resolver and the PUT bodies via fake `gh`; vitest covers the step; `make check` green; ROADMAP item ticked, CHANGELOG and known shortcuts updated.
+Risk: low
+Status: todo
+- [ ] M31.1 Derive the DNS records for apex and subdomain custom domains
+- [ ] M31.2 Add a DNS check endpoint with a fake resolver in tests
+- [ ] M31.3 Set the Pages custom domain and HTTPS enforcement through gh
+- [ ] M31.4 Add the custom domain step to the wizard
+- [ ] M31.5 Update ROADMAP.md, CHANGELOG.md and the known-shortcuts note
+
+## Phase 32: GitHub device-flow login
+Branch: feat/p32-device-flow
+Goal: Users without `gh` can sign in to GitHub from the wizard with the device flow, with the token kept only in the OS keychain.
+Done when: depends on a registered GitHub OAuth app client ID supplied by the user (compiled in as a constant or build flag, not a secret; no client secret is used); the device flow requests `POST https://github.com/login/device/code` with the minimal scope (`repo`, or `public_repo` for public repos only) and polls `POST .../login/oauth/access_token` honouring `interval`, `slow_down`, `expired_token` and `access_denied`, with cancel; the token is stored only in the OS keychain (macOS `security` via its stdin command mode, Linux `secret-tool` via stdin, so it never appears in argv or process listings; other platforms report "use gh instead"), never in settings files, logs, API responses or the browser; a token source prefers `gh` when logged in and otherwise the keychain token, and the same repo/Pages calls run over `net/http` against `api.github.com` with that token; sign-in start/poll/sign-out endpoints (mutating ones behind the Origin/Host guards) are mirrored in `types.ts` and `client.ts`; the wizard preflight offers "Sign in with GitHub" showing the user code and verification link; sign-out deletes the keychain entry; Go tests use `httptest` for the device flow and API, and fake `security`/`secret-tool` binaries that assert the token arrives on stdin only; vitest covers the sign-in step; `make check` green; ROADMAP item ticked, CHANGELOG, README and known shortcuts updated.
+Risk: high (auth: OAuth device flow and token storage; security: secret handling in the OS keychain)
+Status: todo
+- [ ] M32.1 Add the device-flow client with polling and cancel, tested with httptest
+- [ ] M32.2 Add a keychain token store that passes the secret on stdin only
+- [ ] M32.3 Add an HTTP GitHub API client and a token source preferring gh
+- [ ] M32.4 Expose sign-in start, poll and sign-out endpoints and mirror them in the web API client
+- [ ] M32.5 Add the sign-in step to the wizard preflight
+- [ ] M32.6 Update ROADMAP.md, CHANGELOG.md, README and the known-shortcuts note

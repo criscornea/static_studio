@@ -126,6 +126,29 @@ No new features. Zero.
 
 🎯 **Milestone:** format, preview and publish a post to your own server without leaving the app.
 
+## v1.3
+
+**Goal:** publishing to GitHub Pages is guided end to end; nothing to look up.
+
+- [ ] Publish setup wizard on first Publish (and as settings afterwards): repo,
+  site address, files, enable Pages, live URL; preflight for `git`, SSH access
+  and `gh` with readable fixes
+- [ ] Create the GitHub repo from the wizard (public or private) when none
+  exists, and fill in the remote
+- [ ] Site address choice (project site, user site, custom domain) that writes
+  `baseURL` into the Hugo config
+- [ ] Publish always ships `.nojekyll`, and `CNAME` when a custom domain is set,
+  so the replaced `gh-pages` branch keeps working
+- [ ] Turn GitHub Pages on through the API (`POST/PUT /repos/{owner}/{repo}/pages`)
+  and show build status and the live URL (`GET .../pages`)
+- [ ] Custom domain help: the exact DNS records to add, HTTPS enforcement
+- [ ] Auth via the `gh` CLI first (`gh auth token` / `gh api`, nothing stored);
+  readable "run `gh auth login`" hint when missing
+- [ ] Auth via GitHub device-flow login (no `gh` needed), token kept in the OS
+  keychain only
+
+🎯 **Milestone:** a new site goes from zero to live on GitHub Pages without leaving the app or touching GitHub's settings.
+
 ## Explicitly out of scope for v1.0
 
 Plugin system · theme designer · Git integration · multi-user · cloud sync ·
