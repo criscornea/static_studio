@@ -127,3 +127,39 @@ func TestCheckSiteAndReadStatic(t *testing.T) {
 		t.Fatalf("err = %v", err)
 	}
 }
+
+func TestUpdateSite(t *testing.T) {
+	cur := Settings{Remote: "git@github.com:a/b.git"}
+	in := SiteInput{SiteKind: SiteCustom, CustomDomain: "a.example.com"}
+
+	// No static/CNAME, or equal: saved as is.
+	if got, c, err := UpdateSite(cur, in, "a.example.com"); err != nil || c != nil || got.CustomDomain != "a.example.com" {
+		t.Fatalf("equal: %+v %v %v", got, c, err)
+	}
+	// Different: conflict, nothing changes.
+	got, c, err := UpdateSite(cur, in, "b.example.com")
+	if err != nil || c == nil || got.SiteKind != "" {
+		t.Fatalf("conflict: %+v %v %v", got, c, err)
+	}
+	// Explicit choices are stored against the static value.
+	in.CNAMEChoice = CNAMEStatic
+	got, c, err = UpdateSite(cur, in, "b.example.com")
+	if err != nil || c != nil || got.CustomDomain != "b.example.com" || got.CNAMEChoiceFor != "b.example.com" {
+		t.Fatalf("static: %+v %v %v", got, c, err)
+	}
+	in.CNAMEChoice = CNAMESetting
+	got, c, err = UpdateSite(cur, in, "b.example.com")
+	if err != nil || c != nil || got.CustomDomain != "a.example.com" || got.CNAMEChoice != CNAMESetting {
+		t.Fatalf("setting: %+v %v %v", got, c, err)
+	}
+	// Later edit of static/CNAME asks again.
+	in.CNAMEChoice = ""
+	if _, c, _ := UpdateSite(got, in, "c.example.com"); c == nil {
+		t.Fatal("stale choice honoured")
+	}
+	// Choice without a file, bad choice.
+	in.CNAMEChoice = CNAMEStatic
+	if _, _, err := UpdateSite(cur, in, ""); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("err = %v", err)
+	}
+}

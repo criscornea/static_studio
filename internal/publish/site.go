@@ -167,3 +167,39 @@ func CheckSite(root *os.Root, s Settings) (Settings, error) {
 	}
 	return s, nil
 }
+
+// SiteInput is what a site address change carries. CNAMEChoice is the user's
+// explicit answer to a conflict, empty otherwise.
+type SiteInput struct {
+	SiteKind     string `json:"siteKind"`
+	CustomDomain string `json:"customDomain"`
+	CNAMEChoice  string `json:"cnameChoice"`
+}
+
+// UpdateSite applies in to cur against the current static/CNAME value. When
+// the saved domain and static/CNAME differ and no choice settles it, it
+// returns the Conflict and the unchanged cur: nothing should be saved. An
+// explicit choice is recorded together with the static value it answers, and
+// "static" adopts that value as the custom domain.
+func UpdateSite(cur Settings, in SiteInput, static string) (Settings, *Conflict, error) {
+	next := cur
+	next.SiteKind, next.CustomDomain = in.SiteKind, in.CustomDomain
+	if err := next.validateSite(); err != nil {
+		return cur, nil, err
+	}
+	switch in.CNAMEChoice {
+	case "":
+	case CNAMESetting, CNAMEStatic:
+		if static == "" {
+			return cur, nil, fmt.Errorf("%w: there is no static/CNAME to choose", ErrInvalid)
+		}
+		next.CNAMEChoice, next.CNAMEChoiceFor = in.CNAMEChoice, static
+	default:
+		return cur, nil, fmt.Errorf("%w: the CNAME choice is not valid", ErrInvalid)
+	}
+	resolved, c := next.ResolveCNAME(static)
+	if c != nil {
+		return cur, c, nil
+	}
+	return resolved, nil, nil
+}
