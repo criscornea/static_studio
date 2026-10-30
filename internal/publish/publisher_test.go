@@ -1,6 +1,7 @@
 package publish
 
 import (
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -169,5 +170,70 @@ func TestPushRefusesMainBranch(t *testing.T) {
 		if err == nil || !strings.Contains(err.Error(), "not allowed") {
 			t.Errorf("%s: err = %v", b, err)
 		}
+	}
+}
+
+func addStatic(t *testing.T, root *os.Root, cname string) string {
+	t.Helper()
+	p := filepath.Join(root.Name(), "static", "CNAME")
+	if err := os.MkdirAll(filepath.Dir(p), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(p, []byte(cname), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return p
+}
+
+func TestPushShipsCNAMEForCustomDomain(t *testing.T) {
+	remote := bareRepo(t)
+	root := site(t, "x")
+	static := addStatic(t, root, "www.example.com\n")
+	s := Settings{Remote: remote, SiteKind: SiteCustom, CustomDomain: "www.example.com"}
+	if err := (&Publisher{}).Push(t.Context(), root, s, func(string) {}); err != nil {
+		t.Fatal(err)
+	}
+	if got := gitOut(t, remote, "show", "gh-pages:CNAME"); got != "www.example.com" {
+		t.Errorf("CNAME = %q", got)
+	}
+	if files := gitOut(t, remote, "ls-tree", "-r", "--name-only", "gh-pages"); !strings.Contains(files, ".nojekyll") {
+		t.Errorf("files = %q", files)
+	}
+	if got, _ := os.ReadFile(static); string(got) != "www.example.com\n" {
+		t.Errorf("static/CNAME changed: %q", got)
+	}
+	if _, err := os.Stat(filepath.Join(root.Name(), "CNAME")); err == nil {
+		t.Error("CNAME written into the project")
+	}
+}
+
+func TestPushWithoutCustomDomainHasNoCNAME(t *testing.T) {
+	remote := bareRepo(t)
+	s := Settings{Remote: remote, SiteKind: SiteProject}
+	if err := (&Publisher{}).Push(t.Context(), site(t, "x"), s, func(string) {}); err != nil {
+		t.Fatal(err)
+	}
+	files := gitOut(t, remote, "ls-tree", "-r", "--name-only", "gh-pages")
+	if strings.Contains(files, "CNAME") || !strings.Contains(files, ".nojekyll") {
+		t.Errorf("files = %q", files)
+	}
+}
+
+func TestPushCNAMEConflict(t *testing.T) {
+	remote := bareRepo(t)
+	root := site(t, "x")
+	addStatic(t, root, "other.example.com")
+	s := Settings{Remote: remote, SiteKind: SiteCustom, CustomDomain: "www.example.com"}
+	err := (&Publisher{}).Push(t.Context(), root, s, func(string) {})
+	if !errors.Is(err, ErrCNAMEConflict) {
+		t.Fatalf("err = %v", err)
+	}
+	// Answered against the same file: the chosen static value is published.
+	s.CNAMEChoice, s.CNAMEChoiceFor = CNAMEStatic, "other.example.com"
+	if err := (&Publisher{}).Push(t.Context(), root, s, func(string) {}); err != nil {
+		t.Fatal(err)
+	}
+	if got := gitOut(t, remote, "show", "gh-pages:CNAME"); got != "other.example.com" {
+		t.Errorf("CNAME = %q", got)
 	}
 }

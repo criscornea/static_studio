@@ -44,6 +44,11 @@ func (j *Job) Start(builder *build.Runner, root *os.Root, s Settings) error {
 	if err != nil {
 		return err
 	}
+	if s.Target == TargetGitHubPages {
+		if _, err := CheckSite(root, s); err != nil {
+			return err
+		}
+	}
 
 	j.mu.Lock()
 	if j.running {

@@ -72,6 +72,9 @@ func (p *Publisher) Push(ctx context.Context, root *os.Root, s Settings, emit fu
 	if err != nil {
 		return err
 	}
+	if s, err = CheckSite(root, s); err != nil {
+		return err
+	}
 	if b := currentBranch(root); b != "" && b == s.Branch {
 		return fmt.Errorf("%q is the branch your project is on; publishing would replace it. Use another branch such as %s", b, DefaultBranch)
 	}
@@ -98,6 +101,13 @@ func (p *Publisher) Push(ctx context.Context, root *os.Root, s Settings, emit fu
 	// Keeps GitHub Pages from running its own Jekyll build over the output.
 	if err := os.WriteFile(filepath.Join(tmp, ".nojekyll"), nil, 0o600); err != nil {
 		return err
+	}
+	// A custom domain needs CNAME on the branch; it lives only in this copy,
+	// never in the project's static folder.
+	if s.SiteKind == SiteCustom {
+		if err := os.WriteFile(filepath.Join(tmp, "CNAME"), []byte(s.CustomDomain), 0o600); err != nil {
+			return err
+		}
 	}
 
 	bin := p.Git
